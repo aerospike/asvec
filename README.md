@@ -1,0 +1,2 @@
+# asvec
+Aerospike Vector CLI

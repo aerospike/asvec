@@ -6,12 +6,30 @@ package cmd
 import (
 	"context"
 	"log/slog"
-	"net"
 
 	avs "github.com/aerospike/aerospike-proximus-client-go"
 	"github.com/aerospike/aerospike-proximus-client-go/protos"
+	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+var requiredFlags = []string{
+	flagNameNamespace,
+	flagNameIndexName,
+	flagNameDimension,
+	flagNameDistance,
+}
+
+var persistentRequiredFlags = []string{}
+
+const (
+	flagNameMaxEdges        = "hnsw-max-edges"
+	flagNameConstructionEf  = "hnsw-ef-construction"
+	flagNameEf              = "hnsw-ef"
+	flagNameBatchMaxRecords = "hnsw-batch-max-records"
+	flagNameBatchInterval   = "hnsw-batch-interval"
+	flagNameBatchDisabled   = "hnsw-batch-disabled"
 )
 
 // createIndexCmd represents the createIndex command
@@ -25,18 +43,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		host := viper.GetString("host")
-		port := viper.GetInt("port")
-		hostPort := avs.NewHostPort(host, port, false)
-		namespace := viper.GetString("namespace")
-		sets := viper.GetStringSlice("sets")
-		indexName := viper.GetString("index-name")
-		vectorField := viper.GetString("vector-field")
-		dimension := viper.GetUint32("dimension")
-		// distanceMetric := viper.GetInt("distance-metric")
-		indexMeta := viper.GetStringMapString("index-meta")
+		seed := viper.GetString(flagNameSeeds)
+		port := viper.GetInt(flagNamePort)
+		hostPort := avs.NewHostPort(seed, port, false)
+		namespace := viper.GetString(flagNameNamespace)
+		sets := viper.GetStringSlice(flagNameSets)
+		indexName := viper.GetString(flagNameIndexName)
+		vectorField := viper.GetString(flagNameVector)
+		dimension := viper.GetUint32(flagNameDimension)
+		indexMeta := viper.GetStringMapString(flagNameIndexMeta)
+		distanceMetric := viper.GetString(flagNameDistance)
 
-		logger.Debug("Parsed flags", slog.String("host", host), slog.Int("port", port), slog.String("namespace", namespace), slog.Any("sets", sets), slog.String("index-name", indexName), slog.String("vector-field", vectorField), slog.Uint64("dimension", uint64(dimension)), slog.Any("index-meta", indexMeta))
+		logger.Debug("parsed flags", slog.String("seeds", seed), slog.Int("port", port), slog.String("namespace", namespace), slog.Any("sets", sets), slog.String("index-name", indexName), slog.String("vector-field", vectorField), slog.Uint64("dimension", uint64(dimension)), slog.Any("index-meta", indexMeta))
 
 		ctx := context.TODO()
 
@@ -48,7 +66,7 @@ to quickly create a Cobra application.`,
 		}
 
 		// TODO: parse cosine
-		err = adminClient.IndexCreate(ctx, namespace, sets, indexName, vectorField, dimension, protos.VectorDistanceMetric_COSINE, nil, indexMeta)
+		err = adminClient.IndexCreate(ctx, namespace, sets, indexName, vectorField, dimension, protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[distanceMetric]), nil, indexMeta)
 		if err != nil {
 			logger.Error("unable to create index", slog.Any("error", err))
 			view.Printf("Unable to create index: %v", err)
@@ -61,33 +79,38 @@ to quickly create a Cobra application.`,
 
 func init() {
 	createCmd.AddCommand(createIndexCmd)
-	createIndexCmd.PersistentFlags().IPP("host", "h", net.ParseIP("127.0.0.1"), "TODO")
-	createIndexCmd.PersistentFlags().IntP("port", "p", 5000, "TODO")
-	createIndexCmd.Flags().StringP("namespace", "n", "", "TODO")
-	createIndexCmd.Flags().StringArrayP("sets", "s", nil, "TODO")
-	createIndexCmd.Flags().StringP("index-name", "i", "", "TODO")
-	createIndexCmd.Flags().StringP("vector-field", "v", "vector", "TODO")
-	createIndexCmd.Flags().IntP("dimension", "d", 0, "TODO")
-	createIndexCmd.Flags().Uint32P("distance-metric", "m", 0, "TODO")
-	createIndexCmd.Flags().StringToStringP("index-meta", "e", nil, "TODO")
-	// TODO hnsw metadata
 
-	createIndexCmd.MarkFlagRequired("namespace")
-	createIndexCmd.MarkFlagRequired("set")
-	createIndexCmd.MarkFlagRequired("index-name")
-	// createIndexCmd.MarkFlagRequired("vector-field")
-	createIndexCmd.MarkFlagRequired("dimension")
-	// createIndexCmd.MarkFlagRequired("distance-metric")
+	persistentFlags := NewFlagSetBuilder(createIndexCmd.PersistentFlags())
+	flags := NewFlagSetBuilder(createIndexCmd.Flags())
+
+	persistentFlags.AddSeedFlag()
+	persistentFlags.AddPortFlag()
+
+	flags.AddNamespaceFlag()
+	flags.AddSetsFlag()
+	flags.AddIndexNameFlag()
+	flags.AddVectorFieldFlag()
+	flags.AddDimensionFlag()
+	flags.AddDistanceMetricFlag()
+	flags.AddIndexMetaFlag()
+
+	flags.Uint32(flagNameMaxEdges, 0, commonFlags.DefaultWrapHelpString("Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'. The default value is 16."))
+	flags.Uint32(flagNameConstructionEf, 0, commonFlags.DefaultWrapHelpString("The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times. The default is 100."))
+	flags.Uint32(flagNameEf, 0, commonFlags.DefaultWrapHelpString("The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100."))
+	flags.Uint32(flagNameBatchMaxRecords, 0, commonFlags.DefaultWrapHelpString("Maximum number of records to fit in a batch. The default value is 10000."))
+	flags.Uint32(flagNameBatchInterval, 0, commonFlags.DefaultWrapHelpString("The maximum amount of time in milliseconds to wait before finalizing a batch. The default value is 10000."))
+	flags.Bool(flagNameBatchDisabled, false, commonFlags.DefaultWrapHelpString("Disables batching for index updates. Default is false meaning batching is enabled."))
+
+	for _, flag := range requiredFlags {
+		createIndexCmd.MarkFlagRequired(flag)
+	}
+
+	for _, flag := range persistentRequiredFlags {
+		createIndexCmd.MarkPersistentFlagRequired(flag)
+	}
+
+	// TODO hnsw metadata
 	viper.BindPFlags(createIndexCmd.PersistentFlags())
 	viper.BindPFlags(createIndexCmd.Flags())
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createIndexCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createIndexCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

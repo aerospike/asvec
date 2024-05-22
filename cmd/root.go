@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"io"
 	"log/slog"
 	"os"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
+var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 var view = NewView(os.Stdout)
 
 // rootCmd represents the base command when called without any subcommands

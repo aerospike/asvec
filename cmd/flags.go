@@ -4,21 +4,24 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-proximus-client-go/protos"
 	"github.com/spf13/pflag"
 )
 
 const (
-	flagNameSeeds     = "seeds"
-	flagNamePort      = "port"
-	flagNameNamespace = "namespace"
-	flagNameSets      = "sets"
-	flagNameIndexName = "index-name"
-	flagNameVector    = "vector-field"
-	flagNameDimension = "dimension"
-	flagNameDistance  = "distance-metric"
-	flagNameIndexMeta = "index-meta"
+	flagNameSeeds       = "seeds"
+	flagNamePort        = "port"
+	flagNameNamespace   = "namespace"
+	flagNameSets        = "sets"
+	flagNameIndexName   = "index-name"
+	flagNameVectorField = "vector-field"
+	flagNameDimension   = "dimension"
+	flagNameDistance    = "distance-metric"
+	flagNameIndexMeta   = "index-meta"
+	flagNameTimeout     = "timeout"
+	flagNameVerbose     = "verbose"
 )
 
 type FlagSetBuilder struct {
@@ -54,7 +57,7 @@ func (fsb *FlagSetBuilder) AddIndexNameFlag() {
 }
 
 func (fsb *FlagSetBuilder) AddVectorFieldFlag() {
-	fsb.StringP(flagNameVector, "v", "vector-field", "The name of the vector field.")
+	fsb.StringP(flagNameVectorField, "f", "", "The name of the vector field.")
 
 }
 
@@ -72,22 +75,30 @@ func (fsb *FlagSetBuilder) AddIndexMetaFlag() {
 	fsb.StringToStringP(flagNameIndexMeta, "e", nil, "The metadata for the index.")
 }
 
+func (fsb *FlagSetBuilder) AddTimeoutFlag() {
+	fsb.DurationP(flagNameTimeout, "t", time.Second*5, "The timeout used for each request.")
+}
+
+func (fsb *FlagSetBuilder) AddVerbose() {
+	fsb.BoolP(flagNameVerbose, "v", false, "Display extra detail about an index.")
+}
+
 type DistanceMetricFlag string
 
 // This is just a set of valid VectorDistanceMetrics. The value does not have meaning
 var distanceMetricSet = protos.VectorDistanceMetric_value
 
-func (mode *DistanceMetricFlag) Set(val string) error {
+func (f *DistanceMetricFlag) Set(val string) error {
 	val = strings.ToUpper(val)
-	if val, ok := distanceMetricSet[val]; ok {
-		*mode = DistanceMetricFlag(val)
+	if _, ok := distanceMetricSet[val]; ok {
+		*f = DistanceMetricFlag(val)
 		return nil
 	}
 
 	return fmt.Errorf("unrecognized distance metric")
 }
 
-func (mode *DistanceMetricFlag) Type() string {
+func (f *DistanceMetricFlag) Type() string {
 	names := []string{}
 
 	for key := range distanceMetricSet {
@@ -97,6 +108,39 @@ func (mode *DistanceMetricFlag) Type() string {
 	return strings.Join(names, ",")
 }
 
-func (mode *DistanceMetricFlag) String() string {
-	return string(*mode)
+func (f *DistanceMetricFlag) String() string {
+	return string(*f)
+}
+
+type LogLevelFlag string
+
+var logLevelSet = map[string]struct{}{
+	"DEBUG": {},
+	"INFO":  {},
+	"WARN":  {},
+	"ERROR": {},
+}
+
+func (f *LogLevelFlag) Set(val string) error {
+	val = strings.ToUpper(val)
+	if _, ok := logLevelSet[val]; ok {
+		*f = LogLevelFlag(val)
+		return nil
+	}
+
+	return fmt.Errorf("unrecognized log level")
+}
+
+func (f *LogLevelFlag) Type() string {
+	names := []string{}
+
+	for key := range logLevelSet {
+		names = append(names, key)
+	}
+
+	return strings.Join(names, ",")
+}
+
+func (f *LogLevelFlag) String() string {
+	return string(*f)
 }

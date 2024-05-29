@@ -14,15 +14,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var requiredFlags = []string{
-	flagNameNamespace,
-	flagNameIndexName,
-	flagNameDimension,
-	flagNameDistance,
-}
-
-var persistentRequiredFlags = []string{}
-
 const (
 	flagNameMaxEdges        = "hnsw-max-edges"
 	flagNameConstructionEf  = "hnsw-ef-construction"
@@ -42,38 +33,53 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: likely add to prerun step
 		seed := viper.GetString(flagNameSeeds)
 		port := viper.GetInt(flagNamePort)
 		hostPort := avs.NewHostPort(seed, port, false)
 		namespace := viper.GetString(flagNameNamespace)
 		sets := viper.GetStringSlice(flagNameSets)
 		indexName := viper.GetString(flagNameIndexName)
-		vectorField := viper.GetString(flagNameVector)
+		vectorField := viper.GetString(flagNameVectorField)
 		dimension := viper.GetUint32(flagNameDimension)
 		indexMeta := viper.GetStringMapString(flagNameIndexMeta)
 		distanceMetric := viper.GetString(flagNameDistance)
+		timeout := viper.GetDuration(flagNameTimeout)
 
-		logger.Debug("parsed flags", slog.String("seeds", seed), slog.Int("port", port), slog.String("namespace", namespace), slog.Any("sets", sets), slog.String("index-name", indexName), slog.String("vector-field", vectorField), slog.Uint64("dimension", uint64(dimension)), slog.Any("index-meta", indexMeta))
+		logger.Debug("parsed flags",
+			slog.String("seeds", seed), slog.Int("port", port), slog.String("namespace", namespace),
+			slog.Any("sets", sets), slog.String("index-name", indexName), slog.String("vector-field", vectorField),
+			slog.Uint64("dimension", uint64(dimension)), slog.Any("index-meta", indexMeta), slog.String("distance-metric", distanceMetric),
+			slog.Duration("timeout", timeout),
+		)
 
-		ctx := context.TODO()
+		ctx := context.Background()
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
 		adminClient, err := avs.NewAdminClient(ctx, []*avs.HostPort{hostPort}, nil, false, logger)
 		if err != nil {
 			logger.Error("failed to create AVS client", slog.Any("error", err))
-			view.Printf("Failed to connect to AVS: %v", err)
-			return
+			return err
 		}
 
-		// TODO: parse cosine
+		cancel()
+		defer adminClient.Close()
+
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		// TODO: Add storage type
 		err = adminClient.IndexCreate(ctx, namespace, sets, indexName, vectorField, dimension, protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[distanceMetric]), nil, indexMeta)
 		if err != nil {
 			logger.Error("unable to create index", slog.Any("error", err))
-			view.Printf("Unable to create index: %v", err)
-			return
+			return err
 		}
 
 		view.Printf("Successfully created index %s.%s", namespace, indexName)
+		return nil
 	},
 }
 
@@ -93,7 +99,18 @@ func init() {
 	flags.AddDimensionFlag()
 	flags.AddDistanceMetricFlag()
 	flags.AddIndexMetaFlag()
+	flags.AddTimeoutFlag()
 
+	var requiredFlags = []string{
+		flagNameNamespace,
+		flagNameIndexName,
+		flagNameVectorField,
+		flagNameDimension,
+		flagNameDistance,
+	}
+
+	// TODO: Add custom template for usage to take into account terminal width
+	// Ex: https://github.com/sigstore/cosign/pull/3011/files
 	flags.Uint32(flagNameMaxEdges, 0, commonFlags.DefaultWrapHelpString("Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'. The default value is 16."))
 	flags.Uint32(flagNameConstructionEf, 0, commonFlags.DefaultWrapHelpString("The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times. The default is 100."))
 	flags.Uint32(flagNameEf, 0, commonFlags.DefaultWrapHelpString("The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100."))
@@ -104,13 +121,4 @@ func init() {
 	for _, flag := range requiredFlags {
 		createIndexCmd.MarkFlagRequired(flag)
 	}
-
-	for _, flag := range persistentRequiredFlags {
-		createIndexCmd.MarkPersistentFlagRequired(flag)
-	}
-
-	// TODO hnsw metadata
-	viper.BindPFlags(createIndexCmd.PersistentFlags())
-	viper.BindPFlags(createIndexCmd.Flags())
-
 }

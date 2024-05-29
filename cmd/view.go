@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	// "asvec/cmd/writers"
+	"asvec/cmd/writers"
 	"fmt"
 	"io"
+
+	"github.com/aerospike/aerospike-proximus-client-go/protos"
 )
 
 type View struct {
@@ -14,15 +18,22 @@ func NewView(writer io.Writer) *View {
 }
 
 func (v *View) Print(a ...any) {
-	s := fmt.Sprint(a...)
-	fmt.Print(s)
-	v.writer.Write([]byte(fmt.Sprint(a...)))
+	_, err := v.writer.Write([]byte(fmt.Sprint(a...)))
+	if err != nil {
+		panic(err)
+	}
+
 	v.Newline()
 }
 
 func (v *View) Printf(f string, a ...any) {
 	s := fmt.Sprintf(f, a...)
-	v.writer.Write([]byte(s))
+
+	_, err := v.writer.Write([]byte(s))
+	if err != nil {
+		panic(err)
+	}
+
 	v.Newline()
 }
 
@@ -31,4 +42,22 @@ func (v *View) Newline() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (v *View) getIndexListWriter(verbose bool) *writers.IndexTableWriter {
+	return writers.NewIndexTableWriter(v.writer, verbose)
+}
+
+func (v *View) PrintIndexes(indexList *protos.IndexDefinitionList, indexStatusList []*protos.IndexStatusResponse, verbose bool) {
+	t := v.getIndexListWriter(verbose)
+
+	for i, index := range indexList.Indices {
+		if index.Id.Name == "" || index.Id.Namespace == "" {
+			continue
+		}
+
+		t.AppendIndexRow(index, indexStatusList[i])
+	}
+
+	t.Render()
 }

@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
@@ -12,7 +13,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+var lvl = new(slog.LevelVar)
+var logLevelFlagName = "log-level"
+var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout)
 
 // rootCmd represents the base command when called without any subcommands
@@ -25,9 +28,21 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		cmd.SilenceUsage = true
+		viper.BindPFlags(cmd.PersistentFlags())
+		viper.BindPFlags(cmd.Flags())
+
+		if viper.IsSet(logLevelFlagName) {
+			level := viper.GetString(logLevelFlagName)
+			handler := logger.Handler()
+			lvl.UnmarshalText([]byte(level))
+
+			handler.Enabled(context.Background(), lvl.Level())
+		} else {
+			lvl.Set(slog.LevelError + 1) // disable all logging
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -40,15 +55,8 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.asvec.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	logLevel := LogLevelFlag("disabled")
+	rootCmd.PersistentFlags().Var(&logLevel, logLevelFlagName, "Log level for additional details and debugging")
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0")
 	viper.SetEnvPrefix("AVS")
 	viper.AutomaticEnv()

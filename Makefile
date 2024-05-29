@@ -154,7 +154,7 @@ CPU := $(shell uname -m)
 ver:=$(shell V=$$(git branch --show-current); if [[ $$V == v* ]]; then printf $${V:1} > ./VERSION.md; fi; cat ./VERSION.md)
 define _amddebscript
 ver=$(cat ./VERSION.md)
-cat <<EOF > $(BIN_DIR)/deb/DEBIAN/control
+cat <<EOF > ./bin/deb/DEBIAN/control
 Website: www.aerospike.com
 Maintainer: Aerospike <support@aerospike.com>
 Name: Aerospike Vector CLI
@@ -168,7 +168,7 @@ endef
 export amddebscript = $(value _amddebscript)
 define _armdebscript
 ver=$(cat ./VERSION.md)
-cat <<EOF > $(BIN_DIR)/deb/DEBIAN/control
+cat <<EOF > ./bin/deb/DEBIAN/control
 Website: www.aerospike.com
 Maintainer: Aerospike <support@aerospike.com>
 Name: Aerospike Vector CLI

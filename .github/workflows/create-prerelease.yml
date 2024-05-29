@@ -49,7 +49,7 @@ jobs:
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
-                cd ~/work/asvec/asvec/src && make cleanall && make ${buildcmd}
+                cd ~/work/asvec/asvec && make cleanall && make ${buildcmd}
             - name: "Create linux packages"
               env:
                   ADDCOMMIT: ${{ inputs.addCommit }}
@@ -57,7 +57,7 @@ jobs:
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
-                cd ~/work/asvec/asvec/src && make pkg-linux
+                cd ~/work/asvec/asvec && make pkg-linux
             - name: "Create windows zips"
               env:
                   ADDCOMMIT: ${{ inputs.addCommit }}
@@ -65,9 +65,9 @@ jobs:
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
-                cd ~/work/asvec/asvec/src && make pkg-windows-zip
+                cd ~/work/asvec/asvec && make pkg-windows-zip
             - name: "Print asvec version"
-              run: cd ~/work/asvec/asvec/src && ../bin/asvec-macos-amd64 version
+              run: cd ~/work/asvec/asvec && ../bin/asvec-macos-amd64 version
             - name: "Prepare keychain for signing MacOS"
               env:
                   keypw: ${{ secrets.APPLEPW }}
@@ -99,7 +99,7 @@ jobs:
                 export asvec_signer="${xasvec_signer}"
                 export asvec_installsigner="${xasvec_installsigner}"
                 export asvec_teamid="${xasvec_teamid}"
-                export PATH=$PATH:/usr/local/bin:/usr/local/go/bin && cd ~/work/asvec/asvec/src && make macos-build-all && make macos-notarize-all
+                export PATH=$PATH:/usr/local/bin:/usr/local/go/bin && cd ~/work/asvec/asvec && make macos-build-all && make macos-notarize-all
             - name: "Create a new pre-release"
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

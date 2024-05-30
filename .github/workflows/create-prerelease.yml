@@ -70,7 +70,7 @@ jobs:
               run: cd ~/work/asvec/asvec && ./bin/asvec-macos-amd64 --version
             - name: "Prepare keychain for signing MacOS"
               env:
-                  keypw: ${{ secrets.APPLEPW }}
+                  keypw: ${{ secrets.APPLEUSERPW }}
                   INSTALLERP12: ${{ secrets.INSTALLERP12 }}
                   APPLICATIONP12: ${{ secrets.APPLICATIONP12 }}
               run: |
@@ -88,7 +88,7 @@ jobs:
             - name: "Sign and build MacOS"
               env:
                   xasvec_appleid: ${{ secrets.APPLEUSER }}
-                  xasvec_applepw: ${{ secrets.APPLEPW }}
+                  xasvec_applepw: ${{ secrets.APPLEAPPPW }}
                   xasvec_signer: ${{ secrets.APPLESIGNER }}
                   xasvec_installsigner: ${{ secrets.APPLEINSTALLSIGNER }}
                   xasvec_teamid: ${{ secrets.APPLETEAMID }}

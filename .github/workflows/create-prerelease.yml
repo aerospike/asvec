@@ -67,7 +67,7 @@ jobs:
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
                 cd ~/work/asvec/asvec && make pkg-windows-zip
             - name: "Print asvec version"
-              run: cd ~/work/asvec/asvec && ../bin/asvec-macos-amd64 version
+              run: cd ~/work/asvec/asvec && ./bin/asvec-macos-amd64 version
             - name: "Prepare keychain for signing MacOS"
               env:
                   keypw: ${{ secrets.APPLEPW }}

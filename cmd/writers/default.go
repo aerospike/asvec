@@ -7,7 +7,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
-func NewDefaultWriter(writer io.Writer) *table.Writer {
+func NewDefaultWriter(writer io.Writer) table.Writer {
 	t := table.NewWriter()
 
 	t.SetOutputMirror(writer)
@@ -15,6 +15,7 @@ func NewDefaultWriter(writer io.Writer) *table.Writer {
 	t.SuppressEmptyColumns()
 	t.SetStyle(table.StyleRounded)
 	t.Style().Title.Align = text.AlignCenter
+	t.Style().Title.Colors = append(t.Style().Title.Colors, text.Bold)
 
-	return &t
+	return t
 }

@@ -16,7 +16,7 @@ var dropIndexRequiredFlags = []string{
 	flagNameNamespace,
 	flagNameIndexName,
 	flagNameDimension,
-	flagNameDistance,
+	flagNameDistanceMetric,
 }
 
 // dropIndexCmd represents the dropIndex command
@@ -32,16 +32,16 @@ to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// TODO: likely add to prerun step
 		seed := viper.GetString(flagNameSeeds)
-		port := viper.GetInt(flagNamePort)
-		hostPort := avs.NewHostPort(seed, port, false)
+		// port := viper.GetInt(flagNamePort)
+		hostPort := avs.NewHostPort(seed, 5002, false)
 		namespace := viper.GetString(flagNameNamespace)
 		indexName := viper.GetString(flagNameIndexName)
 		timeout := viper.GetDuration(flagNameTimeout)
 
-		logger.Debug("parsed flags",
-			slog.String("seeds", seed), slog.Int("port", port), slog.String("namespace", namespace),
-			slog.String("index-name", indexName), slog.Duration("timeout", timeout),
-		)
+		// logger.Debug("parsed flags",
+		// 	slog.String("seeds", seed), slog.Int("port", port), slog.String("namespace", namespace),
+		// 	slog.String("index-name", indexName), slog.Duration("timeout", timeout),
+		// )
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -74,7 +74,7 @@ func init() {
 
 	flags := NewFlagSetBuilder(dropIndexCmd.Flags())
 	flags.AddSeedFlag()
-	flags.AddPortFlag()
+	// flags.AddPortFlag()
 	flags.AddNamespaceFlag()
 	flags.AddIndexNameFlag()
 	flags.AddTimeoutFlag()

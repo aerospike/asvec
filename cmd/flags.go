@@ -2,27 +2,56 @@ package cmd
 
 import (
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-proximus-client-go/protos"
+	"github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const (
-	flagNameSeeds       = "seeds"
-	flagNamePort        = "port"
-	flagNameNamespace   = "namespace"
-	flagNameSets        = "sets"
-	flagNameIndexName   = "index-name"
-	flagNameVectorField = "vector-field"
-	flagNameDimension   = "dimension"
-	flagNameDistance    = "distance-metric"
-	flagNameIndexMeta   = "index-meta"
-	flagNameTimeout     = "timeout"
-	flagNameVerbose     = "verbose"
+	flagNameSeeds          = "seeds"
+	flagNameHost           = "host"
+	flagNameListenerName   = "listener-name"
+	flagNameNamespace      = "namespace"
+	flagNameSets           = "sets"
+	flagNameIndexName      = "index-name"
+	flagNameVectorField    = "vector-field"
+	flagNameDimension      = "dimension"
+	flagNameDistanceMetric = "distance-metric"
+	flagNameIndexMeta      = "index-meta"
+	flagNameTimeout        = "timeout"
+	flagNameVerbose        = "verbose"
 )
+
+func viperGetIfSetString(flagName string) *string {
+	if viper.IsSet(flagName) {
+		s := viper.GetString(flagName)
+		return &s
+	}
+
+	return nil
+}
+
+func viperGetIfSetBool(flagName string) *bool {
+	if viper.IsSet(flagName) {
+		s := viper.GetBool(flagName)
+		return &s
+	}
+
+	return nil
+}
+
+func viperGetIfSetUint32(flagName string) *uint32 {
+	if viper.IsSet(flagName) {
+		s := viper.GetUint32(flagName)
+		return &s
+	}
+
+	return nil
+}
 
 type FlagSetBuilder struct {
 	*pflag.FlagSet
@@ -36,11 +65,11 @@ func NewFlagSetBuilder(flagSet *pflag.FlagSet) *FlagSetBuilder {
 
 // TODO: Should this be a list of IPs? Should we support IP:PORT?
 func (fsb *FlagSetBuilder) AddSeedFlag() {
-	fsb.IPP(flagNameSeeds, "h", net.ParseIP("127.0.0.1"), "The AVS seed host for cluster discovery.")
+	fsb.StringArrayP(flagNameSeeds, "s", []string{}, flags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost)))
 }
 
-func (fsb *FlagSetBuilder) AddPortFlag() {
-	fsb.IntP(flagNamePort, "p", 5000, "The AVS seed port for cluster discovery.")
+func (fsb *FlagSetBuilder) AddHostFlag() {
+	fsb.StringP(flagNameHost, "h", "127.0.0.1:5000", fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flagNameSeeds))
 }
 
 func (fsb *FlagSetBuilder) AddNamespaceFlag() {
@@ -68,7 +97,7 @@ func (fsb *FlagSetBuilder) AddDimensionFlag() {
 
 func (fsb *FlagSetBuilder) AddDistanceMetricFlag() {
 	distMetric := DistanceMetricFlag("")
-	fsb.VarP(&distMetric, "distance-metric", "m", "The distance metric for the index.")
+	fsb.VarP(&distMetric, flagNameDistanceMetric, "m", "The distance metric for the index.")
 }
 
 func (fsb *FlagSetBuilder) AddIndexMetaFlag() {

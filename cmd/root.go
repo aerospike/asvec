@@ -16,7 +16,7 @@ import (
 var lvl = new(slog.LevelVar)
 var logLevelFlagName = "log-level"
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
-var view = NewView(os.Stdout)
+var view = NewView(os.Stdout, logger)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -58,6 +58,6 @@ func init() {
 	logLevel := LogLevelFlag("disabled")
 	rootCmd.PersistentFlags().Var(&logLevel, logLevelFlagName, "Log level for additional details and debugging")
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0")
-	viper.SetEnvPrefix("AVS")
+	viper.SetEnvPrefix("ASVEC")
 	viper.AutomaticEnv()
 }

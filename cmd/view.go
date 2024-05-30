@@ -5,16 +5,18 @@ import (
 	"asvec/cmd/writers"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/aerospike/aerospike-proximus-client-go/protos"
 )
 
 type View struct {
 	writer io.Writer
+	logger *slog.Logger
 }
 
-func NewView(writer io.Writer) *View {
-	return &View{writer: writer}
+func NewView(writer io.Writer, logger *slog.Logger) *View {
+	return &View{writer: writer, logger: logger}
 }
 
 func (v *View) Print(a ...any) {
@@ -45,7 +47,7 @@ func (v *View) Newline() {
 }
 
 func (v *View) getIndexListWriter(verbose bool) *writers.IndexTableWriter {
-	return writers.NewIndexTableWriter(v.writer, verbose)
+	return writers.NewIndexTableWriter(v.writer, verbose, v.logger)
 }
 
 func (v *View) PrintIndexes(indexList *protos.IndexDefinitionList, indexStatusList []*protos.IndexStatusResponse, verbose bool) {

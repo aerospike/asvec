@@ -30,14 +30,14 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		seed := viper.GetString(flagNameSeeds)
-		port := viper.GetInt(flagNamePort)
-		hostPort := avs.NewHostPort(seed, port, false)
+		// port := viper.GetInt(flagNamePort)
+		hostPort := avs.NewHostPort(seed, 5002, false)
 		timeout := viper.GetDuration(flagNameTimeout)
 		verbose := viper.GetBool(flagNameVerbose)
 
-		logger.Debug("parsed flags",
-			slog.String("seeds", seed), slog.Int("port", port), slog.Duration("timeout", timeout),
-		)
+		// logger.Debug("parsed flags",
+		// 	slog.String("seeds", seed), slog.Int("port", port), slog.Duration("timeout", timeout),
+		// )
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -49,6 +49,7 @@ to quickly create a Cobra application.`,
 		}
 
 		cancel()
+		defer adminClient.Close()
 
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -91,7 +92,7 @@ func init() {
 
 	flags := NewFlagSetBuilder(listIndexCmd.Flags())
 	flags.AddSeedFlag()
-	flags.AddPortFlag()
+	// flags.AddPortFlag()
 	flags.AddTimeoutFlag()
 	flags.AddVerbose()
 }

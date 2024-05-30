@@ -320,9 +320,9 @@ pkg-deb-amd64:
 	cp $(BIN_DIR)/asvec-linux-amd64 $(BIN_DIR)/asvec
 	rm -rf $(BIN_DIR)/deb
 	mkdir -p $(BIN_DIR)/deb/DEBIAN
-	mkdir -p $(BIN_DIR)/deb/usr/bin
+	mkdir -p $(BIN_DIR)/deb/usr/local/aerospike/bin
 	@ eval "$$amddebscript"
-	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/usr/bin/
+	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/usr/local/aerospike/bin/
 	sudo dpkg-deb -Zxz -b $(BIN_DIR)/deb
 	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.deb
 	mv $(BIN_DIR)/deb.deb $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.deb
@@ -333,9 +333,9 @@ pkg-deb-arm64:
 	cp $(BIN_DIR)/asvec-linux-arm64 $(BIN_DIR)/asvec
 	rm -rf $(BIN_DIR)/deb
 	mkdir -p $(BIN_DIR)/deb/DEBIAN
-	mkdir -p $(BIN_DIR)/deb/usr/bin
+	mkdir -p $(BIN_DIR)/deb/usr/local/aerospike/bin
 	@ eval "$$armdebscript"
-	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/usr/bin/
+	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/usr/local/aerospike/bin/
 	sudo dpkg-deb -Zxz -b $(BIN_DIR)/deb
 	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.deb
 	mv $(BIN_DIR)/deb.deb $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.deb

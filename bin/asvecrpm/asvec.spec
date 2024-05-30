@@ -1,9 +1,9 @@
 Buildroot: ./
-Name: aerolab
+Name: asvec
 Version: VERSIONHERE
 Release: 2
 Summary: Tool for deploying non-prod Aerospike server clusters on docker or in AWS
-License: see github.com/aerospike/aerolab
+License: see github.com/aerospike/asvec
 Group: aerospike
 
 %define _rpmdir ./
@@ -17,4 +17,4 @@ Group: aerospike
 Tool for deploying non-prod Aerospike server clusters on docker or in AWS
 
 %files
-"/usr/bin/aerolab"
+"/usr/local/aerospike/bin/asvec"

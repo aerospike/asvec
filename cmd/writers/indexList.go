@@ -21,9 +21,6 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 
 	if verbose {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged", "Storage", "Index Parameters"}, rowConfigAutoMerge)
-		// t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged", "Storage", "Storage", "HNSW", "HNSW", "HNSW", "HNSW", "HNSW", "HNSW"}, rowConfigAutoMerge)
-		// t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged", "Namespace", "Set", "Max Edges", "Ef", "Construction Ef", "Batch", "Batch", "Batch"}, rowConfigAutoMerge)
-		// t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged", "Namespace", "Set", "Max Edges", "Ef", "Construction Ef", "Max Records", "Interval", "Disabled"})
 	} else {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged"})
 	}
@@ -40,37 +37,9 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 	t.SetColumnConfigs([]table.ColumnConfig{
 		{
 
-			Number: 3,
-			// Name:        "Set",
+			Number:      3,
 			Transformer: removeNil,
-			// AutoMerge:   true,
 		},
-		// {
-		// 	Number:    8,
-		// 	Name:      "Namespace",
-		// 	AutoMerge: true,
-		// },
-		// {
-		// 	Number:    9,
-		// 	Name:      "Set",
-		// 	AutoMerge: true,
-		// },
-
-		// {Number: 1, AutoMerge: true},
-		// {Number: 2, AutoMerge: true},
-		// {Number: 3, AutoMerge: true},
-		// {Number: 4, AutoMerge: true},
-		// {Number: 5, AutoMerge: true},
-		// {Number: 6, AutoMerge: true},
-		// {Number: 7, AutoMerge: true},
-		// {Number: 8, AutoMerge: true},
-		// {Number: 9, AutoMerge: true},
-		// {Number: 10, AutoMerge: true},
-		// {Number: 11, AutoMerge: true},
-		// {Number: 12, AutoMerge: true},
-		// {Number: 13, AutoMerge: true},
-		// {Number: 14, AutoMerge: true},
-		// {Number: 15, AutoMerge: true},
 	})
 
 	return &t
@@ -87,7 +56,6 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 		tStorage.AppendRow(table.Row{"Set", index.Storage.GetSet()})
 
 		row = append(row, tStorage.Render())
-		// row = append(row, status.GetUnmergedRecordCount(), index.Storage.GetNamespace(), index.Storage.GetSet())
 
 		switch v := index.Params.(type) {
 		case *protos.IndexDefinition_HnswParams:
@@ -99,11 +67,8 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Construction Ef", v.HnswParams.GetEfConstruction()},
 				{"Batch Max Records", v.HnswParams.BatchingParams.GetMaxRecords()},
 				{"Batch Interval", v.HnswParams.BatchingParams.GetInterval()},
-				{"Batch Disabled", v.HnswParams.BatchingParams.GetDisabled()},
+				{"Batch Enabled", !v.HnswParams.BatchingParams.GetDisabled()},
 			})
-			// row = append(row, v.HnswParams.GetM(), v.HnswParams.GetEf(), v.HnswParams.GetEfConstruction(),
-			// 	v.HnswParams.BatchingParams.GetMaxRecords(), v.HnswParams.BatchingParams.GetInterval(),
-			// 	v.HnswParams.BatchingParams.GetDisabled())
 			row = append(row, tHNSW.Render())
 		default:
 			itw.logger.Warn("the server returned unrecognized index type params. recognized index param types are: HNSW")

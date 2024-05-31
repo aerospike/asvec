@@ -65,7 +65,7 @@ func NewFlagSetBuilder(flagSet *pflag.FlagSet) *FlagSetBuilder {
 
 // TODO: Should this be a list of IPs? Should we support IP:PORT?
 func (fsb *FlagSetBuilder) AddSeedFlag() {
-	fsb.StringArrayP(flagNameSeeds, "s", []string{}, flags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost)))
+	fsb.StringArray(flagNameSeeds, []string{}, flags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost)))
 }
 
 func (fsb *FlagSetBuilder) AddHostFlag() {

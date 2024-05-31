@@ -6,6 +6,8 @@ github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240509004238-aa3172c8
 github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240509004238-aa3172c86d65/go.mod h1:HcQ1MSWCBlL8Sk8jTmXCll2ISoKMEvVBMSDeK5Y70mc=
 github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240529232503-489d9ca9e839 h1:FZZ8WtD4roA8UOJetG7KkMFZYPYJv8Dle4NSM/Emo00=
 github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240529232503-489d9ca9e839/go.mod h1:N0kxd4FoYDbLOEwm8vWH6wKUkoR5v0Wp/v0+tUqoUMg=
+github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240530224737-115c3007bafa h1:+DUvX+HJvY4ZWEVXjlN14iwFBwPP8br0mDL8XPUO3E0=
+github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240530224737-115c3007bafa/go.mod h1:N0kxd4FoYDbLOEwm8vWH6wKUkoR5v0Wp/v0+tUqoUMg=
 github.com/aerospike/tools-common-go v0.0.0-20240425222921-596724ec5926 h1:CqkNasGC/7x5JvYjCSuAVX/rG+nUgRQtXfxIURXo5OE=
 github.com/aerospike/tools-common-go v0.0.0-20240425222921-596724ec5926/go.mod h1:Ig1lRynXx0tXNOY3MdtanTsKz1ifG/2AyDFMXn3RMTc=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=

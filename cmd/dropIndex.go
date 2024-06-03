@@ -5,86 +5,114 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"time"
 
 	avs "github.com/aerospike/aerospike-proximus-client-go"
+	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
+
+type diFlags struct {
+	host         *HostPortFlag
+	seeds        *SeedsSliceFlag
+	listenerName StringOptionalFlag
+	namespace    string
+	sets         []string
+	indexName    string
+	timeout      time.Duration
+}
+
+var dropIndexFlags = &diFlags{
+	host:  NewDefaultHostPortFlag(),
+	seeds: &SeedsSliceFlag{},
+}
+
+func newDropIndexFlagSet() *pflag.FlagSet {
+	flagSet := &pflag.FlagSet{}
+	flagSet.VarP(dropIndexFlags.host, flagNameHost, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flagNameSeeds)))
+	flagSet.Var(dropIndexFlags.seeds, flagNameSeeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost)))
+	flagSet.VarP(&dropIndexFlags.listenerName, flagNameListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))
+	flagSet.StringVarP(&dropIndexFlags.namespace, flagNameNamespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))
+	flagSet.StringArrayVarP(&dropIndexFlags.sets, flagNameSets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))
+	flagSet.StringVarP(&dropIndexFlags.indexName, flagNameIndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))
+	flagSet.DurationVar(&dropIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))
+
+	return flagSet
+}
 
 var dropIndexRequiredFlags = []string{
 	flagNameNamespace,
 	flagNameIndexName,
-	flagNameDimension,
-	flagNameDistanceMetric,
 }
 
 // dropIndexCmd represents the dropIndex command
-var dropIndexCmd = &cobra.Command{
-	Use:   "index",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
+func newDropIndexCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "index",
+		Short: "A brief description of your command",
+		Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: likely add to prerun step
-		seed := viper.GetString(flagNameSeeds)
-		// port := viper.GetInt(flagNamePort)
-		hostPort := avs.NewHostPort(seed, 5002, false)
-		namespace := viper.GetString(flagNameNamespace)
-		indexName := viper.GetString(flagNameIndexName)
-		timeout := viper.GetDuration(flagNameTimeout)
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
+				return fmt.Errorf(fmt.Sprintf("only --%s or --%s allowed", flagNameSeeds, flagNameHost))
+			}
 
-		// logger.Debug("parsed flags",
-		// 	slog.String("seeds", seed), slog.Int("port", port), slog.String("namespace", namespace),
-		// 	slog.String("index-name", indexName), slog.Duration("timeout", timeout),
-		// )
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			logger.Debug("parsed flags",
+				slog.String(flagNameHost, dropIndexFlags.host.String()),
+				slog.String(flagNameSeeds, dropIndexFlags.seeds.String()),
+				slog.String(flagNameListenerName, dropIndexFlags.listenerName.String()),
+				slog.String(flagNameNamespace, dropIndexFlags.namespace),
+				slog.Any(flagNameSets, dropIndexFlags.sets),
+				slog.String(flagNameIndexName, dropIndexFlags.indexName),
+				slog.Duration(flagNameTimeout, dropIndexFlags.timeout),
+			)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(*dropIndexFlags.seeds, *dropIndexFlags.host)
 
-		adminClient, err := avs.NewAdminClient(ctx, avs.HostPortSlice{hostPort}, nil, false, logger)
-		if err != nil {
-			logger.Error("failed to create AVS client", slog.Any("error", err))
-			return err
-		}
+			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
+			defer cancel()
 
-		cancel()
-		defer adminClient.Close()
+			adminClient, err := avs.NewAdminClient(ctx, hosts, nil, isLoadBalancer, logger)
+			if err != nil {
+				logger.Error("failed to create AVS client", slog.Any("error", err))
+				return err
+			}
 
-		ctx, cancel = context.WithTimeout(context.Background(), timeout)
-		defer cancel()
+			cancel()
+			defer adminClient.Close()
 
-		err = adminClient.IndexDrop(ctx, namespace, indexName)
-		if err != nil {
-			logger.Error("unable to drop index", slog.Any("error", err))
-			return err
-		}
+			ctx, cancel = context.WithTimeout(context.Background(), dropIndexFlags.timeout)
+			defer cancel()
 
-		view.Printf("Successfully dropped index %s.%s", namespace, indexName)
-		return nil
-	},
+			err = adminClient.IndexDrop(ctx, dropIndexFlags.namespace, dropIndexFlags.indexName)
+			if err != nil {
+				logger.Error("unable to drop index", slog.Any("error", err))
+				return err
+			}
+
+			view.Printf("Successfully dropped index %s.%s", dropIndexFlags.namespace, dropIndexFlags.indexName)
+			return nil
+		},
+	}
 }
 
 func init() {
+	dropIndexCmd := newDropIndexCommand()
 	dropCmd.AddCommand(dropIndexCmd)
+	dropIndexCmd.Flags().AddFlagSet(newDropIndexFlagSet())
 
-	flags := NewFlagSetBuilder(dropIndexCmd.Flags())
-	flags.AddSeedFlag()
-	// flags.AddPortFlag()
-	flags.AddNamespaceFlag()
-	flags.AddIndexNameFlag()
-	flags.AddTimeoutFlag()
-
-	var requiredFlags = []string{
-		flagNameNamespace,
-		flagNameIndexName,
-	}
-
-	for _, flag := range requiredFlags {
+	for _, flag := range dropIndexRequiredFlags {
 		dropIndexCmd.MarkFlagRequired(flag)
 	}
 }

@@ -5,18 +5,25 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 
 	common "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 var lvl = new(slog.LevelVar)
-var logLevelFlagName = "log-level"
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout, logger)
+
+type rootFlags_ struct {
+	logLevel LogLevelFlag
+}
+
+var rootFlags = &rootFlags_{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -28,20 +35,37 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		cmd.SilenceUsage = true
-		viper.BindPFlags(cmd.PersistentFlags())
-		viper.BindPFlags(cmd.Flags())
-
-		if viper.IsSet(logLevelFlagName) {
-			level := viper.GetString(logLevelFlagName)
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if rootFlags.logLevel.NotSet() {
+			lvl.Set(slog.LevelError + 1) // disable all logging
+		} else {
+			level := rootFlags.logLevel
 			handler := logger.Handler()
 			lvl.UnmarshalText([]byte(level))
 
 			handler.Enabled(context.Background(), lvl.Level())
-		} else {
-			lvl.Set(slog.LevelError + 1) // disable all logging
 		}
+
+		cmd.SilenceUsage = true
+		viper.BindPFlags(cmd.PersistentFlags())
+		viper.BindPFlags(cmd.Flags())
+
+		var persistedErr error
+		flags := cmd.Flags()
+
+		flags.VisitAll(func(f *pflag.Flag) {
+			val := viper.GetString(f.Name)
+
+			// Apply the viper config value to the flag when viper has a value
+			if viper.IsSet(f.Name) && !f.Changed {
+				if err := f.Value.Set(val); err != nil {
+					persistedErr = fmt.Errorf("failed to parse flag %s: %s", f.Name, err)
+				}
+			}
+		})
+
+		return persistedErr
+
 	},
 }
 
@@ -55,9 +79,9 @@ func Execute() {
 }
 
 func init() {
-	logLevel := LogLevelFlag("disabled")
-	rootCmd.PersistentFlags().Var(&logLevel, logLevelFlagName, "Log level for additional details and debugging")
+	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, logLevelFlagName, "Log level for additional details and debugging")
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0")
 	viper.SetEnvPrefix("ASVEC")
-	viper.AutomaticEnv()
+	viper.BindEnv(flagNameHost)
+	viper.BindEnv(flagNameSeeds)
 }

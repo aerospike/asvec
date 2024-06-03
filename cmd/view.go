@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	// "asvec/cmd/writers"
 	"asvec/cmd/writers"
 	"fmt"
 	"io"
@@ -20,7 +19,7 @@ func NewView(writer io.Writer, logger *slog.Logger) *View {
 }
 
 func (v *View) Print(a ...any) {
-	_, err := v.writer.Write([]byte(fmt.Sprint(a...)))
+	_, err := fmt.Fprint(v.writer, a...)
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +49,11 @@ func (v *View) getIndexListWriter(verbose bool) *writers.IndexTableWriter {
 	return writers.NewIndexTableWriter(v.writer, verbose, v.logger)
 }
 
-func (v *View) PrintIndexes(indexList *protos.IndexDefinitionList, indexStatusList []*protos.IndexStatusResponse, verbose bool) {
+func (v *View) PrintIndexes(
+	indexList *protos.IndexDefinitionList,
+	indexStatusList []*protos.IndexStatusResponse,
+	verbose bool,
+) {
 	t := v.getIndexListWriter(verbose)
 
 	for i, index := range indexList.Indices {

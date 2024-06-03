@@ -18,26 +18,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-type liFlags struct {
+var listIndexFlags = &struct {
 	host         *HostPortFlag
 	seeds        *SeedsSliceFlag
 	listenerName StringOptionalFlag
 	verbose      bool
 	timeout      time.Duration
-}
-
-var listIndexFlags = &liFlags{
+}{
 	host:  NewDefaultHostPortFlag(),
 	seeds: &SeedsSliceFlag{},
 }
 
 func newListIndexFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.VarP(listIndexFlags.host, flagNameHost, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flagNameSeeds)))
-	flagSet.Var(listIndexFlags.seeds, flagNameSeeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost)))
-	flagSet.VarP(&listIndexFlags.listenerName, flagNameListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))
-	flagSet.BoolVarP(&listIndexFlags.verbose, flagNameVerbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))
-	flagSet.DurationVar(&listIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))
+	flagSet.VarP(listIndexFlags.host, flagNameHost, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flagNameSeeds)))                                         //nolint:lll // For readability
+	flagSet.Var(listIndexFlags.seeds, flagNameSeeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost))) //nolint:lll // For readability
+	flagSet.VarP(&listIndexFlags.listenerName, flagNameListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))         //nolint:lll // For readability
+	flagSet.BoolVarP(&listIndexFlags.verbose, flagNameVerbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))                                                                                     //nolint:lll // For readability
+	flagSet.DurationVar(&listIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                              //nolint:lll // For readability
 
 	return flagSet
 }
@@ -57,14 +55,14 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
-				return fmt.Errorf(fmt.Sprintf("only --%s or --%s allowed", flagNameSeeds, flagNameHost))
+				return fmt.Errorf("only --%s or --%s allowed", flagNameSeeds, flagNameHost)
 			}
 
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				slog.String(flagNameHost, listIndexFlags.host.String()),
 				slog.String(flagNameSeeds, listIndexFlags.seeds.String()),
@@ -111,7 +109,11 @@ to quickly create a Cobra application.`,
 						defer wg.Done()
 						indexStatus, err := adminClient.IndexGetStatus(ctx, index.Id.Namespace, index.Id.Name)
 						if err != nil {
-							logger.ErrorContext(ctx, "failed to get index status", slog.Any("error", err), slog.String("index", index.Id.String()))
+							logger.ErrorContext(ctx,
+								"failed to get index status",
+								slog.Any("error", err),
+								slog.String("index", index.Id.String()),
+							)
 							return
 						}
 
@@ -139,6 +141,9 @@ func init() {
 	listIndexCmd.Flags().AddFlagSet(newListIndexFlagSet())
 
 	for _, flag := range listIndexRequiredFlags {
-		listIndexCmd.MarkFlagRequired(flag)
+		err := listIndexCmd.MarkFlagRequired(flag)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

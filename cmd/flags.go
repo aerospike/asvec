@@ -270,7 +270,6 @@ func (slice *SeedsSliceFlag) String() string {
 }
 
 func parseBothHostSeedsFlag(seeds SeedsSliceFlag, host HostPortFlag) (avs.HostPortSlice, bool) {
-
 	isLoadBalancer := false
 	hosts := avs.HostPortSlice{}
 
@@ -282,11 +281,14 @@ func parseBothHostSeedsFlag(seeds SeedsSliceFlag, host HostPortFlag) (avs.HostPo
 		logger.Debug("hosts is set")
 
 		isLoadBalancer = true
+
 		hosts = append(hosts, &host.HostPort)
 	}
 
 	return hosts, isLoadBalancer
 }
+
+const optionalEmptyString = "<nil>"
 
 type StringOptionalFlag struct {
 	Val *string
@@ -306,7 +308,7 @@ func (f *StringOptionalFlag) String() string {
 		return *f.Val
 	}
 
-	return "<nil>"
+	return optionalEmptyString
 }
 
 type Uint32OptionalFlag struct {
@@ -317,6 +319,7 @@ func (f *Uint32OptionalFlag) Set(val string) error {
 	v, err := strconv.ParseUint(val, 0, 32)
 	u32Val := uint32(v)
 	f.Val = &u32Val
+
 	return err
 }
 
@@ -329,7 +332,7 @@ func (f *Uint32OptionalFlag) String() string {
 		return strconv.FormatUint(uint64(*f.Val), 10)
 	}
 
-	return "<nil>"
+	return optionalEmptyString
 }
 
 type BoolOptionalFlag struct {
@@ -339,6 +342,7 @@ type BoolOptionalFlag struct {
 func (f *BoolOptionalFlag) Set(val string) error {
 	v, err := strconv.ParseBool(val)
 	f.Val = &v
+
 	return err
 }
 
@@ -351,5 +355,5 @@ func (f *BoolOptionalFlag) String() string {
 		return strconv.FormatBool(*f.Val)
 	}
 
-	return "<nil>"
+	return optionalEmptyString
 }

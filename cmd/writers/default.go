@@ -14,8 +14,10 @@ func NewDefaultWriter(writer io.Writer) table.Writer {
 	t.AppendSeparator()
 	t.SuppressEmptyColumns()
 	t.SetStyle(table.StyleRounded)
-	t.Style().Title.Align = text.AlignCenter
+
 	t.Style().Title.Colors = append(t.Style().Title.Colors, text.Bold)
+
+	t.Style().Title.Align = text.AlignCenter
 
 	return t
 }

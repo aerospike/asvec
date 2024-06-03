@@ -10,6 +10,7 @@ import (
 
 var rowConfigAutoMerge = table.RowConfig{AutoMerge: true}
 
+//nolint:govet // Padding not a concern for a CLI
 type IndexTableWriter struct {
 	table.Writer
 	verbose bool
@@ -20,20 +21,19 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 	t := IndexTableWriter{NewDefaultWriter(writer), verbose, logger}
 
 	if verbose {
-		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged", "Storage", "Index Parameters"}, rowConfigAutoMerge)
+		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions",
+			"Distance Metric", "Unmerged", "Storage", "Index Parameters"}, rowConfigAutoMerge)
 	} else {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged"})
 	}
 
 	t.SetTitle("Indexes")
-	t.Style().Options.SeparateRows = true
 	t.SetAutoIndex(true)
 	t.SortBy([]table.SortBy{
 		{Name: "Namespace", Mode: table.Asc},
 		{Name: "Set", Mode: table.Asc},
 		{Name: "Name", Mode: table.Asc},
 	})
-
 	t.SetColumnConfigs([]table.ColumnConfig{
 		{
 
@@ -41,6 +41,8 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 			Transformer: removeNil,
 		},
 	})
+
+	t.Style().Options.SeparateRows = true
 
 	return &t
 }
@@ -69,6 +71,7 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Batch Interval", v.HnswParams.BatchingParams.GetInterval()},
 				{"Batch Enabled", !v.HnswParams.BatchingParams.GetDisabled()},
 			})
+
 			row = append(row, tHNSW.Render())
 		default:
 			itw.logger.Warn("the server returned unrecognized index type params. recognized index param types are: HNSW")

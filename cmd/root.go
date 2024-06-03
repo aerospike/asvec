@@ -19,11 +19,9 @@ var lvl = new(slog.LevelVar)
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout, logger)
 
-type rootFlags_ struct {
+var rootFlags = &struct {
 	logLevel LogLevelFlag
-}
-
-var rootFlags = &rootFlags_{}
+}{}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -35,20 +33,30 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging
 		} else {
 			level := rootFlags.logLevel
 			handler := logger.Handler()
-			lvl.UnmarshalText([]byte(level))
+
+			err := lvl.UnmarshalText([]byte(level))
+			if err != nil {
+				return err
+			}
 
 			handler.Enabled(context.Background(), lvl.Level())
 		}
 
 		cmd.SilenceUsage = true
-		viper.BindPFlags(cmd.PersistentFlags())
-		viper.BindPFlags(cmd.Flags())
+
+		if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
+			return err
+		}
+
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			return err
+		}
 
 		var persistedErr error
 		flags := cmd.Flags()
@@ -82,6 +90,12 @@ func init() {
 	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, logLevelFlagName, "Log level for additional details and debugging")
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0")
 	viper.SetEnvPrefix("ASVEC")
-	viper.BindEnv(flagNameHost)
-	viper.BindEnv(flagNameSeeds)
+
+	if err := viper.BindEnv(flagNameHost); err != nil {
+		logger.Error("failed to bind environment variable", slog.Any("error", err))
+	}
+
+	if err := viper.BindEnv(flagNameSeeds); err != nil {
+		logger.Error("failed to bind environment variable", slog.Any("error", err))
+	}
 }

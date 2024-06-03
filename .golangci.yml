@@ -11,7 +11,7 @@ linters-settings:
       - performance
       - style
   govet:
-    check-shadowing: true
+    shadow: true
     enable:
       - fieldalignment
   nolintlint:
@@ -22,7 +22,13 @@ linters-settings:
       Main:
         allow:
           - $gostd
-          - github.com/aerospike/aerospike-proximus-client-go/protos
+          - github.com/aerospike/tools-common-go
+          - github.com/aerospike/aerospike-proximus-client-go
+          - asvec/cmd
+          - github.com/spf13/cobra
+          - github.com/spf13/viper
+          - github.com/spf13/pflag
+          - github.com/jedib0t/go-pretty
 
 linters:
   disable-all: true

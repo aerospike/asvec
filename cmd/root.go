@@ -26,13 +26,11 @@ var rootFlags = &struct {
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "asvec",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Aerospike Vector Search CLI",
+	Long: `Welcome to the AVS Deployment Manager CLI Tool!
+	To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
+	Should you encounter any issues or have questions, feel free to report them via GitHub issues.
+	Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.`,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging
@@ -73,7 +71,6 @@ to quickly create a Cobra application.`,
 		})
 
 		return persistedErr
-
 	},
 }
 

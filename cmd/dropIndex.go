@@ -52,13 +52,14 @@ var dropIndexRequiredFlags = []string{
 func newDropIndexCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "index",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+		Short: "A command for dropping indexes",
+		Long: `A command for dropping indexes. Deleting an index will free up 
+		storage but will also disable vector search on your data.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+		For example:
+			export ASVEC_HOST=<avs-ip>:5000
+			asvec drop index -i myindex -n test
+			`,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
 				return fmt.Errorf("only --%s or --%s allowed", flagNameSeeds, flagNameHost)

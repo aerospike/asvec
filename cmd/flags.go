@@ -149,7 +149,6 @@ func parseHostPort(v string) (*avs.HostPort, error) {
 					var intPort int64
 
 					intPort, err = strconv.ParseInt(match, 0, 0)
-
 					if err == nil {
 						host.Port = int(intPort)
 					}
@@ -158,6 +157,10 @@ func parseHostPort(v string) (*avs.HostPort, error) {
 				if err != nil {
 					return host, fmt.Errorf("failed to parse %s : %s", name, err)
 				}
+			}
+
+			if host.Port == 0 {
+				host.Port = DefaultPort
 			}
 
 			return host, nil

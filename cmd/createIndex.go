@@ -88,13 +88,18 @@ var createIndexRequiredFlags = []string{
 func newCreateIndexCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "index",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+		Short: "A command for creating indexes",
+		Long: `A command for creating indexes. An index is required to enable vector 
+		search on your data. The index tells AVS where your data is located, 
+		what your vectors look like, and how vectors should be compared to each other. 
+		You can optionally tweak where your index is stored, and how the HNSW algorithm 
+		behaves.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+		For example:
+			export ASVEC_HOST=<avs-ip>:5000
+			asvec create index -i myindex -n test -s testset -d 256 -m COSINE --vector-field vector \
+				--storage-namespace test --hnsw-batch-enabled false
+			`,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
 				return fmt.Errorf("only --%s or --%s allowed", flagNameSeeds, flagNameHost)

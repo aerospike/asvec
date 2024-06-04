@@ -40,21 +40,18 @@ func newListIndexFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var listIndexRequiredFlags = []string{
-	flagNameNamespace,
-	flagNameIndexName,
-}
+var listIndexRequiredFlags = []string{}
 
 // listIndexCmd represents the listIndex command
 func newListIndexCmd() *cobra.Command {
 	return &cobra.Command{Use: "index",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+		Short: "A command for listing indexes",
+		Long: fmt.Sprintf(`A command for displaying useful information about AVS indexes. To display additional
+		index information use the --%s flag.
+	For example:
+		export ASVEC_HOST=<avs-ip>:5000
+		asvec list index
+		`, flagNameVerbose),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
 				return fmt.Errorf("only --%s or --%s allowed", flagNameSeeds, flagNameHost)

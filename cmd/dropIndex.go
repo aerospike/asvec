@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
@@ -18,16 +19,16 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var dropIndexFlags = &struct {
-	host         *HostPortFlag
-	seeds        *SeedsSliceFlag
-	listenerName StringOptionalFlag
+	host         *flags.HostPortFlag
+	seeds        *flags.SeedsSliceFlag
+	listenerName flags.StringOptionalFlag
 	namespace    string
 	sets         []string
 	indexName    string
 	timeout      time.Duration
 }{
-	host:  NewDefaultHostPortFlag(),
-	seeds: &SeedsSliceFlag{},
+	host:  flags.NewDefaultHostPortFlag(),
+	seeds: &flags.SeedsSliceFlag{},
 }
 
 func newDropIndexFlagSet() *pflag.FlagSet {

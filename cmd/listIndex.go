@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
@@ -19,14 +20,14 @@ import (
 )
 
 var listIndexFlags = &struct {
-	host         *HostPortFlag
-	seeds        *SeedsSliceFlag
-	listenerName StringOptionalFlag
+	host         *flags.HostPortFlag
+	seeds        *flags.SeedsSliceFlag
+	listenerName flags.StringOptionalFlag
 	verbose      bool
 	timeout      time.Duration
 }{
-	host:  NewDefaultHostPortFlag(),
-	seeds: &SeedsSliceFlag{},
+	host:  flags.NewDefaultHostPortFlag(),
+	seeds: &flags.SeedsSliceFlag{},
 }
 
 func newListIndexFlagSet() *pflag.FlagSet {

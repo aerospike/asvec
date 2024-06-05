@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
@@ -19,36 +20,36 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var createIndexFlags = &struct {
-	host                *HostPortFlag
-	seeds               *SeedsSliceFlag
-	listenerName        StringOptionalFlag
+	host                *flags.HostPortFlag
+	seeds               *flags.SeedsSliceFlag
+	listenerName        flags.StringOptionalFlag
 	namespace           string
 	sets                []string
 	indexName           string
 	vectorField         string
 	dimensions          uint32
-	distanceMetric      DistanceMetricFlag
+	distanceMetric      flags.DistanceMetricFlag
 	indexMeta           map[string]string
-	storageNamespace    StringOptionalFlag
-	storageSet          StringOptionalFlag
-	hnswMaxEdges        Uint32OptionalFlag
-	hnswEf              Uint32OptionalFlag
-	hnswConstructionEf  Uint32OptionalFlag
-	hnswBatchMaxRecords Uint32OptionalFlag
-	hnswBatchInterval   Uint32OptionalFlag
-	hnswBatchEnabled    BoolOptionalFlag
+	storageNamespace    flags.StringOptionalFlag
+	storageSet          flags.StringOptionalFlag
+	hnswMaxEdges        flags.Uint32OptionalFlag
+	hnswEf              flags.Uint32OptionalFlag
+	hnswConstructionEf  flags.Uint32OptionalFlag
+	hnswBatchMaxRecords flags.Uint32OptionalFlag
+	hnswBatchInterval   flags.Uint32OptionalFlag
+	hnswBatchEnabled    flags.BoolOptionalFlag
 	timeout             time.Duration
 }{
-	host:                NewDefaultHostPortFlag(),
-	seeds:               &SeedsSliceFlag{},
-	storageNamespace:    StringOptionalFlag{},
-	storageSet:          StringOptionalFlag{},
-	hnswMaxEdges:        Uint32OptionalFlag{},
-	hnswEf:              Uint32OptionalFlag{},
-	hnswConstructionEf:  Uint32OptionalFlag{},
-	hnswBatchMaxRecords: Uint32OptionalFlag{},
-	hnswBatchInterval:   Uint32OptionalFlag{},
-	hnswBatchEnabled:    BoolOptionalFlag{},
+	host:                flags.NewDefaultHostPortFlag(),
+	seeds:               &flags.SeedsSliceFlag{},
+	storageNamespace:    flags.StringOptionalFlag{},
+	storageSet:          flags.StringOptionalFlag{},
+	hnswMaxEdges:        flags.Uint32OptionalFlag{},
+	hnswEf:              flags.Uint32OptionalFlag{},
+	hnswConstructionEf:  flags.Uint32OptionalFlag{},
+	hnswBatchMaxRecords: flags.Uint32OptionalFlag{},
+	hnswBatchInterval:   flags.Uint32OptionalFlag{},
+	hnswBatchEnabled:    flags.BoolOptionalFlag{},
 }
 
 func newCreateIndexFlagSet() *pflag.FlagSet {

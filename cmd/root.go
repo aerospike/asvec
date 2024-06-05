@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
@@ -20,7 +21,7 @@ var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level:
 var view = NewView(os.Stdout, logger)
 
 var rootFlags = &struct {
-	logLevel LogLevelFlag
+	logLevel flags.LogLevelFlag
 }{}
 
 // rootCmd represents the base command when called without any subcommands
@@ -85,7 +86,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, logLevelFlagName, "Log level for additional details and debugging")
-	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0")
+	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
 	if err := viper.BindEnv(flagNameHost); err != nil {

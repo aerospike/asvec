@@ -1,4 +1,4 @@
-/docker/*
+/docker/config/features.conf
 /bin/*
 embed_*.go
 /tmp

@@ -1,3 +1,5 @@
+//go:build unit
+
 package flags
 
 import (
@@ -35,10 +37,14 @@ func (suite *LogLevelSuite) TestSet() {
 
 func (suite *LogLevelSuite) TestType() {
 	flag := LogLevelFlag("")
-	suite.Equal("DEBUG,INFO,WARN,ERROR", flag.Type())
+	suite.Equal("enum", flag.Type())
 }
 
 func (suite *LogLevelSuite) TestString() {
 	flag := LogLevelFlag("DEBUG")
 	suite.Equal("DEBUG", flag.String())
+}
+
+func (suite *LogLevelSuite) TestLogLevelEnum() {
+	suite.Equal([]string{"DEBUG", "INFO", "WARN", "ERROR"}, LogLevelEnum())
 }

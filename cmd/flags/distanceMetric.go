@@ -24,6 +24,14 @@ func (f *DistanceMetricFlag) Set(val string) error {
 }
 
 func (f *DistanceMetricFlag) Type() string {
+	return "enum"
+}
+
+func (f *DistanceMetricFlag) String() string {
+	return string(*f)
+}
+
+func DistanceMetricEnum() []string {
 	names := []string{}
 
 	for key := range distanceMetricSet {
@@ -32,9 +40,5 @@ func (f *DistanceMetricFlag) Type() string {
 
 	slices.Sort(names)
 
-	return strings.Join(names, ",")
-}
-
-func (f *DistanceMetricFlag) String() string {
-	return string(*f)
+	return names
 }

@@ -1,3 +1,5 @@
+//go:build integration
+
 package main_test
 
 import (
@@ -7,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -103,14 +104,8 @@ func (suite *CmdTestSuite) TearDownSuite() {
 }
 
 func (suite *CmdTestSuite) runCmd(asvecCmd ...string) ([]string, error) {
-	strs := strings.Split(suite.coverFile, ".")
-	file := strs[len(strs)-2] + "-" + strconv.Itoa(suite.coverFileCounter) + "." + strs[len(strs)-1]
-	suite.coverFileCounter++
-	var args []string
-	args = []string{"-test.coverprofile=" + file}
-	args = append(args, asvecCmd...)
-
-	cmd := exec.Command(suite.app, args...)
+	cmd := exec.Command(suite.app, asvecCmd...)
+	cmd.Env = []string{"GOCOVERDIR=" + os.Getenv("COVERAGE_DIR")}
 	stdout, err := cmd.Output()
 	// fmt.Printf("stdout: %v", string(stdout))
 
@@ -274,7 +269,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 	testCases := []struct {
 		name           string
-		indexName      string
+		indexName      string // index names must be unique for the suite
 		indexNamespace string
 		cmd            string
 		expected_index *protos.IndexDefinition
@@ -311,16 +306,6 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswBatchingDisabled(true).
 				Build(),
 		},
-		// {
-		// 	"test every arg",
-		// 	"index1",
-		// 	"test",
-		// 	fmt.Sprintf("create index --host %s -n test -i index2 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector2 --hnsw-batch-enabled false --storage-namespace bar", suite.avsHostPort.String()),
-		// 	NewIndexDefinitionBuilder("index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
-		// 		WithStorageNamespace("bar").
-		// 		WithHnswBatchingDisabled(true).
-		// 		Build(),
-		// },
 	}
 
 	for _, tc := range testCases {
@@ -342,7 +327,6 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestCreateIndexFailsAlreadyExistsCmd() {
-
 	lines, err := suite.runCmd(strings.Split(fmt.Sprintf("create index --seeds %s -n test -i exists -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10s", suite.avsHostPort.String()), " ")...)
 	suite.Assert().NoError(err, "index should have NOT existed on first call. error: %s, stdout/err: %s", err, lines)
 
@@ -352,21 +336,125 @@ func (suite *CmdTestSuite) TestCreateIndexFailsAlreadyExistsCmd() {
 	suite.Assert().Contains(lines[0], "AlreadyExists")
 }
 
-func (suite *CmdTestSuite) TestFailInvalidArgCreateIndexCmd() {
+func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
+	testCases := []struct {
+		name           string
+		indexName      string // index names must be unique for the suite
+		indexNamespace string
+		indexSet       []string
+		cmd            string
+	}{
+		{
+			"test with just namespace",
+			"indexdrop1",
+			"test",
+			nil,
+			fmt.Sprintf("drop index --seeds %s -n test -i indexdrop1 --timeout 10s", suite.avsHostPort.String()),
+		},
+		{
+			"test with set",
+			"indexdrop2",
+			"test",
+			[]string{
+				"testset",
+			},
+			fmt.Sprintf("drop index --seeds %s -n test -s testset -i indexdrop2 --timeout 10s", suite.avsHostPort.String()),
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			err := suite.avsClient.IndexCreate(context.Background(), tc.indexNamespace, tc.indexSet, tc.indexName, "vector", 1, protos.VectorDistanceMetric_COSINE, nil, nil, nil)
+			if err != nil {
+				suite.FailNowf("unable to create index", "%v", err)
+			}
+
+			lines, err := suite.runCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+
+			_, err = suite.avsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+
+			time.Sleep(time.Second)
+
+			if err == nil {
+				suite.FailNow("err is nil, that means the index still exists")
+			}
+		})
+	}
+}
+
+func (suite *CmdTestSuite) TestDropIndexFailsDoesNotExistCmd() {
+	lines, err := suite.runCmd(strings.Split(fmt.Sprintf("drop index --seeds %s -n test -i DNE --timeout 10s", suite.avsHostPort.String()), " ")...)
+
+	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
+	suite.Assert().Contains(lines[0], "server error")
+}
+
+func (suite *CmdTestSuite) TestFailInvalidArg() {
 	testCases := []struct {
 		name   string
 		cmd    string
 		errStr string
 	}{
 		{
-			"test with storage config",
+			"use seeds and hosts together",
 			fmt.Sprintf("create index --seeds %s --host 1.1.1.1:3001 -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10s", suite.avsHostPort.String()),
 			"Error: only --seeds or --host allowed",
 		},
 		{
-			"test with storage config",
+			"use seeds and hosts together",
+			fmt.Sprintf("list index --seeds %s --host 1.1.1.1:3001", suite.avsHostPort.String()),
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			fmt.Sprintf("drop index --seeds %s --host 1.1.1.1:3001 -n test -i index1", suite.avsHostPort.String()),
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"test with bad dimension",
 			"create index --host 1.1.1.1:3001  -n test -i index1 -d -1 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10s",
 			"Error: invalid argument \"-1\" for \"-d, --dimension\"",
+		},
+		{
+			"test with bad distance metric",
+			"create index --host 1.1.1.1:3001  -n test -i index1 -d 10 -m BAD --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10s",
+			"Error: invalid argument \"BAD\" for \"-m, --distance-metric\"",
+		},
+		{
+			"test with bad timeout",
+			"create index --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"10\" for \"--timeout\"",
+		},
+		{
+			"test with bad hnsw-batch-enabled",
+			"create index --hnsw-batch-enabled foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"foo\" for \"--hnsw-batch-enabled\"",
+		},
+		{
+			"test with bad hnsw-batch-interval",
+			"create index --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
+		},
+		{
+			"test with bad hnsw-batch-max-records",
+			"create index --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
+		},
+		{
+			"test with bad hnsw-ef",
+			"create index --hnsw-ef foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"foo\" for \"--hnsw-ef\"",
+		},
+		{
+			"test with bad hnsw-ef-construction",
+			"create index --hnsw-ef-construction foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"foo\" for \"--hnsw-ef-construction\"",
+		},
+		{
+			"test with bad hnsw-max-edges",
+			"create index --hnsw-max-edges foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			"Error: invalid argument \"foo\" for \"--hnsw-max-edges\"",
 		},
 	}
 

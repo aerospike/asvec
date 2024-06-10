@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	common "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
@@ -85,7 +86,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, logLevelFlagName, "Log level for additional details and debugging")
+	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, logLevelFlagName, common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))))
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 

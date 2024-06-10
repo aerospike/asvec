@@ -35,6 +35,14 @@ func (f *LogLevelFlag) Set(val string) error {
 }
 
 func (f *LogLevelFlag) Type() string {
+	return "enum"
+}
+
+func (f *LogLevelFlag) String() string {
+	return string(*f)
+}
+
+func LogLevelEnum() []string {
 	names := []string{}
 
 	for key := range logLevelSet {
@@ -45,9 +53,5 @@ func (f *LogLevelFlag) Type() string {
 		return logLevelSet[names[i]] < logLevelSet[names[j]]
 	})
 
-	return strings.Join(names, ",")
-}
-
-func (f *LogLevelFlag) String() string {
-	return string(*f)
+	return names
 }

@@ -1,3 +1,5 @@
+//go:build unit
+
 package flags
 
 import (
@@ -60,7 +62,7 @@ func (suite *DistanceMetricFlagTestSuite) TestSet() {
 
 func (suite *DistanceMetricFlagTestSuite) TestType() {
 	flag := DistanceMetricFlag("")
-	suite.Equal("COSINE,DOT_PRODUCT,HAMMING,MANHATTAN,SQUARED_EUCLIDEAN", flag.Type())
+	suite.Equal("enum", flag.Type())
 }
 
 func (suite *DistanceMetricFlagTestSuite) TestString() {
@@ -72,6 +74,10 @@ func (suite *DistanceMetricFlagTestSuite) TestString() {
 
 	flag = DistanceMetricFlag("manhattan")
 	suite.Equal("manhattan", flag.String())
+}
+
+func (suite *DistanceMetricFlagTestSuite) TestDistanceMetricEnum() {
+	suite.Equal([]string{"COSINE", "DOT_PRODUCT", "HAMMING", "MANHATTAN", "SQUARED_EUCLIDEAN"}, DistanceMetricEnum())
 }
 
 func TestDistanceMetricFlagSuite(t *testing.T) {

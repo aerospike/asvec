@@ -2,3 +2,5 @@
 /bin/*
 embed_*.go
 /tmp
+/vendor
+/coverage

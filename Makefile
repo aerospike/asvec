@@ -1,5 +1,7 @@
 .NOTPARALLEL:
 
+# TODO: move build/pkg related makefile jobs to pkg/
+
 ## requirements: make dpkg rpmbuild upx golang zip wget jq
 ## macos pkg requirement: https://docker-laptop.s3.eu-west-1.amazonaws.com/Packages.pkg
 
@@ -9,7 +11,11 @@ INSTALLSIGNER := "$(asvec_installsigner)"
 APPLEID := "$(asvec_appleid)"
 APPLEPW := "$(asvec_applepw)"
 TEAMID := "$(asvec_teamid)"
+ROOT_DIR = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BIN_DIR = ./bin
+COVERAGE_DIR = $(ROOT_DIR)/coverage
+COV_UNIT_DIR = $(COVERAGE_DIR)/unit
+COV_INTEGRATION_DIR = $(COVERAGE_DIR)/integration
 
 ## available make commands
 .PHONY: help
@@ -489,3 +495,26 @@ macos-pkg-notarize:
 
 ### make cleanall && make build-prerelease && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 ### make cleanall && make build-official && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
+
+.PHONY: test
+test: integration unit
+
+.PHONY: integration
+integration:
+	mkdir -p $(COV_INTEGRATION_DIR) || true
+	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m 
+
+.PHONY: unit
+unit:
+	mkdir -p $(COV_UNIT_DIR) || true
+	go test -tags=unit -cover ./... -args -test.gocoverdir=$(COV_UNIT_DIR)
+
+.PHONY: coverage
+coverage: test
+	go tool covdata textfmt -i="$(COV_INTEGRATION_DIR),$(COV_UNIT_DIR)" -o=$(COVERAGE_DIR)/total.cov
+	go tool cover -func=$(COVERAGE_DIR)/total.cov
+
+
+PHONY: view-coverage
+view-coverage: $(COVERAGE_DIR)/total.cov
+	go tool cover -html=$(COVERAGE_DIR)/total.cov

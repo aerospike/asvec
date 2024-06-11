@@ -25,9 +25,9 @@ jobs:
     - name: Run tests
       run: |
         make coverage
-    # - name: Upload coverage to Codecov // Add when public
-    #   uses: codecov/codecov-action@v3
-    #   with:
-    #     token: ${{secrets.CODECOV_TOKEN}}
-    #     files: testdata/coverage/total.cov
-    #     verbose: false
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        files: ./coverage/total.cov
+        verbose: false

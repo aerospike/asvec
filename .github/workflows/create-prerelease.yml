@@ -1,9 +1,6 @@
 name: Build and Create Pre-Release
 
 on:
-    push:
-        branches: VEC-168-init
-
     workflow_dispatch:
         inputs:
             addCommit:

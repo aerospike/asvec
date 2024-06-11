@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -139,6 +140,7 @@ func getBoolPtr(b bool) *bool {
 type IndexDefinitionBuilder struct {
 	indexName             string
 	namespace             string
+	set                   *string
 	dimension             int
 	vectorDistanceMetric  protos.VectorDistanceMetric
 	vectorField           string
@@ -166,6 +168,11 @@ func NewIndexDefinitionBuilder(
 		vectorDistanceMetric: distanceMetric,
 		vectorField:          vectorField,
 	}
+}
+
+func (idb *IndexDefinitionBuilder) WithSet(set string) *IndexDefinitionBuilder {
+	idb.set = &set
+	return idb
 }
 
 func (idb *IndexDefinitionBuilder) WithStorageNamespace(storageNamespace string) *IndexDefinitionBuilder {
@@ -234,6 +241,10 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				},
 			},
 		},
+	}
+
+	if idb.set != nil {
+		indexDef.SetFilter = idb.set
 	}
 
 	if idb.storageNamespace != nil {
@@ -388,6 +399,153 @@ func (suite *CmdTestSuite) TestDropIndexFailsDoesNotExistCmd() {
 
 	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
 	suite.Assert().Contains(lines[0], "server error")
+}
+
+func removeANSICodes(input string) string {
+	re := regexp.MustCompile(`\x1b[^m]*m`)
+	return re.ReplaceAllString(input, "")
+}
+
+func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
+	indexes, err := suite.avsClient.IndexList(context.Background())
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	for _, index := range indexes.GetIndices() {
+		err := suite.avsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
+	}
+
+	testCases := []struct {
+		name          string
+		indexes       []*protos.IndexDefinition
+		cmd           string
+		expectedTable string
+	}{
+		{
+			"single index",
+			[]*protos.IndexDefinition{
+				NewIndexDefinitionBuilder(
+					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+			},
+			fmt.Sprintf("list index -h %s", suite.avsHostPort.String()),
+			`╭─────────────────────────────────────────────────────────────────────────╮
+│                                 Indexes                                 │
+├───┬──────┬───────────┬────────┬────────────┬─────────────────┬──────────┤
+│   │ NAME │ NAMESPACE │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │
+├───┼──────┼───────────┼────────┼────────────┼─────────────────┼──────────┤
+│ 1 │ list │ test      │ vector │        256 │          COSINE │        0 │
+╰───┴──────┴───────────┴────────┴────────────┴─────────────────┴──────────╯
+`,
+		},
+		{
+			"double index with set",
+			[]*protos.IndexDefinition{
+				NewIndexDefinitionBuilder(
+					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				NewIndexDefinitionBuilder(
+					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			fmt.Sprintf("list index -h %s", suite.avsHostPort.String()),
+			`╭───────────────────────────────────────────────────────────────────────────────────╮
+│                                      Indexes                                      │
+├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┤
+│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │
+├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┤
+│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │
+├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┤
+│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │
+╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────╯
+`,
+		},
+		{
+			"double index with set and verbose",
+			[]*protos.IndexDefinition{
+				NewIndexDefinitionBuilder(
+					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				NewIndexDefinitionBuilder(
+					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			fmt.Sprintf("list index -h %s --verbose", suite.avsHostPort.String()),
+			`╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                   Indexes                                                                  │
+├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┬───────────────────────┬────────────────────────────────┤
+│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │ STORAGE               │ INDEX PARAMETERS               │
+├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼────────────────────────────────┤
+│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │ ╭───────────┬───────╮ │ ╭────────────────────────────╮ │
+│   │       │           │        │        │            │                 │          │ │ Namespace │ bar   │ │ │            HNSW            │ │
+│   │       │           │        │        │            │                 │          │ │ Set       │ list2 │ │ ├───────────────────┬────────┤ │
+│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │ 16     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Ef                │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records │ 100000 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │ 30000  │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Enabled     │ true   │ │
+│   │       │           │        │        │            │                 │          │                       │ ╰───────────────────┴────────╯ │
+├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼────────────────────────────────┤
+│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │ ╭───────────┬───────╮ │ ╭────────────────────────────╮ │
+│   │       │           │        │        │            │                 │          │ │ Namespace │ test  │ │ │            HNSW            │ │
+│   │       │           │        │        │            │                 │          │ │ Set       │ list1 │ │ ├───────────────────┬────────┤ │
+│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │ 16     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Ef                │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records │ 100000 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │ 30000  │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Enabled     │ true   │ │
+│   │       │           │        │        │            │                 │          │                       │ ╰───────────────────┴────────╯ │
+╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────┴───────────────────────┴────────────────────────────────╯
+`,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			for _, index := range tc.indexes {
+				setFilter := []string{}
+				if index.SetFilter != nil {
+					setFilter = append(setFilter, *index.SetFilter)
+				}
+
+				err := suite.avsClient.IndexCreate(
+					context.Background(),
+					index.Id.Namespace,
+					setFilter,
+					index.Id.Name,
+					index.GetField(),
+					index.GetDimensions(),
+					index.GetVectorDistanceMetric(),
+					index.GetHnswParams(),
+					index.GetLabels(),
+					index.GetStorage(),
+				)
+				if err != nil {
+					suite.FailNowf("unable to create index", "%v", err)
+				}
+
+				defer suite.avsClient.IndexDrop(
+					context.Background(),
+					index.Id.Namespace,
+					index.Id.Name,
+				)
+			}
+
+			lines, err := suite.runCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+
+			actualTable := removeANSICodes(strings.Join(lines, "\n"))
+
+			suite.Assert().Equal(tc.expectedTable, actualTable)
+
+		})
+	}
 }
 
 func (suite *CmdTestSuite) TestFailInvalidArg() {

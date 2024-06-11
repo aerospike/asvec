@@ -45,8 +45,10 @@ var listIndexRequiredFlags = []string{}
 
 // listIndexCmd represents the listIndex command
 func newListIndexCmd() *cobra.Command {
-	return &cobra.Command{Use: "index",
-		Short: "A command for listing indexes",
+	return &cobra.Command{
+		Use:     "index",
+		Aliases: []string{"indexes"},
+		Short:   "A command for listing indexes",
 		Long: fmt.Sprintf(`A command for displaying useful information about AVS indexes. To display additional
 		index information use the --%s flag.
 	For example:

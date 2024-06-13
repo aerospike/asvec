@@ -1,0 +1,25 @@
+package cmd
+
+const (
+	logLevelFlagName         = "log-level"
+	flagNameSeeds            = "seeds"
+	flagNameHost             = "host"
+	flagNameListenerName     = "listener-name"
+	flagNameNamespace        = "namespace"
+	flagNameSets             = "sets"
+	flagNameIndexName        = "index-name"
+	flagNameVectorField      = "vector-field"
+	flagNameDimension        = "dimension"
+	flagNameDistanceMetric   = "distance-metric"
+	flagNameIndexMeta        = "index-meta"
+	flagNameTimeout          = "timeout"
+	flagNameVerbose          = "verbose"
+	flagNameStorageNamespace = "storage-namespace"
+	flagNameStorageSet       = "storage-set"
+	flagNameMaxEdges         = "hnsw-max-edges"
+	flagNameConstructionEf   = "hnsw-ef-construction"
+	flagNameEf               = "hnsw-ef"
+	flagNameBatchMaxRecords  = "hnsw-batch-max-records"
+	flagNameBatchInterval    = "hnsw-batch-interval"
+	flagNameBatchEnabled     = "hnsw-batch-enabled"
+)

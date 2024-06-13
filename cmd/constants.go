@@ -22,4 +22,10 @@ const (
 	flagNameBatchMaxRecords  = "hnsw-batch-max-records"
 	flagNameBatchInterval    = "hnsw-batch-interval"
 	flagNameBatchEnabled     = "hnsw-batch-enabled"
+	flagNameTLSProtocols     = "tls-protocols"
+	flagNameTLSCaFile        = "tls-cafile"
+	flagNameTLSCaPath        = "tls-capath"
+	flagNameTLSCertFile      = "tls-certfile"
+	flagNameTLSKeyFile       = "tls-keyfile"
+	flagNameTLSKeyFilePass   = "tls-keyfile-password"
 )

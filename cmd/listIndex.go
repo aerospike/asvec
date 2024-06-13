@@ -25,9 +25,11 @@ var listIndexFlags = &struct {
 	listenerName flags.StringOptionalFlag
 	verbose      bool
 	timeout      time.Duration
+	tls          *flags.TLSFlags
 }{
 	host:  flags.NewDefaultHostPortFlag(),
 	seeds: &flags.SeedsSliceFlag{},
+	tls:   &flags.TLSFlags{},
 }
 
 func newListIndexFlagSet() *pflag.FlagSet {
@@ -37,6 +39,7 @@ func newListIndexFlagSet() *pflag.FlagSet {
 	flagSet.VarP(&listIndexFlags.listenerName, flagNameListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))         //nolint:lll // For readability
 	flagSet.BoolVarP(&listIndexFlags.verbose, flagNameVerbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))                                                                                     //nolint:lll // For readability
 	flagSet.DurationVar(&listIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                              //nolint:lll // For readability
+	flagSet.AddFlagSet(listIndexFlags.tls.NewFlagSet(commonFlags.DefaultWrapHelpString))
 
 	return flagSet
 }

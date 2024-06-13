@@ -26,9 +26,11 @@ var dropIndexFlags = &struct {
 	sets         []string
 	indexName    string
 	timeout      time.Duration
+	tls          *flags.TLSFlags
 }{
 	host:  flags.NewDefaultHostPortFlag(),
 	seeds: &flags.SeedsSliceFlag{},
+	tls:   &flags.TLSFlags{},
 }
 
 func newDropIndexFlagSet() *pflag.FlagSet {
@@ -40,6 +42,7 @@ func newDropIndexFlagSet() *pflag.FlagSet {
 	flagSet.StringArrayVarP(&dropIndexFlags.sets, flagNameSets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                                                                                                //nolint:lll // For readability
 	flagSet.StringVarP(&dropIndexFlags.indexName, flagNameIndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                                                             //nolint:lll // For readability
 	flagSet.DurationVar(&dropIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                              //nolint:lll // For readability
+	flagSet.AddFlagSet(dropIndexFlags.tls.NewFlagSet(commonFlags.DefaultWrapHelpString))
 
 	return flagSet
 }

@@ -87,9 +87,9 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().Var(
-		&rootFlags.logLevel, 
-		logLevelFlagName, 
-		common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))) //nolint:lll // For readability
+		&rootFlags.logLevel,
+		logLevelFlagName,
+		common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))), //nolint:lll // For readability
 	)
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")

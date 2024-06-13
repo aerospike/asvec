@@ -110,7 +110,7 @@ func newCreateIndexCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(*createIndexFlags.seeds, *createIndexFlags.host)
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(createIndexFlags.seeds, createIndexFlags.host)
 
 			logger.Debug("parsed flags",
 				slog.String(flagNameHost, createIndexFlags.host.String()),

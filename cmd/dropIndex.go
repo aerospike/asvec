@@ -79,7 +79,7 @@ func newDropIndexCommand() *cobra.Command {
 				slog.Duration(flagNameTimeout, dropIndexFlags.timeout),
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(*dropIndexFlags.seeds, *dropIndexFlags.host)
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(dropIndexFlags.seeds, dropIndexFlags.host)
 
 			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
 			defer cancel()

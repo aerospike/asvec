@@ -6,7 +6,7 @@ import (
 	avs "github.com/aerospike/aerospike-proximus-client-go"
 )
 
-func parseBothHostSeedsFlag(seeds flags.SeedsSliceFlag, host flags.HostPortFlag) (avs.HostPortSlice, bool) {
+func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) (avs.HostPortSlice, bool) {
 	isLoadBalancer := false
 	hosts := avs.HostPortSlice{}
 

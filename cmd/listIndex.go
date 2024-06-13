@@ -71,7 +71,7 @@ func newListIndexCmd() *cobra.Command {
 				slog.Duration(flagNameTimeout, listIndexFlags.timeout),
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(*listIndexFlags.seeds, *listIndexFlags.host)
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(listIndexFlags.seeds, listIndexFlags.host)
 
 			ctx, cancel := context.WithTimeout(context.Background(), listIndexFlags.timeout)
 			defer cancel()

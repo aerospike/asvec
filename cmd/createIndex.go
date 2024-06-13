@@ -138,7 +138,7 @@ func newCreateIndexCmd() *cobra.Command {
 			defer cancel()
 
 			adminClient, err := avs.NewAdminClient(
-				ctx, hosts, createIndexFlags.listenerName.Val, isLoadBalancer, logger,
+				ctx, hosts, createIndexFlags.listenerName.Val, isLoadBalancer, nil, logger,
 			)
 			if err != nil {
 				logger.Error("failed to create AVS client", slog.Any("error", err))

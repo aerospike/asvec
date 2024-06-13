@@ -84,7 +84,9 @@ func newDropIndexCommand() *cobra.Command {
 			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
 			defer cancel()
 
-			adminClient, err := avs.NewAdminClient(ctx, hosts, nil, isLoadBalancer, logger)
+			adminClient, err := avs.NewAdminClient(
+				ctx, hosts, nil, isLoadBalancer, nil, logger,
+			)
 			if err != nil {
 				logger.Error("failed to create AVS client", slog.Any("error", err))
 				return err

@@ -40,6 +40,7 @@ var createIndexFlags = &struct {
 	hnswBatchInterval   flags.Uint32OptionalFlag
 	hnswBatchEnabled    flags.BoolOptionalFlag
 	timeout             time.Duration
+	tls                 *flags.TLSFlags
 }{
 	host:                flags.NewDefaultHostPortFlag(),
 	seeds:               &flags.SeedsSliceFlag{},
@@ -51,6 +52,7 @@ var createIndexFlags = &struct {
 	hnswBatchMaxRecords: flags.Uint32OptionalFlag{},
 	hnswBatchInterval:   flags.Uint32OptionalFlag{},
 	hnswBatchEnabled:    flags.BoolOptionalFlag{},
+	tls:                 &flags.TLSFlags{},
 }
 
 func newCreateIndexFlagSet() *pflag.FlagSet {
@@ -74,6 +76,7 @@ func newCreateIndexFlagSet() *pflag.FlagSet {
 	flagSet.Var(&createIndexFlags.hnswBatchMaxRecords, flagNameBatchMaxRecords, commonFlags.DefaultWrapHelpString("Maximum number of records to fit in a batch. The default value is 10000."))                                                                                                                                                                                                                               //nolint:lll // For readability
 	flagSet.Var(&createIndexFlags.hnswBatchInterval, flagNameBatchInterval, commonFlags.DefaultWrapHelpString("The maximum amount of time in milliseconds to wait before finalizing a batch. The default value is 10000."))                                                                                                                                                                                                  //nolint:lll // For readability
 	flagSet.Var(&createIndexFlags.hnswBatchEnabled, flagNameBatchEnabled, commonFlags.DefaultWrapHelpString("Enables batching for index updates. Default is true meaning batching is enabled."))                                                                                                                                                                                                                             //nolint:lll // For readability
+	flagSet.AddFlagSet(createIndexFlags.tls.NewFlagSet(commonFlags.DefaultWrapHelpString))
 
 	return flagSet
 }

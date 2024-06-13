@@ -79,12 +79,14 @@ func newDropIndexCommand() *cobra.Command {
 				slog.Duration(flagNameTimeout, dropIndexFlags.timeout),
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(*dropIndexFlags.seeds, *dropIndexFlags.host)
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(dropIndexFlags.seeds, dropIndexFlags.host)
 
 			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
 			defer cancel()
 
-			adminClient, err := avs.NewAdminClient(ctx, hosts, nil, isLoadBalancer, logger)
+			adminClient, err := avs.NewAdminClient(
+				ctx, hosts, nil, isLoadBalancer, nil, logger,
+			)
 			if err != nil {
 				logger.Error("failed to create AVS client", slog.Any("error", err))
 				return err

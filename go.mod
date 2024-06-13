@@ -2,8 +2,7 @@ module asvec
 
 go 1.21.7
 
-//replace github.com/aerospike/aerospike-proximus-client-go => github.com/aerospike/aerospike-proximus-client-go VEC-155-admin-client
-//replace github.com/aerospike/aerospike-proximus-client-go => /Users/jesseschmidt/Developer/aerospike-proximus-client-go
+replace github.com/aerospike/aerospike-proximus-client-go => /Users/jesseschmidt/Developer/aerospike-proximus-client-go
 
 require (
 	github.com/aerospike/aerospike-proximus-client-go v0.0.0-20240603230632-86a0ebaa8aa9

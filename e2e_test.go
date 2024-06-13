@@ -74,7 +74,9 @@ func (suite *CmdTestSuite) SetupSuite() {
 	defer cancel()
 
 	for {
-		suite.avsClient, err = avs.NewAdminClient(ctx, avs.HostPortSlice{suite.avsHostPort}, nil, true, logger)
+		suite.avsClient, err = avs.NewAdminClient(
+			ctx, avs.HostPortSlice{suite.avsHostPort}, nil, true, nil, logger,
+		)
 
 		if err != nil {
 			fmt.Printf("unable to create avs client %v", err)

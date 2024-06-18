@@ -25,7 +25,7 @@ func NewTLSFlags() *TLSFlags {
 
 // NewAerospikeFlagSet returns a new pflag.FlagSet with Aerospike flags defined.
 // Values set in the returned FlagSet will be stored in the AerospikeFlags argument.
-func (tf *TLSFlags) NewFlagSet(fmtUsage commonFlags.UsageFormatter) *pflag.FlagSet {
+func (tf *TLSFlags) NewTLSFlagSet(fmtUsage commonFlags.UsageFormatter) *pflag.FlagSet {
 	f := &pflag.FlagSet{}
 
 	f.Var(&tf.TLSRootCAFile, "tls-cafile", fmtUsage("The CA used when connecting to AVS."))
@@ -55,7 +55,7 @@ func (tf *TLSFlags) NewTLSConfig() (*tls.Config, error) {
 		tf.TLSCertFile,
 		tf.TLSKeyFile,
 		tf.TLSKeyFilePass,
-		tf.TLSProtocols.Min,
-		tf.TLSProtocols.Max,
+		0,
+		0,
 	).NewGoTLSConfig()
 }

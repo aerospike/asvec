@@ -86,15 +86,15 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, logLevelFlagName, common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))))
+	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, flags.LogLevel, common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))))
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
-	if err := viper.BindEnv(flagNameHost); err != nil {
+	if err := viper.BindEnv(flags.Host); err != nil {
 		logger.Error("failed to bind environment variable", slog.Any("error", err))
 	}
 
-	if err := viper.BindEnv(flagNameSeeds); err != nil {
+	if err := viper.BindEnv(flags.Seeds); err != nil {
 		logger.Error("failed to bind environment variable", slog.Any("error", err))
 	}
 }

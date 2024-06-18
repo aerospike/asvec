@@ -20,26 +20,21 @@ import (
 )
 
 var listIndexFlags = &struct {
-	host         *flags.HostPortFlag
-	seeds        *flags.SeedsSliceFlag
-	listenerName flags.StringOptionalFlag
-	verbose      bool
-	timeout      time.Duration
-	tls          *flags.TLSFlags
+	flags.ClientFlags
+	verbose bool
+	timeout time.Duration
 }{
-	host:  flags.NewDefaultHostPortFlag(),
-	seeds: &flags.SeedsSliceFlag{},
-	tls:   &flags.TLSFlags{},
+	ClientFlags: *flags.NewClientFlags(),
 }
 
 func newListIndexFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.VarP(listIndexFlags.host, flagNameHost, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flagNameSeeds)))                                         //nolint:lll // For readability
-	flagSet.Var(listIndexFlags.seeds, flagNameSeeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost))) //nolint:lll // For readability
-	flagSet.VarP(&listIndexFlags.listenerName, flagNameListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))         //nolint:lll // For readability
-	flagSet.BoolVarP(&listIndexFlags.verbose, flagNameVerbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))                                                                                     //nolint:lll // For readability
-	flagSet.DurationVar(&listIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                              //nolint:lll // For readability
-	flagSet.AddFlagSet(listIndexFlags.tls.NewFlagSet(commonFlags.DefaultWrapHelpString))
+	flagSet.VarP(listIndexFlags.Host, flags.Host, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flags.Seeds)))                                         //nolint:lll // For readability
+	flagSet.Var(listIndexFlags.Seeds, flags.Seeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flags.Host))) //nolint:lll // For readability
+	flagSet.VarP(&listIndexFlags.ListenerName, flags.ListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))       //nolint:lll // For readability
+	flagSet.BoolVarP(&listIndexFlags.verbose, flags.Verbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))                                                                                   //nolint:lll // For readability
+	flagSet.DurationVar(&listIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                            //nolint:lll // For readability
+	flagSet.AddFlagSet(listIndexFlags.NewClientFlagSet())
 
 	return flagSet
 }
@@ -57,30 +52,41 @@ func newListIndexCmd() *cobra.Command {
 	For example:
 		export ASVEC_HOST=<avs-ip>:5000
 		asvec list index
-		`, flagNameVerbose),
+		`, flags.Verbose),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
-				return fmt.Errorf("only --%s or --%s allowed", flagNameSeeds, flagNameHost)
+			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
+				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
 			}
 
 			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
-				slog.String(flagNameHost, listIndexFlags.host.String()),
-				slog.String(flagNameSeeds, listIndexFlags.seeds.String()),
-				slog.String(flagNameListenerName, listIndexFlags.listenerName.String()),
-				slog.Bool(flagNameVerbose, listIndexFlags.verbose),
-				slog.Duration(flagNameTimeout, listIndexFlags.timeout),
+				slog.String(flags.Host, listIndexFlags.Host.String()),
+				slog.String(flags.Seeds, listIndexFlags.Seeds.String()),
+				slog.String(flags.ListenerName, listIndexFlags.ListenerName.String()),
+				slog.Bool(flags.TLSCaFile, createIndexFlags.TLSRootCAFile != nil),
+				slog.Bool(flags.TLSCaPath, createIndexFlags.TLSRootCAPath != nil),
+				slog.Bool(flags.TLSCertFile, createIndexFlags.TLSCertFile != nil),
+				slog.Bool(flags.TLSKeyFile, createIndexFlags.TLSKeyFile != nil),
+				slog.Bool(flags.TLSKeyFilePass, createIndexFlags.TLSKeyFilePass != nil),
+				slog.Bool(flags.Verbose, listIndexFlags.verbose),
+				slog.Duration(flags.Timeout, listIndexFlags.timeout),
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(listIndexFlags.seeds, listIndexFlags.host)
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(listIndexFlags.Seeds, listIndexFlags.Host)
 
 			ctx, cancel := context.WithTimeout(context.Background(), listIndexFlags.timeout)
 			defer cancel()
 
+			tlsConfig, err := listIndexFlags.NewTLSConfig()
+			if err != nil {
+				logger.Error("failed to create TLS config", slog.Any("error", err))
+				return err
+			}
+
 			adminClient, err := avs.NewAdminClient(
-				ctx, hosts, listIndexFlags.listenerName.Val, isLoadBalancer, nil, logger,
+				ctx, hosts, listIndexFlags.ListenerName.Val, isLoadBalancer, tlsConfig, logger,
 			)
 			if err != nil {
 				logger.Error("failed to create AVS client", slog.Any("error", err))

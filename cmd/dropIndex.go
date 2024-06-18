@@ -19,37 +19,29 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var dropIndexFlags = &struct {
-	host         *flags.HostPortFlag
-	seeds        *flags.SeedsSliceFlag
-	listenerName flags.StringOptionalFlag
-	namespace    string
-	sets         []string
-	indexName    string
-	timeout      time.Duration
-	tls          *flags.TLSFlags
+	flags.ClientFlags
+	namespace string
+	sets      []string
+	indexName string
+	timeout   time.Duration
 }{
-	host:  flags.NewDefaultHostPortFlag(),
-	seeds: &flags.SeedsSliceFlag{},
-	tls:   &flags.TLSFlags{},
+	ClientFlags: *flags.NewClientFlags(),
 }
 
 func newDropIndexFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.VarP(dropIndexFlags.host, flagNameHost, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flagNameSeeds)))                                         //nolint:lll // For readability
-	flagSet.Var(dropIndexFlags.seeds, flagNameSeeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flagNameHost))) //nolint:lll // For readability
-	flagSet.VarP(&dropIndexFlags.listenerName, flagNameListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))         //nolint:lll // For readability
-	flagSet.StringVarP(&dropIndexFlags.namespace, flagNameNamespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                                                                       //nolint:lll // For readability
-	flagSet.StringArrayVarP(&dropIndexFlags.sets, flagNameSets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                                                                                                //nolint:lll // For readability
-	flagSet.StringVarP(&dropIndexFlags.indexName, flagNameIndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                                                             //nolint:lll // For readability
-	flagSet.DurationVar(&dropIndexFlags.timeout, flagNameTimeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                              //nolint:lll // For readability
-	flagSet.AddFlagSet(dropIndexFlags.tls.NewFlagSet(commonFlags.DefaultWrapHelpString))
+	flagSet.StringVarP(&dropIndexFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))          //nolint:lll // For readability
+	flagSet.StringArrayVarP(&dropIndexFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                   //nolint:lll // For readability
+	flagSet.StringVarP(&dropIndexFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                //nolint:lll // For readability
+	flagSet.DurationVar(&dropIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index.")) //nolint:lll // For readability
+	flagSet.AddFlagSet(dropIndexFlags.NewClientFlagSet())
 
 	return flagSet
 }
 
 var dropIndexRequiredFlags = []string{
-	flagNameNamespace,
-	flagNameIndexName,
+	flags.Namespace,
+	flags.IndexName,
 }
 
 // dropIndexCmd represents the dropIndex command
@@ -65,30 +57,41 @@ func newDropIndexCommand() *cobra.Command {
 			asvec drop index -i myindex -n test
 			`,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flagNameSeeds) && viper.IsSet(flagNameHost) {
-				return fmt.Errorf("only --%s or --%s allowed", flagNameSeeds, flagNameHost)
+			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
+				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
 			}
 
 			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
-				slog.String(flagNameHost, dropIndexFlags.host.String()),
-				slog.String(flagNameSeeds, dropIndexFlags.seeds.String()),
-				slog.String(flagNameListenerName, dropIndexFlags.listenerName.String()),
-				slog.String(flagNameNamespace, dropIndexFlags.namespace),
-				slog.Any(flagNameSets, dropIndexFlags.sets),
-				slog.String(flagNameIndexName, dropIndexFlags.indexName),
-				slog.Duration(flagNameTimeout, dropIndexFlags.timeout),
+				slog.String(flags.Host, dropIndexFlags.Host.String()),
+				slog.String(flags.Seeds, dropIndexFlags.Seeds.String()),
+				slog.String(flags.ListenerName, dropIndexFlags.ListenerName.String()),
+				slog.Bool(flags.TLSCaFile, createIndexFlags.TLSRootCAFile != nil),
+				slog.Bool(flags.TLSCaPath, createIndexFlags.TLSRootCAPath != nil),
+				slog.Bool(flags.TLSCertFile, createIndexFlags.TLSCertFile != nil),
+				slog.Bool(flags.TLSKeyFile, createIndexFlags.TLSKeyFile != nil),
+				slog.Bool(flags.TLSKeyFilePass, createIndexFlags.TLSKeyFilePass != nil),
+				slog.String(flags.Namespace, dropIndexFlags.namespace),
+				slog.Any(flags.Sets, dropIndexFlags.sets),
+				slog.String(flags.IndexName, dropIndexFlags.indexName),
+				slog.Duration(flags.Timeout, dropIndexFlags.timeout),
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(dropIndexFlags.seeds, dropIndexFlags.host)
+			hosts, isLoadBalancer := parseBothHostSeedsFlag(dropIndexFlags.Seeds, dropIndexFlags.Host)
 
 			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
 			defer cancel()
 
+			tlsConfig, err := dropIndexFlags.NewTLSConfig()
+			if err != nil {
+				logger.Error("failed to create TLS config", slog.Any("error", err))
+				return err
+			}
+
 			adminClient, err := avs.NewAdminClient(
-				ctx, hosts, nil, isLoadBalancer, nil, logger,
+				ctx, hosts, dropIndexFlags.ListenerName.Val, isLoadBalancer, tlsConfig, logger,
 			)
 			if err != nil {
 				logger.Error("failed to create AVS client", slog.Any("error", err))

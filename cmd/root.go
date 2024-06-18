@@ -94,11 +94,11 @@ func init() {
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
-	if err := viper.BindEnv(flagNameHost); err != nil {
+	if err := viper.BindEnv(flags.Host); err != nil {
 		logger.Error("failed to bind environment variable", slog.Any("error", err))
 	}
 
-	if err := viper.BindEnv(flagNameSeeds); err != nil {
+	if err := viper.BindEnv(flags.Seeds); err != nil {
 		logger.Error("failed to bind environment variable", slog.Any("error", err))
 	}
 }

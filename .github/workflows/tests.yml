@@ -24,7 +24,6 @@ jobs:
         echo "$FEATURES_CONF" > docker/config/features.conf
     - name: Run tests
       run: |
-        echo '127.0.0.1 connector.aerospike.com' >> /etc/hosts
         make coverage
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

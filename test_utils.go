@@ -2,7 +2,7 @@
 
 package main
 
-import "github.com/aerospike/aerospike-proximus-client-go/protos"
+import "github.com/aerospike/avs-client-go/protos"
 
 func getStrPtr(str string) *string {
 	ptr := str

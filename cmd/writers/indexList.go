@@ -4,7 +4,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-proximus-client-go/protos"
+	"github.com/aerospike/avs-client-go/protos"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 

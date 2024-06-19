@@ -23,7 +23,7 @@ linters-settings:
         allow:
           - $gostd
           - github.com/aerospike/tools-common-go
-          - github.com/aerospike/aerospike-proximus-client-go
+          - github.com/aerospike/avs-client-go
           - asvec/cmd
           - github.com/spf13/cobra
           - github.com/spf13/viper

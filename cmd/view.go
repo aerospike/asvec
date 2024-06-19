@@ -6,7 +6,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-proximus-client-go/protos"
+	"github.com/aerospike/avs-client-go/protos"
 )
 
 type View struct {

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	avs "github.com/aerospike/aerospike-proximus-client-go"
-	"github.com/aerospike/aerospike-proximus-client-go/protos"
+	avs "github.com/aerospike/avs-client-go"
+	"github.com/aerospike/avs-client-go/protos"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

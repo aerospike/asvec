@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"time"
 
-	avs "github.com/aerospike/aerospike-proximus-client-go"
+	avs "github.com/aerospike/avs-client-go"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

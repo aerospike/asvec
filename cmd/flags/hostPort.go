@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	avs "github.com/aerospike/aerospike-proximus-client-go"
+	avs "github.com/aerospike/avs-client-go"
 )
 
 const (

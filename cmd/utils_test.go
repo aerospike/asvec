@@ -6,7 +6,7 @@ import (
 	"asvec/cmd/flags"
 	"testing"
 
-	avs "github.com/aerospike/aerospike-proximus-client-go"
+	avs "github.com/aerospike/avs-client-go"
 	"github.com/stretchr/testify/assert"
 )
 

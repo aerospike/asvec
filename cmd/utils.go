@@ -7,7 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	avs "github.com/aerospike/aerospike-proximus-client-go"
+	avs "github.com/aerospike/avs-client-go"
 )
 
 func newTLSConfig(rootCA [][]byte, cert []byte, key []byte, keyPass []byte, tlsProtoMin int, tlsProtoMax int) (*tls.Config, error) {

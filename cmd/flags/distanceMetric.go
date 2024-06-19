@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/aerospike/aerospike-proximus-client-go/protos"
+	"github.com/aerospike/avs-client-go/protos"
 )
 
 type DistanceMetricFlag string

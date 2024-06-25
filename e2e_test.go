@@ -74,23 +74,23 @@ func TestCmdSuite(t *testing.T) {
 
 	logger.Info("%v", slog.Any("cert", rootCA))
 
-	// suite.Run(t, &CmdTestSuite{
-	// 	composeFile: "docker/docker-compose.yml",
-	// 	suiteFlags:  []string{"--log-level debug"},
-	// 	avsIP:       "localhost",
-	// })
-	// suite.Run(t, &CmdTestSuite{
-	// 	composeFile: "docker/tls/docker-compose.yml",
-	// 	suiteFlags: []string{
-	// 		"--log-level debug",
-	// 		createFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
-	// 	},
-	// 	avsTLSConfig: &tls.Config{
-	// 		Certificates: nil,
-	// 		RootCAs:      rootCA,
-	// 	},
-	// 	avsIP: "localhost",
-	// })
+	suite.Run(t, &CmdTestSuite{
+		composeFile: "docker/docker-compose.yml",
+		suiteFlags:  []string{"--log-level debug"},
+		avsIP:       "localhost",
+	})
+	suite.Run(t, &CmdTestSuite{
+		composeFile: "docker/tls/docker-compose.yml",
+		suiteFlags: []string{
+			"--log-level debug",
+			createFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+		},
+		avsTLSConfig: &tls.Config{
+			Certificates: nil,
+			RootCAs:      rootCA,
+		},
+		avsIP: "localhost",
+	})
 	suite.Run(t, &CmdTestSuite{
 		composeFile: "docker/auth/docker-compose.yml",
 		suiteFlags: []string{

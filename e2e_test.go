@@ -52,12 +52,14 @@ type CmdTestSuite struct {
 	app          string
 	composeFile  string
 	suiteName    string
-	suiteArgs    string
+	suiteFlags   []string
 	coverFile    string
 	avsIP        string
 	avsPort      int
 	avsHostPort  *avs.HostPort
 	avsTLSConfig *tls.Config
+	avsUser      *string
+	avsPassword  *string
 	avsClient    *avs.AdminClient
 }
 
@@ -72,19 +74,38 @@ func TestCmdSuite(t *testing.T) {
 
 	logger.Info("%v", slog.Any("cert", rootCA))
 
+	// suite.Run(t, &CmdTestSuite{
+	// 	composeFile: "docker/docker-compose.yml",
+	// 	suiteFlags:  []string{"--log-level debug"},
+	// 	avsIP:       "localhost",
+	// })
+	// suite.Run(t, &CmdTestSuite{
+	// 	composeFile: "docker/tls/docker-compose.yml",
+	// 	suiteFlags: []string{
+	// 		"--log-level debug",
+	// 		createFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+	// 	},
+	// 	avsTLSConfig: &tls.Config{
+	// 		Certificates: nil,
+	// 		RootCAs:      rootCA,
+	// 	},
+	// 	avsIP: "localhost",
+	// })
 	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/docker-compose.yml",
-		suiteArgs:   "--log-level debug",
-		avsIP:       "localhost",
-	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/tls/docker-compose.yml",
-		suiteArgs:   fmt.Sprintf("--%s %s --log-level debug", flags.TLSCaFile, "docker/tls/config/tls/connector.aerospike.com.crt"),
+		composeFile: "docker/auth/docker-compose.yml",
+		suiteFlags: []string{
+			"--log-level debug",
+			createFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+			createFlagStr(flags.User, "admin"),
+			createFlagStr(flags.Password, "admin"),
+		},
+		avsUser:     getStrPtr("admin"),
+		avsPassword: getStrPtr("admin"),
 		avsTLSConfig: &tls.Config{
 			Certificates: nil,
 			RootCAs:      rootCA,
 		},
-		avsIP: "connector.aerospike.com",
+		avsIP: "localhost",
 	})
 }
 
@@ -92,7 +113,7 @@ func (suite *CmdTestSuite) SetupSuite() {
 	suite.app = path.Join(wd, "app.test")
 	suite.coverFile = path.Join(wd, "../coverage/cmd-coverage.cov")
 	suite.avsPort = 10000
-	suite.avsHostPort = avs.NewHostPort(suite.avsIP, suite.avsPort, false)
+	suite.avsHostPort = avs.NewHostPort(suite.avsIP, suite.avsPort)
 
 	err := docker_compose_up(suite.composeFile)
 	if err != nil {
@@ -117,7 +138,14 @@ func (suite *CmdTestSuite) SetupSuite() {
 
 	for {
 		suite.avsClient, err = avs.NewAdminClient(
-			ctx, avs.HostPortSlice{suite.avsHostPort}, nil, true, suite.avsTLSConfig, logger,
+			ctx,
+			avs.HostPortSlice{suite.avsHostPort},
+			nil,
+			true,
+			suite.avsUser,
+			suite.avsPassword,
+			suite.avsTLSConfig,
+			logger,
 		)
 
 		if err != nil {
@@ -149,7 +177,8 @@ func (suite *CmdTestSuite) TearDownSuite() {
 }
 
 func (suite *CmdTestSuite) runCmd(asvecCmd ...string) ([]string, error) {
-	asvecCmd = append(strings.Split(suite.suiteArgs, " "), asvecCmd...)
+	suiteFlags := strings.Split(strings.Join(suite.suiteFlags, " "), " ")
+	asvecCmd = append(suiteFlags, asvecCmd...)
 	logger.Info("running command", slog.String("cmd", strings.Join(asvecCmd, " ")))
 	cmd := exec.Command(suite.app, asvecCmd...)
 	cmd.Env = []string{"GOCOVERDIR=" + os.Getenv("COVERAGE_DIR")}

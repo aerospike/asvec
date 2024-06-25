@@ -17,6 +17,12 @@ tls:
       store-password-file: /etc/aerospike-proximus/tls/storepass
       key-password-file: /etc/aerospike-proximus/tls/keypass
 
+security:
+  auth-token:
+    private-key: /etc/aerospike-proximus/jwt/private_key.pem
+    public-key: /etc/aerospike-proximus/jwt/public_key.pem
+    token-expiry: 30_000
+
 # The Proximus service listening ports, TLS and network interface.
 service:
   ports:

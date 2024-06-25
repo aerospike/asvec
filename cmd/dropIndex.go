@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"time"
 
-	avs "github.com/aerospike/avs-client-go"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -19,13 +18,13 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var dropIndexFlags = &struct {
-	flags.ClientFlags
-	namespace string
-	sets      []string
-	indexName string
-	timeout   time.Duration
+	clientFlags flags.ClientFlags
+	namespace   string
+	sets        []string
+	indexName   string
+	timeout     time.Duration
 }{
-	ClientFlags: *flags.NewClientFlags(),
+	clientFlags: *flags.NewClientFlags(),
 }
 
 func newDropIndexFlagSet() *pflag.FlagSet {
@@ -34,7 +33,7 @@ func newDropIndexFlagSet() *pflag.FlagSet {
 	flagSet.StringArrayVarP(&dropIndexFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                   //nolint:lll // For readability
 	flagSet.StringVarP(&dropIndexFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                //nolint:lll // For readability
 	flagSet.DurationVar(&dropIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index.")) //nolint:lll // For readability
-	flagSet.AddFlagSet(dropIndexFlags.NewClientFlagSet())
+	flagSet.AddFlagSet(dropIndexFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
 }
@@ -65,43 +64,21 @@ func newDropIndexCommand() *cobra.Command {
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
-				slog.String(flags.Host, dropIndexFlags.Host.String()),
-				slog.String(flags.Seeds, dropIndexFlags.Seeds.String()),
-				slog.String(flags.ListenerName, dropIndexFlags.ListenerName.String()),
-				slog.Bool(flags.TLSCaFile, createIndexFlags.TLSRootCAFile != nil),
-				slog.Bool(flags.TLSCaPath, createIndexFlags.TLSRootCAPath != nil),
-				slog.Bool(flags.TLSCertFile, createIndexFlags.TLSCertFile != nil),
-				slog.Bool(flags.TLSKeyFile, createIndexFlags.TLSKeyFile != nil),
-				slog.Bool(flags.TLSKeyFilePass, createIndexFlags.TLSKeyFilePass != nil),
-				slog.String(flags.Namespace, dropIndexFlags.namespace),
-				slog.Any(flags.Sets, dropIndexFlags.sets),
-				slog.String(flags.IndexName, dropIndexFlags.indexName),
-				slog.Duration(flags.Timeout, dropIndexFlags.timeout),
+				append(dropIndexFlags.clientFlags.NewSLogAttr(),
+					slog.String(flags.Namespace, dropIndexFlags.namespace),
+					slog.Any(flags.Sets, dropIndexFlags.sets),
+					slog.String(flags.IndexName, dropIndexFlags.indexName),
+					slog.Duration(flags.Timeout, dropIndexFlags.timeout),
+				)...,
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(dropIndexFlags.Seeds, dropIndexFlags.Host)
-
-			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
-			defer cancel()
-
-			tlsConfig, err := dropIndexFlags.NewTLSConfig()
+			adminClient, err := createClientFromFlags(&dropIndexFlags.clientFlags, dropIndexFlags.timeout)
 			if err != nil {
-				logger.Error("failed to create TLS config", slog.Any("error", err))
 				return err
 			}
-
-			adminClient, err := avs.NewAdminClient(
-				ctx, hosts, dropIndexFlags.ListenerName.Val, isLoadBalancer, tlsConfig, logger,
-			)
-			if err != nil {
-				logger.Error("failed to create AVS client", slog.Any("error", err))
-				return err
-			}
-
-			cancel()
 			defer adminClient.Close()
 
-			ctx, cancel = context.WithTimeout(context.Background(), dropIndexFlags.timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
 			defer cancel()
 
 			err = adminClient.IndexDrop(ctx, dropIndexFlags.namespace, dropIndexFlags.indexName)

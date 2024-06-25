@@ -5,6 +5,8 @@ const (
 	Seeds            = "seeds"
 	Host             = "host"
 	ListenerName     = "listener-name"
+	User             = "user"
+	Password         = "password"
 	Namespace        = "namespace"
 	Sets             = "sets"
 	IndexName        = "index-name"

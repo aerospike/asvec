@@ -2,7 +2,11 @@
 
 package main
 
-import "github.com/aerospike/avs-client-go/protos"
+import (
+	"fmt"
+
+	"github.com/aerospike/avs-client-go/protos"
+)
 
 func getStrPtr(str string) *string {
 	ptr := str
@@ -17,6 +21,10 @@ func getUint32Ptr(i int) *uint32 {
 func getBoolPtr(b bool) *bool {
 	ptr := b
 	return &ptr
+}
+
+func createFlagStr(name, value string) string {
+	return fmt.Sprintf("--%s %s", name, value)
 }
 
 type IndexDefinitionBuilder struct {

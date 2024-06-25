@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
@@ -21,7 +20,7 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var createIndexFlags = &struct {
-	flags.ClientFlags
+	clientFlags         flags.ClientFlags
 	namespace           string
 	sets                []string
 	indexName           string
@@ -39,7 +38,7 @@ var createIndexFlags = &struct {
 	hnswBatchEnabled    flags.BoolOptionalFlag
 	timeout             time.Duration
 }{
-	ClientFlags:         *flags.NewClientFlags(),
+	clientFlags:         *flags.NewClientFlags(),
 	storageNamespace:    flags.StringOptionalFlag{},
 	storageSet:          flags.StringOptionalFlag{},
 	hnswMaxEdges:        flags.Uint32OptionalFlag{},
@@ -68,7 +67,7 @@ func newCreateIndexFlagSet() *pflag.FlagSet {
 	flagSet.Var(&createIndexFlags.hnswBatchMaxRecords, flags.BatchMaxRecords, commonFlags.DefaultWrapHelpString("Maximum number of records to fit in a batch. The default value is 10000."))                                                                                                                                                                                                                               //nolint:lll // For readability
 	flagSet.Var(&createIndexFlags.hnswBatchInterval, flags.BatchInterval, commonFlags.DefaultWrapHelpString("The maximum amount of time in milliseconds to wait before finalizing a batch. The default value is 10000."))                                                                                                                                                                                                  //nolint:lll // For readability
 	flagSet.Var(&createIndexFlags.hnswBatchEnabled, flags.BatchEnabled, commonFlags.DefaultWrapHelpString("Enables batching for index updates. Default is true meaning batching is enabled."))                                                                                                                                                                                                                             //nolint:lll // For readability
-	flagSet.AddFlagSet(createIndexFlags.NewClientFlagSet())
+	flagSet.AddFlagSet(createIndexFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
 }
@@ -105,56 +104,34 @@ func newCreateIndexCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(createIndexFlags.Seeds, createIndexFlags.Host)
-
 			logger.Debug("parsed flags",
-				slog.String(flags.Host, createIndexFlags.Host.String()),
-				slog.String(flags.Seeds, createIndexFlags.Seeds.String()),
-				slog.String(flags.ListenerName, createIndexFlags.ListenerName.String()),
-				slog.Bool(flags.TLSCaFile, createIndexFlags.TLSRootCAFile != nil),
-				slog.Bool(flags.TLSCaPath, createIndexFlags.TLSRootCAPath != nil),
-				slog.Bool(flags.TLSCertFile, createIndexFlags.TLSCertFile != nil),
-				slog.Bool(flags.TLSKeyFile, createIndexFlags.TLSKeyFile != nil),
-				slog.Bool(flags.TLSKeyFilePass, createIndexFlags.TLSKeyFilePass != nil),
-				slog.String(flags.Namespace, createIndexFlags.namespace),
-				slog.Any(flags.Sets, createIndexFlags.sets),
-				slog.String(flags.IndexName, createIndexFlags.indexName),
-				slog.String(flags.VectorField, createIndexFlags.vectorField),
-				slog.Uint64(flags.Dimension, uint64(createIndexFlags.dimensions)),
-				slog.Any(flags.IndexMeta, createIndexFlags.indexMeta),
-				slog.String(flags.DistanceMetric, createIndexFlags.distanceMetric.String()),
-				slog.Duration(flags.Timeout, createIndexFlags.timeout),
-				slog.Any(flags.StorageNamespace, createIndexFlags.storageNamespace.String()),
-				slog.Any(flags.StorageSet, createIndexFlags.storageSet.String()),
-				slog.Any(flags.MaxEdges, createIndexFlags.hnswMaxEdges.String()),
-				slog.Any(flags.Ef, createIndexFlags.hnswEf),
-				slog.Any(flags.ConstructionEf, createIndexFlags.hnswConstructionEf.String()),
-				slog.Any(flags.BatchMaxRecords, createIndexFlags.hnswBatchMaxRecords.String()),
-				slog.Any(flags.BatchInterval, createIndexFlags.hnswBatchInterval.String()),
-				slog.Any(flags.BatchEnabled, createIndexFlags.hnswBatchEnabled.String()),
+				append(createIndexFlags.clientFlags.NewSLogAttr(),
+					slog.String(flags.Namespace, createIndexFlags.namespace),
+					slog.Any(flags.Sets, createIndexFlags.sets),
+					slog.String(flags.IndexName, createIndexFlags.indexName),
+					slog.String(flags.VectorField, createIndexFlags.vectorField),
+					slog.Uint64(flags.Dimension, uint64(createIndexFlags.dimensions)),
+					slog.Any(flags.IndexMeta, createIndexFlags.indexMeta),
+					slog.String(flags.DistanceMetric, createIndexFlags.distanceMetric.String()),
+					slog.Duration(flags.Timeout, createIndexFlags.timeout),
+					slog.Any(flags.StorageNamespace, createIndexFlags.storageNamespace.String()),
+					slog.Any(flags.StorageSet, createIndexFlags.storageSet.String()),
+					slog.Any(flags.MaxEdges, createIndexFlags.hnswMaxEdges.String()),
+					slog.Any(flags.Ef, createIndexFlags.hnswEf),
+					slog.Any(flags.ConstructionEf, createIndexFlags.hnswConstructionEf.String()),
+					slog.Any(flags.BatchMaxRecords, createIndexFlags.hnswBatchMaxRecords.String()),
+					slog.Any(flags.BatchInterval, createIndexFlags.hnswBatchInterval.String()),
+					slog.Any(flags.BatchEnabled, createIndexFlags.hnswBatchEnabled.String()),
+				)...,
 			)
 
-			ctx, cancel := context.WithTimeout(context.Background(), createIndexFlags.timeout)
-			defer cancel()
-
-			tlsConfig, err := createIndexFlags.NewTLSConfig()
+			adminClient, err := createClientFromFlags(&createIndexFlags.clientFlags, createIndexFlags.timeout)
 			if err != nil {
-				logger.Error("failed to create TLS config", slog.Any("error", err))
 				return err
 			}
-
-			adminClient, err := avs.NewAdminClient(
-				ctx, hosts, createIndexFlags.ListenerName.Val, isLoadBalancer, tlsConfig, logger,
-			)
-			if err != nil {
-				logger.Error("failed to create AVS client", slog.Any("error", err))
-				return err
-			}
-
-			cancel()
 			defer adminClient.Close()
 
-			ctx, cancel = context.WithTimeout(context.Background(), createIndexFlags.timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), createIndexFlags.timeout)
 			defer cancel()
 
 			// Inverted to make it easier to understand

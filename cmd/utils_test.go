@@ -20,12 +20,12 @@ func TestParseBothHostSeedsFlag(t *testing.T) {
 		{
 			&flags.SeedsSliceFlag{
 				Seeds: avs.HostPortSlice{
-					avs.NewHostPort("1.1.1.1", 5000, false),
+					avs.NewHostPort("1.1.1.1", 5000),
 				},
 			},
 			flags.NewDefaultHostPortFlag(),
 			avs.HostPortSlice{
-				avs.NewHostPort("1.1.1.1", 5000, false),
+				avs.NewHostPort("1.1.1.1", 5000),
 			},
 			false,
 		},

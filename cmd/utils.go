@@ -8,7 +8,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
+
+	"golang.org/x/term"
 
 	avs "github.com/aerospike/avs-client-go"
 )
@@ -26,9 +29,21 @@ func createClientFromFlags(clientFlags *flags.ClientFlags, connectTimeout time.D
 	}
 
 	var password *string
-	if len(clientFlags.Password) != 0 {
-		strPass := clientFlags.Password.String()
-		password = &strPass
+	if clientFlags.User.Val != nil {
+		if len(clientFlags.Password) != 0 {
+			strPass := clientFlags.Password.String()
+			password = &strPass
+		} else {
+			fmt.Print("Enter Password: ")
+			bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+			if err != nil {
+				logger.Error("failed to read password", slog.Any("error", err))
+				return nil, err
+			}
+			fmt.Println() // Print a newline after the password input
+			strPass := string(bytePassword)
+			password = &strPass
+		}
 	}
 
 	adminClient, err := avs.NewAdminClient(

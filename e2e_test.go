@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"log/slog"
 	"os"
@@ -21,6 +20,7 @@ import (
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
+	"github.com/aerospike/tools-common-go/client"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -35,16 +35,29 @@ var (
 
 func GetCACert(cert string) (*x509.CertPool, error) {
 	// read in file
-	certBytes, err := ioutil.ReadFile(cert)
+	certBytes, err := os.ReadFile(cert)
 	if err != nil {
 		log.Fatalf("unable to read cert file %v", err)
 		return nil, err
 	}
 
-	certificates := x509.NewCertPool()
-	certificates.AppendCertsFromPEM(certBytes)
+	return client.LoadCACerts([][]byte{certBytes}), nil
+}
 
-	return certificates, nil
+func GetCertificates(certFile string, keyFile string) ([]tls.Certificate, error) {
+	cert, err := os.ReadFile(certFile)
+	if err != nil {
+		log.Fatalf("unable to read cert file %v", err)
+		return nil, err
+	}
+
+	key, err := os.ReadFile(keyFile)
+	if err != nil {
+		log.Fatalf("unable to read key file %v", err)
+		return nil, err
+	}
+
+	return client.LoadServerCertAndKey([]byte(cert), []byte(key), nil)
 }
 
 type CmdTestSuite struct {
@@ -64,7 +77,7 @@ type CmdTestSuite struct {
 }
 
 func TestCmdSuite(t *testing.T) {
-	logger = logger.WithGroup("test-logger")
+	logger = logger.With(slog.Bool("test-logger", true)) // makes it easy to see which logger is which
 	rootCA, err := GetCACert("docker/tls/config/tls/ca.aerospike.com.crt")
 	if err != nil {
 		t.Fatalf("unable to read root ca %v", err)
@@ -72,15 +85,21 @@ func TestCmdSuite(t *testing.T) {
 		logger.Error("Failed to read cert")
 	}
 
-	logger.Info("%v", slog.Any("cert", rootCA))
+	certificates, err := GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
+	if err != nil {
+		t.Fatalf("unable to read certificates %v", err)
+		t.FailNow()
+		logger.Error("Failed to read cert")
+	}
 
+	logger.Info("%v", slog.Any("cert", rootCA))
 	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/docker-compose.yml",
+		composeFile: "docker/docker-compose.yml", // vanilla
 		suiteFlags:  []string{"--log-level debug"},
 		avsIP:       "localhost",
 	})
 	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/tls/docker-compose.yml",
+		composeFile: "docker/tls/docker-compose.yml", // tls
 		suiteFlags: []string{
 			"--log-level debug",
 			createFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
@@ -92,7 +111,21 @@ func TestCmdSuite(t *testing.T) {
 		avsIP: "localhost",
 	})
 	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/auth/docker-compose.yml",
+		composeFile: "docker/mtls/docker-compose.yml", // mutual tls
+		suiteFlags: []string{
+			"--log-level debug",
+			createFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+			createFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+			createFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+		},
+		avsTLSConfig: &tls.Config{
+			Certificates: certificates,
+			RootCAs:      rootCA,
+		},
+		avsIP: "localhost",
+	})
+	suite.Run(t, &CmdTestSuite{
+		composeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
 		suiteFlags: []string{
 			"--log-level debug",
 			createFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),

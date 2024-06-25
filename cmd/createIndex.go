@@ -52,7 +52,7 @@ var createIndexFlags = &struct {
 func newCreateIndexFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}                                                                                                                                                                                                                                                                                                                                                                                            //nolint:lll // For readability
 	flagSet.StringVarP(&createIndexFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                                                                                                                                                                                                                                                           //nolint:lll // For readability
-	flagSet.StringArrayVarP(&createIndexFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                                                                                                                                                                                                                                                                                    //nolint:lll // For readability
+	flagSet.StringSliceVarP(&createIndexFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                                                                                                                                                                                                                                                                                    //nolint:lll // For readability
 	flagSet.StringVarP(&createIndexFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                                                                                                                                                                                                                                                 //nolint:lll // For readability
 	flagSet.StringVarP(&createIndexFlags.vectorField, flags.VectorField, "f", "", commonFlags.DefaultWrapHelpString("The name of the vector field."))                                                                                                                                                                                                                                                                      //nolint:lll // For readability
 	flagSet.Uint32VarP(&createIndexFlags.dimensions, flags.Dimension, "d", 0, commonFlags.DefaultWrapHelpString("The dimension of the vector field."))                                                                                                                                                                                                                                                                     //nolint:lll // For readability
@@ -131,9 +131,6 @@ func newCreateIndexCmd() *cobra.Command {
 			}
 			defer adminClient.Close()
 
-			ctx, cancel := context.WithTimeout(context.Background(), createIndexFlags.timeout)
-			defer cancel()
-
 			// Inverted to make it easier to understand
 			var hnswBatchDisabled *bool
 			if createIndexFlags.hnswBatchEnabled.Val != nil {
@@ -156,6 +153,20 @@ func newCreateIndexCmd() *cobra.Command {
 					Disabled:   hnswBatchDisabled,
 				},
 			}
+
+			if !confirm(fmt.Sprintf(
+				"Are you sure you want to create the index %s field %s?",
+				nsAndSetString(
+					createIndexFlags.namespace,
+					createIndexFlags.sets,
+				),
+				createIndexFlags.vectorField,
+			)) {
+				return nil
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), createIndexFlags.timeout)
+			defer cancel()
 
 			err = adminClient.IndexCreate(
 				ctx,

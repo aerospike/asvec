@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/term"
@@ -164,4 +165,27 @@ func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFla
 	}
 
 	return hosts, isLoadBalancer
+}
+
+func nsAndSetString(namespace string, sets []string) string {
+	var setStr string
+
+	if len(sets) == 0 {
+		setStr = "*"
+	} else if len(sets) == 1 {
+		setStr = sets[0]
+	} else {
+		setStr = fmt.Sprintf("%v", sets)
+	}
+
+	return fmt.Sprintf("%s.%s", namespace, setStr)
+}
+
+func confirm(prompt string) bool {
+	var confirm string
+
+	fmt.Print(prompt + " (y/n): ")
+	fmt.Scanln(&confirm)
+
+	return strings.ToLower(confirm) == "y"
 }

@@ -30,7 +30,7 @@ var dropIndexFlags = &struct {
 func newDropIndexFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.StringVarP(&dropIndexFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))          //nolint:lll // For readability
-	flagSet.StringArrayVarP(&dropIndexFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                   //nolint:lll // For readability
+	flagSet.StringSliceVarP(&dropIndexFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                   //nolint:lll // For readability
 	flagSet.StringVarP(&dropIndexFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                //nolint:lll // For readability
 	flagSet.DurationVar(&dropIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index.")) //nolint:lll // For readability
 	flagSet.AddFlagSet(dropIndexFlags.clientFlags.NewClientFlagSet())
@@ -77,6 +77,17 @@ func newDropIndexCommand() *cobra.Command {
 				return err
 			}
 			defer adminClient.Close()
+
+			if !confirm(fmt.Sprintf(
+				"Are you sure you want to drop the index %s on field %s?",
+				nsAndSetString(
+					createIndexFlags.namespace,
+					createIndexFlags.sets,
+				),
+				createIndexFlags.vectorField,
+			)) {
+				return nil
+			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), dropIndexFlags.timeout)
 			defer cancel()

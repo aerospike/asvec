@@ -2,6 +2,10 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/aerospike/aerospike-client-go/v7 v7.4.0 h1:g8/7v8RHhQhTArhW3C7Au7o+u8j8x5eySZL6MXfpHKU=
 github.com/aerospike/aerospike-client-go/v7 v7.4.0/go.mod h1:pPKnWiS8VDJcH4IeB1b8SA2TWnkjcVLHwAAJ+BHfGK8=
+github.com/aerospike/avs-client-go v0.0.0-20240625001515-2ad1adca5de0 h1:ptyMV3i84ErLHyXIs3aTqIxTgJnJInfa6Nn1+L8GqO0=
+github.com/aerospike/avs-client-go v0.0.0-20240625001515-2ad1adca5de0/go.mod h1:brxlQNig1y4tU7EP/jX+kXVgmwLERvtP/xhRoNw8Ark=
+github.com/aerospike/tools-common-go v0.0.0-20240618165632-595098741f89 h1:5rYc5QsaQeAnSzUm30gOUANEIEsMS8knbnjouenRV7E=
+github.com/aerospike/tools-common-go v0.0.0-20240618165632-595098741f89/go.mod h1:Ig1lRynXx0tXNOY3MdtanTsKz1ifG/2AyDFMXn3RMTc=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

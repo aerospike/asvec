@@ -2,13 +2,45 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
+	"time"
 
 	avs "github.com/aerospike/avs-client-go"
 )
+
+func createClientFromFlags(clientFlags *flags.ClientFlags, connectTimeout time.Duration) (*avs.AdminClient, error) {
+	hosts, isLoadBalancer := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
+
+	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
+	defer cancel()
+
+	tlsConfig, err := clientFlags.NewTLSConfig()
+	if err != nil {
+		logger.Error("failed to create TLS config", slog.Any("error", err))
+		return nil, err
+	}
+
+	var password *string
+	if len(clientFlags.Password) != 0 {
+		strPass := clientFlags.Password.String()
+		password = &strPass
+	}
+
+	adminClient, err := avs.NewAdminClient(
+		ctx, hosts, clientFlags.ListenerName.Val, isLoadBalancer, clientFlags.User.Val, password, tlsConfig, logger,
+	)
+	if err != nil {
+		logger.Error("failed to create AVS client", slog.Any("error", err))
+		return nil, err
+	}
+
+	return adminClient, nil
+}
 
 func newTLSConfig(rootCA [][]byte, cert []byte, key []byte, keyPass []byte, tlsProtoMin int, tlsProtoMax int) (*tls.Config, error) {
 	if len(rootCA) == 0 && len(cert) == 0 && len(key) == 0 {

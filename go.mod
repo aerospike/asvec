@@ -2,12 +2,12 @@ module asvec
 
 go 1.21.7
 
-replace github.com/aerospike/avs-client-go => /Users/jesseschmidt/Developer/avs-client-go
+// replace github.com/aerospike/avs-client-go => /Users/jesseschmidt/Developer/avs-client-go
 
-replace github.com/aerospike/tools-common-go => /Users/jesseschmidt/Developer/tools-common-go
+// replace github.com/aerospike/tools-common-go => /Users/jesseschmidt/Developer/tools-common-go
 
 require (
-	github.com/aerospike/avs-client-go v0.0.0-20240509004238-aa3172c86d65
+	github.com/aerospike/avs-client-go v0.0.0-20240625001515-2ad1adca5de0
 	github.com/aerospike/tools-common-go v0.0.0-20240618165632-595098741f89
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/spf13/cobra v1.8.0

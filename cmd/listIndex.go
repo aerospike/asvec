@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
@@ -20,21 +19,18 @@ import (
 )
 
 var listIndexFlags = &struct {
-	flags.ClientFlags
-	verbose bool
-	timeout time.Duration
+	clientFlags flags.ClientFlags
+	verbose     bool
+	timeout     time.Duration
 }{
-	ClientFlags: *flags.NewClientFlags(),
+	clientFlags: *flags.NewClientFlags(),
 }
 
 func newListIndexFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.VarP(listIndexFlags.Host, flags.Host, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s", flags.Seeds)))                                         //nolint:lll // For readability
-	flagSet.Var(listIndexFlags.Seeds, flags.Seeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s", flags.Host))) //nolint:lll // For readability
-	flagSet.VarP(&listIndexFlags.ListenerName, flags.ListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))       //nolint:lll // For readability
-	flagSet.BoolVarP(&listIndexFlags.verbose, flags.Verbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))                                                                                   //nolint:lll // For readability
-	flagSet.DurationVar(&listIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                            //nolint:lll // For readability
-	flagSet.AddFlagSet(listIndexFlags.NewClientFlagSet())
+	flagSet.BoolVarP(&listIndexFlags.verbose, flags.Verbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))        //nolint:lll // For readability
+	flagSet.DurationVar(&listIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index.")) //nolint:lll // For readability
+	flagSet.AddFlagSet(listIndexFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
 }
@@ -62,41 +58,19 @@ func newListIndexCmd() *cobra.Command {
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
-				slog.String(flags.Host, listIndexFlags.Host.String()),
-				slog.String(flags.Seeds, listIndexFlags.Seeds.String()),
-				slog.String(flags.ListenerName, listIndexFlags.ListenerName.String()),
-				slog.Bool(flags.TLSCaFile, createIndexFlags.TLSRootCAFile != nil),
-				slog.Bool(flags.TLSCaPath, createIndexFlags.TLSRootCAPath != nil),
-				slog.Bool(flags.TLSCertFile, createIndexFlags.TLSCertFile != nil),
-				slog.Bool(flags.TLSKeyFile, createIndexFlags.TLSKeyFile != nil),
-				slog.Bool(flags.TLSKeyFilePass, createIndexFlags.TLSKeyFilePass != nil),
-				slog.Bool(flags.Verbose, listIndexFlags.verbose),
-				slog.Duration(flags.Timeout, listIndexFlags.timeout),
+				append(listIndexFlags.clientFlags.NewSLogAttr(),
+					slog.Bool(flags.Verbose, listIndexFlags.verbose),
+					slog.Duration(flags.Timeout, listIndexFlags.timeout),
+				)...,
 			)
 
-			hosts, isLoadBalancer := parseBothHostSeedsFlag(listIndexFlags.Seeds, listIndexFlags.Host)
-
-			ctx, cancel := context.WithTimeout(context.Background(), listIndexFlags.timeout)
-			defer cancel()
-
-			tlsConfig, err := listIndexFlags.NewTLSConfig()
+			adminClient, err := createClientFromFlags(&listIndexFlags.clientFlags, listIndexFlags.timeout)
 			if err != nil {
-				logger.Error("failed to create TLS config", slog.Any("error", err))
 				return err
 			}
-
-			adminClient, err := avs.NewAdminClient(
-				ctx, hosts, listIndexFlags.ListenerName.Val, isLoadBalancer, tlsConfig, logger,
-			)
-			if err != nil {
-				logger.Error("failed to create AVS client", slog.Any("error", err))
-				return err
-			}
-
-			cancel()
 			defer adminClient.Close()
 
-			ctx, cancel = context.WithTimeout(context.Background(), listIndexFlags.timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), listIndexFlags.timeout)
 			defer cancel()
 
 			indexList, err := adminClient.IndexList(ctx)

@@ -11,6 +11,10 @@ on:
               description: 'Delete existing pre-releases?'
               required: false
               type: boolean
+
+    push:
+        branches:
+          - "VEC-189-tls" # remove before merge into main
 jobs:
     build-and-release:
         runs-on: macos-13

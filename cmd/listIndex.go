@@ -81,34 +81,32 @@ func newListIndexCmd() *cobra.Command {
 
 			indexStatusList := make([]*protos.IndexStatusResponse, len(indexList.GetIndices()))
 
-			if listIndexFlags.verbose {
-				cancel()
+			cancel()
 
-				ctx, cancel = context.WithTimeout(context.Background(), listIndexFlags.timeout)
-				defer cancel()
+			ctx, cancel = context.WithTimeout(context.Background(), listIndexFlags.timeout)
+			defer cancel()
 
-				wg := sync.WaitGroup{}
-				for i, index := range indexList.GetIndices() {
-					wg.Add(1)
-					go func(i int, index *protos.IndexDefinition) {
-						defer wg.Done()
-						indexStatus, err := adminClient.IndexGetStatus(ctx, index.Id.Namespace, index.Id.Name)
-						if err != nil {
-							logger.ErrorContext(ctx,
-								"failed to get index status",
-								slog.Any("error", err),
-								slog.String("index", index.Id.String()),
-							)
-							return
-						}
+			wg := sync.WaitGroup{}
+			for i, index := range indexList.GetIndices() {
+				wg.Add(1)
+				go func(i int, index *protos.IndexDefinition) {
+					defer wg.Done()
+					indexStatus, err := adminClient.IndexGetStatus(ctx, index.Id.Namespace, index.Id.Name)
+					if err != nil {
+						logger.ErrorContext(ctx,
+							"failed to get index status",
+							slog.Any("error", err),
+							slog.String("index", index.Id.String()),
+						)
+						return
+					}
 
-						indexStatusList[i] = indexStatus
-						logger.Debug("server index status", slog.Int("index", i), slog.Any("response", indexStatus))
-					}(i, index)
-				}
-
-				wg.Wait()
+					indexStatusList[i] = indexStatus
+					logger.Debug("server index status", slog.Int("index", i), slog.Any("response", indexStatus))
+				}(i, index)
 			}
+
+			wg.Wait()
 
 			logger.Debug("server index list", slog.String("response", indexList.String()))
 

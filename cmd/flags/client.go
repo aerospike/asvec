@@ -3,6 +3,7 @@ package flags
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/pflag"
@@ -14,6 +15,7 @@ type ClientFlags struct {
 	ListenerName StringOptionalFlag
 	User         StringOptionalFlag
 	Password     commonFlags.PasswordFlag
+	Timeout      time.Duration
 	TLSFlags
 }
 
@@ -32,21 +34,28 @@ func (cf *ClientFlags) NewClientFlagSet() *pflag.FlagSet {
 	flagSet.VarP(&cf.ListenerName, ListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments.")) //nolint:lll // For readability
 	flagSet.VarP(&cf.User, User, "U", commonFlags.DefaultWrapHelpString("The AVS user to authenticate with."))                                                                                             //nolint:lll // For readability
 	flagSet.VarP(&cf.Password, Password, "P", commonFlags.DefaultWrapHelpString("The AVS password for the specified user."))                                                                               //nolint:lll // For readability
+	flagSet.DurationVar(&cf.Timeout, Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The timeout to use for each request to AVS"))                                                              //nolint:lll // For readability
 	flagSet.AddFlagSet(cf.NewTLSFlagSet(commonFlags.DefaultWrapHelpString))
 
 	return flagSet
 }
 
 func (cf *ClientFlags) NewSLogAttr() []any {
+	logPass := ""
+	if cf.Password.String() != "" {
+		logPass = "*"
+	}
+
 	return []any{slog.String(Host, cf.Host.String()),
 		slog.String(Seeds, cf.Seeds.String()),
 		slog.String(ListenerName, cf.ListenerName.String()),
 		slog.String(User, cf.User.String()),
-		slog.String(Password, cf.Password.String()),
+		slog.String(Password, logPass),
 		slog.Bool(TLSCaFile, cf.TLSRootCAFile != nil),
 		slog.Bool(TLSCaPath, cf.TLSRootCAPath != nil),
 		slog.Bool(TLSCertFile, cf.TLSCertFile != nil),
 		slog.Bool(TLSKeyFile, cf.TLSKeyFile != nil),
 		slog.Bool(TLSKeyFilePass, cf.TLSKeyFilePass != nil),
+		slog.Duration(Timeout, cf.Timeout),
 	}
 }

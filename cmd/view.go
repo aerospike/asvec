@@ -66,3 +66,31 @@ func (v *View) PrintIndexes(
 
 	t.Render()
 }
+
+func (v *View) getUserListWriter() *writers.UserTableWriter {
+	return writers.NewUserTableWriter(v.writer, v.logger)
+}
+
+func (v *View) PrintUsers(usersList *protos.ListUsersResponse) {
+	t := v.getUserListWriter()
+
+	for _, user := range usersList.GetUsers() {
+		t.AppendUserRow(user)
+	}
+
+	t.Render()
+}
+
+func (v *View) getRoleListWriter() *writers.RoleTableWriter {
+	return writers.NewRoleTableWriter(v.writer, v.logger)
+}
+
+func (v *View) PrintRoles(usersList *protos.ListRolesResponse) {
+	t := v.getRoleListWriter()
+
+	for _, role := range usersList.GetRoles() {
+		t.AppendRoleRow(role)
+	}
+
+	t.Render()
+}

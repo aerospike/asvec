@@ -48,6 +48,10 @@ var rootCmd = &cobra.Command{
 			handler.Enabled(context.Background(), lvl.Level())
 		}
 
+		if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
+			return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
+		}
+
 		cmd.SilenceUsage = true
 
 		if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {

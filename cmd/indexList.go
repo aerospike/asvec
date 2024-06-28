@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-	"time"
 
 	"github.com/aerospike/avs-client-go/protos"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
@@ -18,36 +17,34 @@ import (
 	"github.com/spf13/viper"
 )
 
-var listIndexFlags = &struct {
+var indexListFlags = &struct {
 	clientFlags flags.ClientFlags
 	verbose     bool
-	timeout     time.Duration
 }{
 	clientFlags: *flags.NewClientFlags(),
 }
 
-func newListIndexFlagSet() *pflag.FlagSet {
+func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&listIndexFlags.verbose, flags.Verbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information."))        //nolint:lll // For readability
-	flagSet.DurationVar(&listIndexFlags.timeout, flags.Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The distance metric for the index.")) //nolint:lll // For readability
-	flagSet.AddFlagSet(listIndexFlags.clientFlags.NewClientFlagSet())
+	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information.")) //nolint:lll // For readability
+	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
 }
 
-var listIndexRequiredFlags = []string{}
+var indexListRequiredFlags = []string{}
 
 // listIndexCmd represents the listIndex command
-func newListIndexCmd() *cobra.Command {
+func newIndexListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "index",
-		Aliases: []string{"indexes"},
+		Use:     "list",
+		Aliases: []string{"ls"},
 		Short:   "A command for listing indexes",
 		Long: fmt.Sprintf(`A command for displaying useful information about AVS indexes. To display additional
 		index information use the --%s flag.
 	For example:
 		export ASVEC_HOST=<avs-ip>:5000
-		asvec list index
+		asvec index list
 		`, flags.Verbose),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
@@ -58,19 +55,18 @@ func newListIndexCmd() *cobra.Command {
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
-				append(listIndexFlags.clientFlags.NewSLogAttr(),
-					slog.Bool(flags.Verbose, listIndexFlags.verbose),
-					slog.Duration(flags.Timeout, listIndexFlags.timeout),
+				append(indexListFlags.clientFlags.NewSLogAttr(),
+					slog.Bool(flags.Verbose, indexListFlags.verbose),
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&listIndexFlags.clientFlags, listIndexFlags.timeout)
+			adminClient, err := createClientFromFlags(&indexListFlags.clientFlags)
 			if err != nil {
 				return err
 			}
 			defer adminClient.Close()
 
-			ctx, cancel := context.WithTimeout(context.Background(), listIndexFlags.timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), indexListFlags.clientFlags.Timeout)
 			defer cancel()
 
 			indexList, err := adminClient.IndexList(ctx)
@@ -83,7 +79,7 @@ func newListIndexCmd() *cobra.Command {
 
 			cancel()
 
-			ctx, cancel = context.WithTimeout(context.Background(), listIndexFlags.timeout)
+			ctx, cancel = context.WithTimeout(context.Background(), indexListFlags.clientFlags.Timeout)
 			defer cancel()
 
 			wg := sync.WaitGroup{}
@@ -110,7 +106,7 @@ func newListIndexCmd() *cobra.Command {
 
 			logger.Debug("server index list", slog.String("response", indexList.String()))
 
-			view.PrintIndexes(indexList, indexStatusList, listIndexFlags.verbose)
+			view.PrintIndexes(indexList, indexStatusList, indexListFlags.verbose)
 
 			return nil
 		},
@@ -118,13 +114,13 @@ func newListIndexCmd() *cobra.Command {
 }
 
 func init() {
-	listIndexCmd := newListIndexCmd()
+	indexListCmd := newIndexListCmd()
 
-	listCmd.AddCommand(listIndexCmd)
-	listIndexCmd.Flags().AddFlagSet(newListIndexFlagSet())
+	indexCmd.AddCommand(indexListCmd)
+	indexListCmd.Flags().AddFlagSet(newIndexListFlagSet())
 
-	for _, flag := range listIndexRequiredFlags {
-		err := listIndexCmd.MarkFlagRequired(flag)
+	for _, flag := range indexListRequiredFlags {
+		err := indexListCmd.MarkFlagRequired(flag)
 		if err != nil {
 			panic(err)
 		}

@@ -7,17 +7,29 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"time"
 
 	"golang.org/x/term"
 
 	avs "github.com/aerospike/avs-client-go"
 )
 
-func createClientFromFlags(clientFlags *flags.ClientFlags, connectTimeout time.Duration) (*avs.AdminClient, error) {
+func passwordPrompt(prompt string) (string, error) {
+	fmt.Print(prompt)
+
+	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println()
+
+	return string(bytePassword), nil
+}
+
+func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, error) {
 	hosts, isLoadBalancer := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
 
-	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), clientFlags.Timeout)
 	defer cancel()
 
 	tlsConfig, err := clientFlags.NewTLSConfig()
@@ -32,15 +44,13 @@ func createClientFromFlags(clientFlags *flags.ClientFlags, connectTimeout time.D
 			strPass := clientFlags.Password.String()
 			password = &strPass
 		} else {
-			fmt.Print("Enter Password: ")
-			bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+			pass, err := passwordPrompt("Enter Password: ")
 			if err != nil {
 				logger.Error("failed to read password", slog.Any("error", err))
 				return nil, err
 			}
-			fmt.Println() // Print a newline after the password input
-			strPass := string(bytePassword)
-			password = &strPass
+
+			password = &pass
 		}
 	}
 

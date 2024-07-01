@@ -52,7 +52,7 @@ func newUserNewPasswordCmd() *cobra.Command {
 			logger.Debug("parsed flags",
 				append(
 					userNewPassFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.NewUser, userNewPassFlags.username),
+					slog.String(flags.Username, userNewPassFlags.username),
 					slog.Any(flags.Roles, userNewPassFlags.roles),
 				)...,
 			)

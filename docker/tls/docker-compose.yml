@@ -11,7 +11,7 @@ services:
       - "--config-file"
       - "/opt/aerospike/etc/aerospike/aerospike.conf"
   avs:
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-proximus-private:0.5.0-SNAPSHOT
+    image: aerospike.jfrog.io/docker/aerospike/aerospike-proximus-private:0.5.1-SNAPSHOT
     ports:
       - "10000:10000"
     networks:

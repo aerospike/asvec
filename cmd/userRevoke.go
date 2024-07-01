@@ -27,14 +27,14 @@ var userRevokeFlags = &struct {
 func newUserRevokeFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
 	flagSet.AddFlagSet(userRevokeFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.RevokeUser, "", "TODO")
+	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.Username, "", "TODO")
 	flagSet.StringSliceVar(&userRevokeFlags.roles, flags.Roles, []string{}, "TODO")
 
 	return flagSet
 }
 
 var userRevokeRequiredFlags = []string{
-	flags.RevokeUser,
+	flags.Username,
 	flags.Roles,
 }
 
@@ -59,7 +59,7 @@ func newUserRevokeCmd() *cobra.Command {
 			logger.Debug("parsed flags",
 				append(
 					userRevokeFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.NewUser, userRevokeFlags.revokeUser),
+					slog.String(flags.Username, userRevokeFlags.revokeUser),
 					slog.Any(flags.Roles, userRevokeFlags.roles),
 				)...,
 			)

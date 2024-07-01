@@ -25,7 +25,7 @@ var userCreateFlags = &struct {
 func newUserCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
 	flagSet.AddFlagSet(userCreateFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userCreateFlags.newUsername, flags.NewUser, "", "TODO")
+	flagSet.StringVar(&userCreateFlags.newUsername, flags.Username, "", "TODO")
 	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", "TODO")
 	flagSet.StringSliceVar(&userCreateFlags.roles, flags.Roles, []string{}, "TODO")
 
@@ -33,7 +33,7 @@ func newUserCreateFlagSet() *pflag.FlagSet {
 }
 
 var userCreateRequiredFlags = []string{
-	flags.NewUser,
+	flags.Username,
 	flags.Roles,
 }
 
@@ -52,7 +52,7 @@ func newUserCreateCmd() *cobra.Command {
 			logger.Debug("parsed flags",
 				append(
 					userCreateFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.NewUser, userCreateFlags.newUsername),
+					slog.String(flags.Username, userCreateFlags.newUsername),
 					slog.Any(flags.Roles, userCreateFlags.roles),
 				)...,
 			)

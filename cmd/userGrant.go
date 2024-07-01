@@ -25,14 +25,14 @@ var userGrantFlags = &struct {
 func newUserGrantFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
 	flagSet.AddFlagSet(userGrantFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userGrantFlags.grantUser, flags.GrantUser, "", "TODO")
+	flagSet.StringVar(&userGrantFlags.grantUser, flags.Username, "", "TODO")
 	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, "TODO")
 
 	return flagSet
 }
 
 var userGrantRequiredFlags = []string{
-	flags.GrantUser,
+	flags.Username,
 	flags.Roles,
 }
 
@@ -50,7 +50,7 @@ func newUserGrantCmd() *cobra.Command {
 			logger.Debug("parsed flags",
 				append(
 					userGrantFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.NewUser, userGrantFlags.grantUser),
+					slog.String(flags.Username, userGrantFlags.grantUser),
 					slog.Any(flags.Roles, userGrantFlags.roles),
 				)...,
 			)

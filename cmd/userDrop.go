@@ -23,13 +23,13 @@ var userDropFlags = &struct {
 func newUserDropFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
 	flagSet.AddFlagSet(userDropFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userDropFlags.dropUser, flags.DropUser, "", "TODO")
+	flagSet.StringVar(&userDropFlags.dropUser, flags.Username, "", "TODO")
 
 	return flagSet
 }
 
 var userDropRequiredFlags = []string{
-	flags.DropUser,
+	flags.Username,
 }
 
 func newUserDropCmd() *cobra.Command {
@@ -46,7 +46,7 @@ func newUserDropCmd() *cobra.Command {
 			logger.Debug("parsed flags",
 				append(
 					userDropFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.NewUser, userDropFlags.dropUser),
+					slog.String(flags.Username, userDropFlags.dropUser),
 				)...,
 			)
 

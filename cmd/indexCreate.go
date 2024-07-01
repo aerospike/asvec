@@ -20,6 +20,7 @@ import (
 //nolint:govet // Padding not a concern for a CLI
 var indexCreateFlags = &struct {
 	clientFlags         flags.ClientFlags
+	yes                 bool
 	namespace           string
 	sets                []string
 	indexName           string
@@ -48,7 +49,8 @@ var indexCreateFlags = &struct {
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{}                                                                                                                                                                                                                                                                                                                                                                  //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{}
+	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, commonFlags.DefaultWrapHelpString("When true do not prompt for confirmation."))                                                                                                                                                                                                                                               //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                                                                                                                                                                                                                                 //nolint:lll // For readability
 	flagSet.StringSliceVarP(&indexCreateFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                                                                                                                                                                                                                                                          //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                                                                                                                                                                                                                       //nolint:lll // For readability
@@ -103,6 +105,7 @@ func newIndexCreateCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(indexCreateFlags.clientFlags.NewSLogAttr(),
+					slog.Bool(flags.Yes, indexCreateFlags.yes),
 					slog.String(flags.Namespace, indexCreateFlags.namespace),
 					slog.Any(flags.Sets, indexCreateFlags.sets),
 					slog.String(flags.IndexName, indexCreateFlags.indexName),
@@ -150,7 +153,7 @@ func newIndexCreateCmd() *cobra.Command {
 				},
 			}
 
-			if !confirm(fmt.Sprintf(
+			if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
 				"Are you sure you want to create the index %s field %s?",
 				nsAndSetString(
 					indexCreateFlags.namespace,

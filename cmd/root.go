@@ -98,7 +98,7 @@ func init() {
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
-	bindEnvs := []string{flags.Host, flags.Seeds, flags.User, flags.Password}
+	bindEnvs := []string{flags.Host, flags.Seeds, flags.AuthUser, flags.AuthPassword}
 
 	// Bind specified flags to ASVEC_*
 	for _, env := range bindEnvs {

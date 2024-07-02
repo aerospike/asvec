@@ -40,4 +40,4 @@ Otherwise, if you are an enterprise customer, please [contact support](https://a
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE.md](./LICENSE.md) file for details.
+This project is licensed under the MIT License. See the [LICENSE.md](./LICENSE) file for details.

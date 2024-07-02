@@ -21,7 +21,10 @@ jobs:
         FEATURES_CONF : ${{secrets.FEATURES_CONF}}
 
       run: |
-        echo "$FEATURES_CONF" > docker/config/features.conf
+        echo "$FEATURES_CONF" > docker/vanilla/config/features.conf
+        echo "$FEATURES_CONF" > docker/tls/config/features.conf
+        echo "$FEATURES_CONF" > docker/mtls/config/features.conf
+        echo "$FEATURES_CONF" > docker/auth/config/features.conf
     - name: Run tests
       run: |
         make coverage

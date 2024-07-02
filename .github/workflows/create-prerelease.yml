@@ -21,6 +21,8 @@ jobs:
         steps:
             - name: "Git checkout"
               uses: actions/checkout@v3
+              with:
+                fetch-depth: 0
             - name: "Install Homebrew"
               run: /bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
             - name: "Install Dependencies"

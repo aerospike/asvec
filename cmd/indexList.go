@@ -37,15 +37,17 @@ var indexListRequiredFlags = []string{}
 // listIndexCmd represents the listIndex command
 func newIndexListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
+		Use:     "ls",
+		Aliases: []string{"list"},
 		Short:   "A command for listing indexes",
-		Long: fmt.Sprintf(`A command for displaying useful information about AVS indexes. To display additional
-		index information use the --%s flag.
-	For example:
-		export ASVEC_HOST=<avs-ip>:5000
-		asvec index list
-		`, flags.Verbose),
+		Long: fmt.Sprintf(`A command for listing useful information about AVS indexes. To display additional
+index information use the --%s flag.
+
+For example:
+
+%s
+asvec index ls
+		`, flags.Verbose, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
 				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)

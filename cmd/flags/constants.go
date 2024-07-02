@@ -7,7 +7,7 @@ const (
 	ListenerName     = "listener-name"
 	AuthUser         = "user"
 	AuthPassword     = "password"
-	Username         = "name"
+	Name             = "name"
 	NewPassword      = "new-password"
 	Roles            = "roles"
 	Namespace        = "namespace"

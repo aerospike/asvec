@@ -6,8 +6,10 @@ package cmd
 import (
 	"asvec/cmd/flags"
 	"context"
+	"fmt"
 	"log/slog"
 
+	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,16 +25,16 @@ var userNewPassFlags = &struct {
 }
 
 func newUserNewPassFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userNewPassFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userNewPassFlags.username, flags.Username, "", "TODO")
-	flagSet.StringVar(&userNewPassFlags.password, flags.NewPassword, "", "TODO")
+	flagSet.StringVar(&userNewPassFlags.username, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the user."))                                                                                                     //nolint:lll // For readability
+	flagSet.StringVar(&userNewPassFlags.password, flags.NewPassword, "", commonFlags.DefaultWrapHelpString("The new password for the user. If a new password is not provided you you will be prompted to enter a new password.")) //nolint:lll // For readability
 
 	return flagSet
 }
 
 var userNewPassRequiredFlags = []string{
-	flags.Username,
+	flags.Name,
 }
 
 // createUserCmd represents the createIndex command
@@ -40,19 +42,20 @@ func newUserNewPasswordCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "new-password",
 		Aliases: []string{"new-pass"},
-		Short:   "A command for creating users",
-		Long: `A command for creating users. TODO
+		Short:   "Change the password for a user",
+		Long: fmt.Sprintf(`A command for changing the password for an existing user.
 
-		For example:
-			export ASVEC_HOST=127.0.0.1:5000 ASVEC_USER=admin
-			asvec user new-password --name
-			`,
+For example:
+
+%s
+asvec user new-password --%s foo
+			`, HelpTxtSetupEnv, flags.Name),
 
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(
 					userNewPassFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.Username, userNewPassFlags.username),
+					slog.String(flags.Name, userNewPassFlags.username),
 					slog.Any(flags.Roles, userNewPassFlags.roles),
 				)...,
 			)

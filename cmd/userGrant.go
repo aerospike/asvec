@@ -6,9 +6,11 @@ package cmd
 import (
 	"asvec/cmd/flags"
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
+	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,34 +25,35 @@ var userGrantFlags = &struct {
 }
 
 func newUserGrantFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
 	flagSet.AddFlagSet(userGrantFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userGrantFlags.grantUser, flags.Username, "", "TODO")
-	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, "TODO")
+	flagSet.StringVar(&userGrantFlags.grantUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to grant new roles"))                                                           //nolint:lll // For readability
+	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to grant the existing user. New roles are added to a users existing roles.")) //nolint:lll // For readability
 
 	return flagSet
 }
 
 var userGrantRequiredFlags = []string{
-	flags.Username,
+	flags.Name,
 	flags.Roles,
 }
 
 func newUserGrantCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "grant",
-		Short: "A command for granting users roles",
-		Long: `A command for creating users. TODO
+		Short: "A command for granting roles to an existing users.",
+		Long: fmt.Sprintf(`A command for granting roles to an existing users.
 
-		For example:
-			export ASVEC_HOST=127.0.0.1:5000 ASVEC_USER=admin
-			asvec user grant --grant-user foo --roles admin
-			`,
+For example:
+
+%s
+asvec user grant --%s foo --%s admin
+			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(
 					userGrantFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.Username, userGrantFlags.grantUser),
+					slog.String(flags.Name, userGrantFlags.grantUser),
 					slog.Any(flags.Roles, userGrantFlags.roles),
 				)...,
 			)
@@ -70,7 +73,12 @@ func newUserGrantCmd() *cobra.Command {
 				userGrantFlags.roles,
 			)
 			if err != nil {
-				logger.Error("unable to grant user roles", slog.String("user", userGrantFlags.grantUser), slog.Any("roles", userGrantFlags.roles), slog.Any("error", err))
+				logger.Error(
+					"unable to grant user roles",
+					slog.String("user", userGrantFlags.grantUser),
+					slog.Any("roles", userGrantFlags.roles),
+					slog.Any("error", err),
+				)
 				return err
 			}
 

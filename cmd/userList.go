@@ -6,6 +6,7 @@ package cmd
 import (
 	"asvec/cmd/flags"
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/spf13/cobra"
@@ -31,14 +32,15 @@ var userListRequiredFlags = []string{}
 // listIndexCmd represents the listIndex command
 func newUserListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
+		Use:     "ls",
+		Aliases: []string{"list"},
 		Short:   "A command for listing users",
-		Long: `A command for displaying useful information about AVS users.
-	For example:
-		export ASVEC_HOST=<avs-ip>:5000
-		asvec user list
-		`,
+		Long: fmt.Sprintf(`A command for listing useful information about AVS users.
+For example:
+
+%s
+asvec user ls
+		`, HelpTxtSetupEnv),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				userListFlags.clientFlags.NewSLogAttr()...,

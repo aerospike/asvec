@@ -33,14 +33,16 @@ var roleListRequiredFlags = []string{}
 // listIndexCmd represents the listIndex command
 func newRoleListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
-		Short:   "A command for listing users",
-		Long: `A command for displaying useful information about AVS users.
-	For example:
-		export ASVEC_HOST=<avs-ip>:5000
-		asvec user list
-		`,
+		Use:     "ls",
+		Aliases: []string{"list"},
+		Short:   "A command for listing roles",
+		Long: fmt.Sprintf(`A command for listing roles.
+
+For example:
+
+%s
+asvec role ls
+		`, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
 				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)

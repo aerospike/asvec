@@ -155,9 +155,11 @@ clean:
 
 ## actual code
 
+VERSION = $(shell git describe --tags --always)
+GO_LDFLAGS="-X 'asvec/cmd.Version=$(VERSION)' -s -w"
 OS := $(shell uname -o)
 CPU := $(shell uname -m)
-ver:=$(shell V=$$(git branch --show-current); if [[ $$V == v* ]]; then printf $${V:1} > ./VERSION.md; fi; cat ./VERSION.md)
+ver:=$(shell V=$$(git describe --tags --always); then printf $$V > ./VERSION.md; fi; cat ./VERSION.md)
 define _amddebscript
 ver=$(cat ./VERSION.md)
 cat <<EOF > ./bin/deb/DEBIAN/control
@@ -241,14 +243,14 @@ prep:
 
 .PHONY: compile_linux_wip_amd64
 compile_linux_wip_amd64:
-	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-linux-amd64-wip
+	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-amd64-wip
 ifneq (, $(shell which upx))
 	upx asvec-linux-amd64-wip
 endif
 
 .PHONY: compile_linux_wip_arm64
 compile_linux_wip_arm64:
-	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-linux-arm64-wip
+	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-arm64-wip
 ifneq (, $(shell which upx))
 	upx asvec-linux-arm64-wip
 endif
@@ -256,53 +258,53 @@ endif
 .PHONY: compile_linux_amd64
 compile_linux_amd64:
 	printf "package main\n\nimport _ \"embed\"\n\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte\n" > embed_linux.go
-	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-linux-amd64
+	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-amd64
 	mv asvec-linux-amd64 $(BIN_DIR)/
 
 .PHONY: compile_linux_arm64
 compile_linux_arm64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\nvar nLinuxBinaryArm64 []byte\n" > embed_linux.go
-	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-linux-arm64
+	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-arm64
 	mv asvec-linux-arm64 $(BIN_DIR)/
 
 .PHONY: compile_darwin
 compile_darwin:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_darwin.go
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-macos-amd64
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-macos-arm64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-amd64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-arm64
 	mv asvec-macos-amd64 $(BIN_DIR)/
 	mv asvec-macos-arm64 $(BIN_DIR)/
 
 .PHONY: compile_darwin_amd64
 compile_darwin_amd64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_darwin.go
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-macos-amd64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-amd64
 	mv asvec-macos-amd64 $(BIN_DIR)/
 
 .PHONY: compile_darwin_arm64
 compile_darwin_arm64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_darwin.go
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-macos-arm64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-arm64
 	mv asvec-macos-arm64 $(BIN_DIR)/
 
 .PHONY: compile_windows
 compile_windows:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_windows.go
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-windows-amd64.exe
-	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-windows-arm64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-amd64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-arm64.exe
 	mv asvec-windows-amd64.exe $(BIN_DIR)/
 	mv asvec-windows-arm64.exe $(BIN_DIR)/
 
 .PHONY: compile_windows_amd64
 compile_windows_amd64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_windows.go
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-windows-amd64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-amd64.exe
 	mv asvec-windows-amd64.exe $(BIN_DIR)/
 
 .PHONY: compile_windows_arm64
 compile_windows_arm64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_windows.go
-	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-windows-arm64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-arm64.exe
 	mv asvec-windows-arm64.exe $(BIN_DIR)/
 
 .PHONY: official

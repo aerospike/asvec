@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -20,6 +17,7 @@ import (
 var lvl = new(slog.LevelVar)
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout, logger)
+var Version = "development" // Overwritten at build time by ld_flags
 
 var rootFlags = &struct {
 	logLevel flags.LogLevelFlag
@@ -30,9 +28,14 @@ var rootCmd = &cobra.Command{
 	Use:   "asvec",
 	Short: "Aerospike Vector Search CLI",
 	Long: `Welcome to the AVS Deployment Manager CLI Tool!
-	To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
-	Should you encounter any issues or have questions, feel free to report them by creating a GitHub issue.
-	Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.`,
+To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
+Should you encounter any issues or have questions, feel free to report them by creating a GitHub issue.
+Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.
+
+For example:
+
+asvec --help
+	`,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging
@@ -95,7 +98,7 @@ func init() {
 		flags.LogLevel,
 		common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))), //nolint:lll // For readability
 	)
-	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
+	common.SetupRoot(rootCmd, "aerospike-vector-search", Version) // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
 	bindEnvs := []string{flags.Host, flags.Seeds, flags.AuthUser, flags.AuthPassword}

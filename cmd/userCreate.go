@@ -6,8 +6,10 @@ package cmd
 import (
 	"asvec/cmd/flags"
 	"context"
+	"fmt"
 	"log/slog"
 
+	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,17 +25,17 @@ var userCreateFlags = &struct {
 }
 
 func newUserCreateFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
 	flagSet.AddFlagSet(userCreateFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userCreateFlags.newUsername, flags.Username, "", "TODO")
-	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", "TODO")
-	flagSet.StringSliceVar(&userCreateFlags.roles, flags.Roles, []string{}, "TODO")
+	flagSet.StringVar(&userCreateFlags.newUsername, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the new user."))                                                                                                 //nolint:lll // For readability
+	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", commonFlags.DefaultWrapHelpString("The password for the new user. If a new password is not provided you you will be prompted to enter a new password.")) //nolint:lll // For readability
+	flagSet.StringSliceVar(&userCreateFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to assign to the new user. To see valid roles run 'asvec role ls'."))                                      //nolint:lll // For readability
 
 	return flagSet
 }
 
 var userCreateRequiredFlags = []string{
-	flags.Username,
+	flags.Name,
 	flags.Roles,
 }
 
@@ -41,18 +43,21 @@ var userCreateRequiredFlags = []string{
 func newUserCreateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "create",
-		Short: "A command for creating users",
-		Long: `A command for creating users. TODO
+		Short: "A command for creating new users",
+		Long: fmt.Sprintf(`A command for creating new users. Users are assigned 
+roles which have certain privileges. Users should be have the minimum number of
+roles necessary to perform their tasks.
 
-		For example:
-			export ASVEC_HOST=127.0.0.1:5000 ASVEC_USER=admin
-			asvec user create --new-user foo --roles read-write
-			`,
+For example:
+
+%s
+asvec user create --%s foo --%s read-write
+			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(
 					userCreateFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.Username, userCreateFlags.newUsername),
+					slog.String(flags.Name, userCreateFlags.newUsername),
 					slog.Any(flags.Roles, userCreateFlags.roles),
 				)...,
 			)

@@ -10,9 +10,10 @@ var userCmd = &cobra.Command{
 	Aliases: []string{"users"},
 	Short:   "A parent command for viewing and configuring users.",
 	Long: `A parent command for listing, creating, dropping, and granting roles to users. 
-	For example:
-		export ASVEC_HOST=<avs-ip>:5000
-		asvec user list
+
+For example:
+
+asvec user --help
 		`,
 }
 

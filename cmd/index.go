@@ -10,11 +10,12 @@ import (
 // indexCmd represents the create command
 var indexCmd = &cobra.Command{
 	Use:   "index",
-	Short: "A parent command for creating resources",
-	Long: `A parent command for creating resources. It currently only supports creating indexes. 
-	For example:
-		export ASVEC_HOST=<avs-ip>:5000
-		asvec index ---help
+	Short: "A parent command viewing, creating, and removing indexes.",
+	Long: `A parent command viewing, creating, and removing indexes.
+	
+For example:
+
+	asvec index --help
 		`,
 }
 

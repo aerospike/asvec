@@ -6,8 +6,10 @@ package cmd
 import (
 	"asvec/cmd/flags"
 	"context"
+	"fmt"
 	"log/slog"
 
+	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -21,32 +23,33 @@ var userDropFlags = &struct {
 }
 
 func newUserDropFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
 	flagSet.AddFlagSet(userDropFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userDropFlags.dropUser, flags.Username, "", "TODO")
+	flagSet.StringVar(&userDropFlags.dropUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the user to drop.")) //nolint:lll // For readability
 
 	return flagSet
 }
 
 var userDropRequiredFlags = []string{
-	flags.Username,
+	flags.Name,
 }
 
 func newUserDropCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "drop",
 		Short: "A command for dropping users",
-		Long: `A command for dropping users. TODO
+		Long: fmt.Sprintf(`A command for dropping users.
 
-		For example:
-			export ASVEC_HOST=127.0.0.1:5000 ASVEC_USER=admin
-			asvec user drop --new-user foo --roles read-write
-			`,
+For example:
+
+%s
+asvec user drop --%s foo
+			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(
 					userDropFlags.clientFlags.NewSLogAttr(),
-					slog.String(flags.Username, userDropFlags.dropUser),
+					slog.String(flags.Name, userDropFlags.dropUser),
 				)...,
 			)
 

@@ -47,13 +47,14 @@ func newIndexDropCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "drop",
 		Short: "A command for dropping indexes",
-		Long: `A command for dropping indexes. Deleting an index will free up 
-		storage but will also disable vector search on your data.
+		Long: fmt.Sprintf(`A command for dropping indexes. Deleting an index will free up 
+storage but will also disable vector search on your data.
 
-		For example:
-			export ASVEC_HOST=<avs-ip>:5000
-			asvec index drop -i myindex -n test
-			`,
+For example:
+
+%s
+asvec index drop -i myindex -n test
+			`, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
 				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)

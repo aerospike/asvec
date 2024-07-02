@@ -3,7 +3,7 @@
 ## Overview
 
 The Aerospike Vector Search (AVS) CLI Tool is designed to simplify the
-management of AVS deployments. It offers a features aimed at enhancing
+management of AVS deployments. It offers features aimed at enhancing
 efficiency and productivity for users getting started with vector search.
 
 ## Getting Started

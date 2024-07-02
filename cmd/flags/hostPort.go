@@ -73,7 +73,7 @@ func parseHostPort(v string) (*avs.HostPort, error) {
 	return host, fmt.Errorf("does not match any expected formats")
 }
 
-// A cobra PFlag to parse and display help info for the host[:tls-name][:port]
+// A cobra PFlag to parse and display help info for the host[:port]
 // input option.  It implements the pflag Value and SliceValue interfaces to
 // enable automatic parsing by cobra.
 type HostPortFlag struct {

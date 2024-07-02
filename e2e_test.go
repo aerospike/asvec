@@ -326,8 +326,6 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 
 			actual, err := suite.avsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
 
-			time.Sleep(time.Second)
-
 			if err != nil {
 				suite.FailNowf("unable to get index", "%v", err)
 			}

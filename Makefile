@@ -168,7 +168,7 @@ Package: asvec
 Section: aerospike
 Version: ${ver}
 Architecture: amd64
-Description: Tool for deploying non-prod Aerospike server clusters on docker, GCP or in AWS
+Description: Tool for managing Aerospike Vector Search clusters.
 EOF
 endef
 export amddebscript = $(value _amddebscript)
@@ -182,7 +182,7 @@ Package: asvec
 Section: aerospike
 Version: ${ver}
 Architecture: arm64
-Description: Tool for deploying non-prod Aerospike server clusters on docker, GCP or in AWS
+Description: Tool for managing Aerospike Vector Search clusters.
 EOF
 endef
 export armdebscript = $(value _armdebscript)

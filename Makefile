@@ -157,8 +157,8 @@ clean:
 
 OS := $(shell uname -o)
 CPU := $(shell uname -m)
-ver:=$(shell V=$$(git branch --show-current); if [[ $$V == v* ]]; then printf $${V:1} > ./VERSION.md; fi; cat ./VERSION.md)
-# GO_LDFLAGS="-X 'asvec/cmd.Version=$(ver)' -s -w"
+ver:=$(shell V=$$(git describe --tags --always); printf $${V} > ./VERSION.md; cat ./VERSION.md)
+GO_LDFLAGS="-X 'asvec/cmd.Version=$(ver)' -s -w"
 define _amddebscript
 ver=$(cat ./VERSION.md)
 cat <<EOF > ./bin/deb/DEBIAN/control

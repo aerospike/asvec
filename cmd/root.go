@@ -27,15 +27,15 @@ var rootFlags = &struct {
 var rootCmd = &cobra.Command{
 	Use:   "asvec",
 	Short: "Aerospike Vector Search CLI",
-	Long: `Welcome to the AVS Deployment Manager CLI Tool!
+	Long: fmt.Sprintf(`Welcome to the AVS Deployment Manager CLI Tool!
 To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
 Should you encounter any issues or have questions, feel free to report them by creating a GitHub issue.
 Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.
 
 For example:
-
+%s
 asvec --help
-	`,
+	`, HelpTxtSetupEnv),
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging

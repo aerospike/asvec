@@ -158,6 +158,7 @@ clean:
 OS := $(shell uname -o)
 CPU := $(shell uname -m)
 ver:=$(shell V=$$(git describe --tags --always); printf $${V} > ./VERSION.md; cat ./VERSION.md)
+rpm_ver := $(ver:-=_)
 GO_LDFLAGS="-X 'asvec/cmd.Version=$(ver)' -s -w"
 define _amddebscript
 ver=$(cat ./VERSION.md)
@@ -389,23 +390,23 @@ pkg-zip: pkg-zip-amd64 pkg-zip-arm64
 pkg-rpm-amd64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
-	sed -i.bak "s/VERSIONHERE/${ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
+	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-amd64 $(BIN_DIR)/asvec-rpm-centos/usr/local/aerospike/bin/asvec
 	rm -f $(BIN_DIR)/asvec-linux-x86_64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=x86_64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
-	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.rpm
-	mv $(BIN_DIR)/asvec-linux-x86_64.rpm $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.rpm
+	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${rpm_ver}.rpm
+	mv $(BIN_DIR)/asvec-linux-x86_64.rpm $(BIN_DIR)/packages/asvec-linux-amd64-${rpm_ver}.rpm
 
 .PHONY: pkg-rpm-arm64
 pkg-rpm-arm64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
-	sed -i.bak "s/VERSIONHERE/${ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
+	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-arm64 $(BIN_DIR)/asvec-rpm-centos/usr/local/aerospike/bin/asvec
 	rm -f $(BIN_DIR)/asvec-linux-arm64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=arm64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
-	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.rpm
-	mv $(BIN_DIR)/asvec-linux-arm64.rpm $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.rpm
+	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${rpm_ver}.rpm
+	mv $(BIN_DIR)/asvec-linux-arm64.rpm $(BIN_DIR)/packages/asvec-linux-arm64-${rpm_ver}.rpm
 
 .PHONY: pkg-rpm
 pkg-rpm: pkg-rpm-amd64 pkg-rpm-arm64

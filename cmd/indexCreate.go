@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -14,7 +11,6 @@ import (
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 //nolint:govet // Padding not a concern for a CLI
@@ -96,13 +92,6 @@ For example:
 asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 	--%s test --%s false
 			`, HelpTxtSetupEnv, flags.VectorField, flags.StorageNamespace, flags.BatchEnabled),
-		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
-				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
-			}
-
-			return nil
-		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(indexCreateFlags.clientFlags.NewSLogAttr(),

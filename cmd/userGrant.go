@@ -1,6 +1,4 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
+//nolint:dupl // Ignore code duplication
 package cmd
 
 import (
@@ -48,7 +46,6 @@ For example:
 %s
 asvec user grant --%s foo --%s admin
 			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
-		//nolint:dupl // Ignore code duplication
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(

@@ -1,6 +1,4 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
+//nolint:dupl // Ignore code duplication
 package cmd
 
 import (
@@ -13,7 +11,6 @@ import (
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 var userRevokeFlags = &struct {
@@ -27,7 +24,7 @@ var userRevokeFlags = &struct {
 func newUserRevokeFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userRevokeFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to grant new roles."))                                                       //nolint:lll // For readability
+	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to revoke new roles."))                                                      //nolint:lll // For readability
 	flagSet.StringSliceVar(&userRevokeFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to revoke from the user. Roles are removed from a user's existing roles.")) //nolint:lll // For readability
 
 	return flagSet
@@ -49,14 +46,6 @@ For example:
 %s
 asvec user revoke --%s foo --%s admin
 			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
-		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
-				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
-			}
-
-			return nil
-		},
-		//nolint:dupl // Ignore code duplication
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(

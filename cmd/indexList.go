@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -14,7 +11,6 @@ import (
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 var indexListFlags = &struct {
@@ -48,13 +44,6 @@ For example:
 %s
 asvec index ls
 		`, flags.Verbose, HelpTxtSetupEnv),
-		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
-				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
-			}
-
-			return nil
-		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(indexListFlags.clientFlags.NewSLogAttr(),

@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -14,11 +11,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
+//nolint:govet // Padding not a concern for a CLI
 var userNewPassFlags = &struct {
 	clientFlags flags.ClientFlags
 	username    string
 	password    string
-	roles       []string
 }{
 	clientFlags: *flags.NewClientFlags(),
 }
@@ -55,7 +52,6 @@ asvec user new-password --%s foo
 				append(
 					userNewPassFlags.clientFlags.NewSLogAttr(),
 					slog.String(flags.Name, userNewPassFlags.username),
-					slog.Any(flags.Roles, userNewPassFlags.roles),
 				)...,
 			)
 

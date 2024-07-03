@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -11,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 var rolesListFlags = &struct {
@@ -43,13 +39,6 @@ For example:
 %s
 asvec role ls
 		`, HelpTxtSetupEnv),
-		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
-				return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
-			}
-
-			return nil
-		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				rolesListFlags.clientFlags.NewSLogAttr()...,
@@ -69,8 +58,6 @@ asvec role ls
 				logger.Error("failed to list roles", slog.Any("error", err))
 				return err
 			}
-
-			cancel()
 
 			logger.Debug("server role list", slog.String("response", userList.String()))
 

@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -60,8 +57,6 @@ asvec user ls
 				logger.Error("failed to list users", slog.Any("error", err))
 				return err
 			}
-
-			cancel()
 
 			logger.Debug("server user list", slog.String("response", userList.String()))
 

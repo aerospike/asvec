@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -44,7 +41,7 @@ func newUserCreateCmd() *cobra.Command {
 		Use:   "create",
 		Short: "A command for creating new users",
 		Long: fmt.Sprintf(`A command for creating new users. Users are assigned 
-roles which have certain privileges. Users should be have the minimum number of
+roles which have certain privileges. Users should have the minimum number of
 roles necessary to perform their tasks.
 
 For example:

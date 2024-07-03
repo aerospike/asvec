@@ -23,8 +23,8 @@ func NewTLSFlags() *TLSFlags {
 	}
 }
 
-// NewAerospikeFlagSet returns a new pflag.FlagSet with Aerospike flags defined.
-// Values set in the returned FlagSet will be stored in the AerospikeFlags argument.
+// NewTLSFlagSet returns a new pflag.FlagSet with TLS flags defined. Values
+// are stored in the TLSFlags struct.
 func (tf *TLSFlags) NewTLSFlagSet(fmtUsage commonFlags.UsageFormatter) *pflag.FlagSet {
 	f := &pflag.FlagSet{}
 

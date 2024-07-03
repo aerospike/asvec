@@ -158,7 +158,7 @@ clean:
 OS := $(shell uname -o)
 CPU := $(shell uname -m)
 ver:=$(shell V=$$(git describe --tags --always); printf $${V} > ./VERSION.md; cat ./VERSION.md)
-rpm_ver := $(ver:-=_)
+rpm_ver := $(shell echo $(ver) | sed 's/-/_/g')
 $(info ver is $(ver) and rpm_ver is $(rpm_ver))
 GO_LDFLAGS="-X 'asvec/cmd.Version=$(ver)' -s -w"
 define _amddebscript

@@ -7,17 +7,30 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"time"
 
 	"golang.org/x/term"
 
 	avs "github.com/aerospike/avs-client-go"
+	"github.com/spf13/viper"
 )
 
-func createClientFromFlags(clientFlags *flags.ClientFlags, connectTimeout time.Duration) (*avs.AdminClient, error) {
+func passwordPrompt(prompt string) (string, error) {
+	fmt.Print(prompt)
+
+	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println()
+
+	return string(bytePassword), nil
+}
+
+func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, error) {
 	hosts, isLoadBalancer := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
 
-	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), clientFlags.Timeout)
 	defer cancel()
 
 	tlsConfig, err := clientFlags.NewTLSConfig()
@@ -27,20 +40,19 @@ func createClientFromFlags(clientFlags *flags.ClientFlags, connectTimeout time.D
 	}
 
 	var password *string
+
 	if clientFlags.User.Val != nil {
 		if len(clientFlags.Password) != 0 {
 			strPass := clientFlags.Password.String()
 			password = &strPass
 		} else {
-			fmt.Print("Enter Password: ")
-			bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+			pass, err := passwordPrompt("Enter Password: ")
 			if err != nil {
 				logger.Error("failed to read password", slog.Any("error", err))
 				return nil, err
 			}
-			fmt.Println() // Print a newline after the password input
-			strPass := string(bytePassword)
-			password = &strPass
+
+			password = &pass
 		}
 	}
 
@@ -76,11 +88,12 @@ func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFla
 func nsAndSetString(namespace string, sets []string) string {
 	var setStr string
 
-	if len(sets) == 0 {
+	switch len(sets) {
+	case 0:
 		setStr = "*"
-	} else if len(sets) == 1 {
+	case 1:
 		setStr = sets[0]
-	} else {
+	default:
 		setStr = fmt.Sprintf("%v", sets)
 	}
 
@@ -93,5 +106,13 @@ func confirm(prompt string) bool {
 	fmt.Print(prompt + " (y/n): ")
 	fmt.Scanln(&confirm)
 
-	return strings.ToLower(confirm) == "y"
+	return strings.EqualFold(confirm, "y")
+}
+
+func checkSeedsAndHost() error {
+	if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
+		return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
+	}
+
+	return nil
 }

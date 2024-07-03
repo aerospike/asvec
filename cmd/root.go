@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -20,6 +17,7 @@ import (
 var lvl = new(slog.LevelVar)
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout, logger)
+var Version = "development" // Overwritten at build time by ld_flags
 
 var rootFlags = &struct {
 	logLevel flags.LogLevelFlag
@@ -29,10 +27,15 @@ var rootFlags = &struct {
 var rootCmd = &cobra.Command{
 	Use:   "asvec",
 	Short: "Aerospike Vector Search CLI",
-	Long: `Welcome to the AVS Deployment Manager CLI Tool!
-	To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
-	Should you encounter any issues or have questions, feel free to report them by creating a GitHub issue.
-	Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.`,
+	Long: fmt.Sprintf(`Welcome to the AVS Deployment Manager CLI Tool!
+To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
+Should you encounter any issues or have questions, feel free to report them by creating a GitHub issue.
+Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.
+
+For example:
+%s
+asvec --help
+	`, HelpTxtSetupEnv),
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging
@@ -46,6 +49,10 @@ var rootCmd = &cobra.Command{
 			}
 
 			handler.Enabled(context.Background(), lvl.Level())
+		}
+
+		if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
+			return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
 		}
 
 		cmd.SilenceUsage = true
@@ -91,10 +98,10 @@ func init() {
 		flags.LogLevel,
 		common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))), //nolint:lll // For readability
 	)
-	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
+	common.SetupRoot(rootCmd, "aerospike-vector-search", Version) // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
-	bindEnvs := []string{flags.Host, flags.Seeds, flags.User, flags.Password}
+	bindEnvs := []string{flags.Host, flags.Seeds, flags.AuthUser, flags.AuthPassword}
 
 	// Bind specified flags to ASVEC_*
 	for _, env := range bindEnvs {

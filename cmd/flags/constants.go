@@ -5,10 +5,14 @@ const (
 	Seeds            = "seeds"
 	Host             = "host"
 	ListenerName     = "listener-name"
-	User             = "user"
-	Password         = "password"
+	AuthUser         = "user"
+	AuthPassword     = "password"
+	Name             = "name"
+	NewPassword      = "new-password"
+	Roles            = "roles"
 	Namespace        = "namespace"
 	Sets             = "sets"
+	Yes              = "yes"
 	IndexName        = "index-name"
 	VectorField      = "vector-field"
 	Dimension        = "dimension"
@@ -29,5 +33,5 @@ const (
 	TLSCaPath        = "tls-capath"
 	TLSCertFile      = "tls-certfile"
 	TLSKeyFile       = "tls-keyfile"
-	TLSKeyFilePass   = "tls-keyfile-password"
+	TLSKeyFilePass   = "tls-keyfile-password" //nolint:gosec // Not a credential
 )

@@ -157,7 +157,10 @@ clean:
 
 OS := $(shell uname -o)
 CPU := $(shell uname -m)
-ver:=$(shell V=$$(git branch --show-current); if [[ $$V == v* ]]; then printf $${V:1} > ./VERSION.md; fi; cat ./VERSION.md)
+ver:=$(shell V=$$(git describe --tags --always); printf $${V} > ./VERSION.md; cat ./VERSION.md)
+rpm_ver := $(shell echo $(ver) | sed 's/-/_/g')
+$(info ver is $(ver) and rpm_ver is $(rpm_ver))
+GO_LDFLAGS="-X 'asvec/cmd.Version=$(ver)' -s -w"
 define _amddebscript
 ver=$(cat ./VERSION.md)
 cat <<EOF > ./bin/deb/DEBIAN/control
@@ -241,14 +244,14 @@ prep:
 
 .PHONY: compile_linux_wip_amd64
 compile_linux_wip_amd64:
-	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-linux-amd64-wip
+	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-amd64-wip
 ifneq (, $(shell which upx))
 	upx asvec-linux-amd64-wip
 endif
 
 .PHONY: compile_linux_wip_arm64
 compile_linux_wip_arm64:
-	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-linux-arm64-wip
+	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-arm64-wip
 ifneq (, $(shell which upx))
 	upx asvec-linux-arm64-wip
 endif
@@ -256,53 +259,53 @@ endif
 .PHONY: compile_linux_amd64
 compile_linux_amd64:
 	printf "package main\n\nimport _ \"embed\"\n\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte\n" > embed_linux.go
-	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-linux-amd64
+	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-amd64
 	mv asvec-linux-amd64 $(BIN_DIR)/
 
 .PHONY: compile_linux_arm64
 compile_linux_arm64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\nvar nLinuxBinaryArm64 []byte\n" > embed_linux.go
-	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-linux-arm64
+	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-linux-arm64
 	mv asvec-linux-arm64 $(BIN_DIR)/
 
 .PHONY: compile_darwin
 compile_darwin:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_darwin.go
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-macos-amd64
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-macos-arm64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-amd64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-arm64
 	mv asvec-macos-amd64 $(BIN_DIR)/
 	mv asvec-macos-arm64 $(BIN_DIR)/
 
 .PHONY: compile_darwin_amd64
 compile_darwin_amd64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_darwin.go
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-macos-amd64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-amd64
 	mv asvec-macos-amd64 $(BIN_DIR)/
 
 .PHONY: compile_darwin_arm64
 compile_darwin_arm64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_darwin.go
-	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-macos-arm64
+	env CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-macos-arm64
 	mv asvec-macos-arm64 $(BIN_DIR)/
 
 .PHONY: compile_windows
 compile_windows:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_windows.go
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-windows-amd64.exe
-	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-windows-arm64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-amd64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-arm64.exe
 	mv asvec-windows-amd64.exe $(BIN_DIR)/
 	mv asvec-windows-arm64.exe $(BIN_DIR)/
 
 .PHONY: compile_windows_amd64
 compile_windows_amd64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_windows.go
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o asvec-windows-amd64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-amd64.exe
 	mv asvec-windows-amd64.exe $(BIN_DIR)/
 
 .PHONY: compile_windows_arm64
 compile_windows_arm64:
 	printf "package main\n\nimport _ \"embed\"\n\n//go:embed asvec-linux-amd64-wip\nvar nLinuxBinaryX64 []byte\n\n//go:embed asvec-linux-arm64-wip\nvar nLinuxBinaryArm64 []byte" > embed_windows.go
-	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o asvec-windows-arm64.exe
+	env CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -ldflags=$(GO_LDFLAGS) -o asvec-windows-arm64.exe
 	mv asvec-windows-arm64.exe $(BIN_DIR)/
 
 .PHONY: official
@@ -388,23 +391,23 @@ pkg-zip: pkg-zip-amd64 pkg-zip-arm64
 pkg-rpm-amd64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
-	sed -i.bak "s/VERSIONHERE/${ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
+	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-amd64 $(BIN_DIR)/asvec-rpm-centos/usr/local/aerospike/bin/asvec
 	rm -f $(BIN_DIR)/asvec-linux-x86_64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=x86_64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
-	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.rpm
-	mv $(BIN_DIR)/asvec-linux-x86_64.rpm $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.rpm
+	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${rpm_ver}.rpm
+	mv $(BIN_DIR)/asvec-linux-x86_64.rpm $(BIN_DIR)/packages/asvec-linux-amd64-${rpm_ver}.rpm
 
 .PHONY: pkg-rpm-arm64
 pkg-rpm-arm64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
-	sed -i.bak "s/VERSIONHERE/${ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
+	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-arm64 $(BIN_DIR)/asvec-rpm-centos/usr/local/aerospike/bin/asvec
 	rm -f $(BIN_DIR)/asvec-linux-arm64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=arm64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
-	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.rpm
-	mv $(BIN_DIR)/asvec-linux-arm64.rpm $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.rpm
+	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${rpm_ver}.rpm
+	mv $(BIN_DIR)/asvec-linux-arm64.rpm $(BIN_DIR)/packages/asvec-linux-arm64-${rpm_ver}.rpm
 
 .PHONY: pkg-rpm
 pkg-rpm: pkg-rpm-amd64 pkg-rpm-arm64

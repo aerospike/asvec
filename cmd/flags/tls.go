@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+//nolint:govet // Padding not a concern for a CLI
 type TLSFlags struct {
 	TLSProtocols   commonFlags.TLSProtocolsFlag
 	TLSRootCAFile  commonFlags.CertFlag

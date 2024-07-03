@@ -12,7 +12,7 @@ efficiency and productivity for users getting started with vector search.
 
 Ensure you have an AVS instance up and running for `asvec` to connect to.
 Checkout out the [AVS documentation](https://aerospike.com/docs/vector) for
-options on getting started.
+instructions on getting started.
 
 ### Installation
 

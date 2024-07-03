@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 	Short: "Aerospike Vector Search CLI",
 	Long: `Welcome to the AVS Deployment Manager CLI Tool!
 	To start using this tool, please consult the detailed documentation available at https://aerospike.com/docs/vector.
-	Should you encounter any issues or have questions, feel free to report them via GitHub issues.
+	Should you encounter any issues or have questions, feel free to report them by creating a GitHub issue.
 	Enterprise customers requiring support should contact Aerospike Support directly at https://aerospike.com/support.`,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
@@ -88,17 +88,18 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().Var(
 		&rootFlags.logLevel,
-		logLevelFlagName,
+		flags.LogLevel,
 		common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))), //nolint:lll // For readability
 	)
 	common.SetupRoot(rootCmd, "aerospike-vector-search", "0.0.0") // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
-	if err := viper.BindEnv(flagNameHost); err != nil {
-		logger.Error("failed to bind environment variable", slog.Any("error", err))
-	}
+	bindEnvs := []string{flags.Host, flags.Seeds, flags.User, flags.Password}
 
-	if err := viper.BindEnv(flagNameSeeds); err != nil {
-		logger.Error("failed to bind environment variable", slog.Any("error", err))
+	// Bind specified flags to ASVEC_*
+	for _, env := range bindEnvs {
+		if err := viper.BindEnv(env); err != nil {
+			panic(fmt.Sprintf("failed to bind environment variable: %s", err))
+		}
 	}
 }

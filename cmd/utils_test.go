@@ -6,7 +6,7 @@ import (
 	"asvec/cmd/flags"
 	"testing"
 
-	avs "github.com/aerospike/aerospike-proximus-client-go"
+	avs "github.com/aerospike/avs-client-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,12 +20,12 @@ func TestParseBothHostSeedsFlag(t *testing.T) {
 		{
 			&flags.SeedsSliceFlag{
 				Seeds: avs.HostPortSlice{
-					avs.NewHostPort("1.1.1.1", 5000, false),
+					avs.NewHostPort("1.1.1.1", 5000),
 				},
 			},
 			flags.NewDefaultHostPortFlag(),
 			avs.HostPortSlice{
-				avs.NewHostPort("1.1.1.1", 5000, false),
+				avs.NewHostPort("1.1.1.1", 5000),
 			},
 			false,
 		},

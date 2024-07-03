@@ -152,6 +152,9 @@ func (suite *CmdTestSuite) SetupSuite() {
 	suite.avsHostPort = avs.NewHostPort(suite.avsIP, suite.avsPort)
 
 	err := docker_compose_up(suite.composeFile)
+
+	time.Sleep(5)
+
 	if err != nil {
 		suite.FailNowf("unable to start docker compose up", "%v", err)
 	}

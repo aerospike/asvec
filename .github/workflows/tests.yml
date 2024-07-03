@@ -27,7 +27,7 @@ jobs:
         echo "$FEATURES_CONF" > docker/auth/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
-        docker login aeropike.jfrog.com --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+        docker login aeropike.jfrog.com --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
     - name: Run tests
       run: |
         make coverage

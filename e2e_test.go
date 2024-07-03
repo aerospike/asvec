@@ -153,7 +153,7 @@ func (suite *CmdTestSuite) SetupSuite() {
 
 	err := docker_compose_up(suite.composeFile)
 
-	time.Sleep(5)
+	time.Sleep(time.Second * 10)
 
 	if err != nil {
 		suite.FailNowf("unable to start docker compose up", "%v", err)

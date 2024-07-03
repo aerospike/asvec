@@ -51,6 +51,9 @@ For example:
 %s
 asvec index drop -i myindex -n test
 			`, HelpTxtSetupEnv),
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return checkSeedsAndHost()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(indexDropFlags.clientFlags.NewSLogAttr(),

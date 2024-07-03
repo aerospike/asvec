@@ -44,6 +44,9 @@ For example:
 %s
 asvec index ls
 		`, flags.Verbose, HelpTxtSetupEnv),
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return checkSeedsAndHost()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(indexListFlags.clientFlags.NewSLogAttr(),

@@ -11,6 +11,7 @@ import (
 	"golang.org/x/term"
 
 	avs "github.com/aerospike/avs-client-go"
+	"github.com/spf13/viper"
 )
 
 func passwordPrompt(prompt string) (string, error) {
@@ -106,4 +107,12 @@ func confirm(prompt string) bool {
 	fmt.Scanln(&confirm)
 
 	return strings.EqualFold(confirm, "y")
+}
+
+func checkSeedsAndHost() error {
+	if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
+		return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
+	}
+
+	return nil
 }

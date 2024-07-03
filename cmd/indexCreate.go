@@ -92,6 +92,9 @@ For example:
 asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 	--%s test --%s false
 			`, HelpTxtSetupEnv, flags.VectorField, flags.StorageNamespace, flags.BatchEnabled),
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return checkSeedsAndHost()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(indexCreateFlags.clientFlags.NewSLogAttr(),

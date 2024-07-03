@@ -46,6 +46,9 @@ For example:
 %s
 asvec user grant --%s foo --%s admin
 			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return checkSeedsAndHost()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(

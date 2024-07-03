@@ -49,6 +49,9 @@ For example:
 %s
 asvec user create --%s foo --%s read-write
 			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return checkSeedsAndHost()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(

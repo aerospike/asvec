@@ -46,7 +46,9 @@ For example:
 %s
 asvec user new-password --%s foo
 			`, HelpTxtSetupEnv, flags.Name),
-
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return checkSeedsAndHost()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(

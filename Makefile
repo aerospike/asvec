@@ -157,7 +157,7 @@ clean:
 
 OS := $(shell uname -o)
 CPU := $(shell uname -m)
-ver:=$(shell V=$$(git branch --show-current); if [[ $$V == v* ]]; then printf $${V:1} > ../VERSION.md; fi; cat ../VERSION.md)
+ver:=$(shell V=$$(git branch --show-current); if [[ $$V == v* ]]; then printf $${V:1} > ./VERSION.md; fi; cat ./VERSION.md)
 # GO_LDFLAGS="-X 'asvec/cmd.Version=$(ver)' -s -w"
 define _amddebscript
 ver=$(cat ./VERSION.md)

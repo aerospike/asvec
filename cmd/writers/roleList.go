@@ -17,8 +17,6 @@ func NewRoleTableWriter(writer io.Writer, logger *slog.Logger) *RoleTableWriter 
 	t := RoleTableWriter{NewDefaultWriter(writer), logger}
 
 	t.AppendHeader(table.Row{"Roles"}, rowConfigAutoMerge)
-
-	// t.SetTitle("Roles") //nolint:gocritic // Add back when we add more fields to Roles table
 	t.SetAutoIndex(true)
 	t.SortBy([]table.SortBy{
 		{Name: "Roles", Mode: table.Asc},

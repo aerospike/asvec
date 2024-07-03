@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 var userCreateFlags = &struct {
 	clientFlags flags.ClientFlags
 	newUsername string
@@ -25,7 +24,7 @@ var userCreateFlags = &struct {
 }
 
 func newUserCreateFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userCreateFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userCreateFlags.newUsername, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the new user."))                                                                                                 //nolint:lll // For readability
 	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", commonFlags.DefaultWrapHelpString("The password for the new user. If a new password is not provided you you will be prompted to enter a new password.")) //nolint:lll // For readability

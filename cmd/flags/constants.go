@@ -33,5 +33,5 @@ const (
 	TLSCaPath        = "tls-capath"
 	TLSCertFile      = "tls-certfile"
 	TLSKeyFile       = "tls-keyfile"
-	TLSKeyFilePass   = "tls-keyfile-password"
+	TLSKeyFilePass   = "tls-keyfile-password" //nolint:gosec // Not a credential
 )

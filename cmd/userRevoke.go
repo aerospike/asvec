@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 var userRevokeFlags = &struct {
 	clientFlags flags.ClientFlags
 	revokeUser  string
@@ -26,7 +25,7 @@ var userRevokeFlags = &struct {
 }
 
 func newUserRevokeFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userRevokeFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to grant new roles."))                                                       //nolint:lll // For readability
 	flagSet.StringSliceVar(&userRevokeFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to revoke from the user. Roles are removed from a user's existing roles.")) //nolint:lll // For readability
@@ -57,6 +56,7 @@ asvec user revoke --%s foo --%s admin
 
 			return nil
 		},
+		//nolint:dupl // Ignore code duplication
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(
@@ -81,11 +81,20 @@ asvec user revoke --%s foo --%s admin
 				userRevokeFlags.roles,
 			)
 			if err != nil {
-				logger.Error("unable to revoke user roles", slog.String("user", userRevokeFlags.revokeUser), slog.Any("roles", userRevokeFlags.roles), slog.Any("error", err))
+				logger.Error(
+					"unable to revoke user roles",
+					slog.String("user", userRevokeFlags.revokeUser),
+					slog.Any("roles", userRevokeFlags.roles),
+					slog.Any("error", err),
+				)
 				return err
 			}
 
-			view.Printf("Successfully revoked user %s's roles %s", userRevokeFlags.revokeUser, strings.Join(userRevokeFlags.roles, ", "))
+			view.Printf(
+				"Successfully revoked user %s's roles %s",
+				userRevokeFlags.revokeUser,
+				strings.Join(userRevokeFlags.roles, ", "),
+			)
 			return nil
 		},
 	}

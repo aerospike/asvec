@@ -39,6 +39,7 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 	}
 
 	var password *string
+
 	if clientFlags.User.Val != nil {
 		if len(clientFlags.Password) != 0 {
 			strPass := clientFlags.Password.String()
@@ -86,11 +87,12 @@ func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFla
 func nsAndSetString(namespace string, sets []string) string {
 	var setStr string
 
-	if len(sets) == 0 {
+	switch len(sets) {
+	case 0:
 		setStr = "*"
-	} else if len(sets) == 1 {
+	case 1:
 		setStr = sets[0]
-	} else {
+	default:
 		setStr = fmt.Sprintf("%v", sets)
 	}
 
@@ -103,5 +105,5 @@ func confirm(prompt string) bool {
 	fmt.Print(prompt + " (y/n): ")
 	fmt.Scanln(&confirm)
 
-	return strings.ToLower(confirm) == "y"
+	return strings.EqualFold(confirm, "y")
 }

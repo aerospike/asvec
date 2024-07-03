@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 var userGrantFlags = &struct {
 	clientFlags flags.ClientFlags
 	grantUser   string
@@ -25,7 +24,7 @@ var userGrantFlags = &struct {
 }
 
 func newUserGrantFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userGrantFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userGrantFlags.grantUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to grant new roles"))                                                           //nolint:lll // For readability
 	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to grant the existing user. New roles are added to a users existing roles.")) //nolint:lll // For readability
@@ -49,6 +48,7 @@ For example:
 %s
 asvec user grant --%s foo --%s admin
 			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
+		//nolint:dupl // Ignore code duplication
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(
@@ -82,7 +82,11 @@ asvec user grant --%s foo --%s admin
 				return err
 			}
 
-			view.Printf("Successfully granted user %s roles %s", userGrantFlags.grantUser, strings.Join(userGrantFlags.roles, ", "))
+			view.Printf(
+				"Successfully granted user %s roles %s",
+				userGrantFlags.grantUser,
+				strings.Join(userGrantFlags.roles, ", "),
+			)
 			return nil
 		},
 	}

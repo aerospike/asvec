@@ -23,7 +23,7 @@ var userDropFlags = &struct {
 }
 
 func newUserDropFlagSet() *pflag.FlagSet {
-	flagSet := &pflag.FlagSet{} //nolint:lll // For readability
+	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userDropFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userDropFlags.dropUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the user to drop.")) //nolint:lll // For readability
 
@@ -44,7 +44,7 @@ For example:
 
 %s
 asvec user drop --%s foo
-			`, HelpTxtSetupEnv, flags.Name, flags.Roles),
+			`, HelpTxtSetupEnv, flags.Name),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(

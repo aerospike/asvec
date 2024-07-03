@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 var userNewPassFlags = &struct {
 	clientFlags flags.ClientFlags
 	username    string
@@ -83,7 +82,11 @@ asvec user new-password --%s foo
 				userNewPassFlags.password,
 			)
 			if err != nil {
-				logger.Error("unable to update user credentials", slog.String("user", userNewPassFlags.username), slog.Any("error", err))
+				logger.Error(
+					"unable to update user credentials",
+					slog.String("user", userNewPassFlags.username),
+					slog.Any("error", err),
+				)
 				return err
 			}
 

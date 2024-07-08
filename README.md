@@ -11,7 +11,7 @@ efficiency and productivity for users getting started with vector search.
 ### Prerequisites
 
 Ensure you have an AVS instance up and running for `asvec` to connect to.
-Checkout out the [AVS documentation](https://aerospike.com/docs/vector) for
+Check out the [AVS documentation](https://aerospike.com/docs/vector) for
 instructions on getting started.
 
 ### Installation
@@ -30,7 +30,8 @@ asvec --help
 > [!NOTE]
 > More features are in the works. Don't worry!
 
-- **Index Management**: Streamline the management of AVS deployments.
+- **Index Management**: Listing, creating, and dropping indexes.
+- **User Management**: Listing, creating, and dropping users. Revoking and granting user's roles.
 
 ## Issues
 

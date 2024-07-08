@@ -14,7 +14,7 @@ on:
 
     push:
         branches:
-          - "VEC-210-acl" # remove before merge into main
+          - "actions-hub" # remove before merge into main
 jobs:
     build-and-release:
         runs-on: macos-13

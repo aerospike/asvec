@@ -3,18 +3,19 @@ name: Build and Create Pre-Release
 on:
     workflow_dispatch:
         inputs:
-            addCommit:
-                description: 'Dev build?'
+            version:
+              description: 'If this is release what version is this for? If this is a pre-release what version are you developing toward?'
+              required: false
+              type: string
+            preRelease:
+                description: 'Create Pre-release? SNAPSHOT will appended to the version above.'
                 required: false
                 type: boolean
             deletePrevBuild:
               description: 'Delete existing pre-releases?'
               required: false
               type: boolean
-            tag:
-              description: 'If not a dev build, should we tag?'
-              required: false
-              type: string
+
 
     # push:
     #     branches:
@@ -50,14 +51,20 @@ jobs:
                 cd /Volumes/Packages
                 sudo installer -pkg Install\ Packages.pkg -target /
             - name: Tag Before Building
-              if: inputs.tag != ''
+              if: inputs.version != ''
               env:
-                TAG: ${{ inputs.tag }}
+                TAG: ${{ inputs.version }}
+                SNAPSHOT: ${{ inputs.preRelease }}
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                 echo "Tagging the repository with ${TAG}"
                 git config --global user.email "actions@github.com"
                 git config --global user.name "GitHub Actions"
+
+                if [ "${SNAPSHOT}" = "true" ]; then
+                  COMMIT=$(git rev-parse --short HEAD)
+                  TAG="${TAG}-SNAPSHOT-${COMMIT}"
+                fi
                 
                 # Ensure the tag does not already exist
                 if ! gh release view "${TAG}" > /dev/null 2>&1; then
@@ -71,7 +78,7 @@ jobs:
                 
             - name: "Compile"
               env:
-                  ADDCOMMIT: ${{ inputs.addCommit }}
+                  ADDCOMMIT: ${{ inputs.preRelease }}
               run: |
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
@@ -79,7 +86,7 @@ jobs:
                 cd ~/work/asvec/asvec && make cleanall && make ${buildcmd}
             - name: "Create linux packages"
               env:
-                  ADDCOMMIT: ${{ inputs.addCommit }}
+                  ADDCOMMIT: ${{ inputs.preRelease }}
               run: |
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
@@ -87,7 +94,7 @@ jobs:
                 cd ~/work/asvec/asvec && make pkg-linux
             - name: "Create windows zips"
               env:
-                  ADDCOMMIT: ${{ inputs.addCommit }}
+                  ADDCOMMIT: ${{ inputs.preRelease }}
               run: |
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
@@ -130,10 +137,8 @@ jobs:
             - name: "Create a new pre-release"
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  ADDCOMMIT: ${{ inputs.addCommit }}
               run: |
                 set -e
-                echo "${ADDCOMMIT}"
                 cd ~/work/asvec/asvec/bin/packages
                 VER=$(cat ../../VERSION.md)
                 RPM_VER=$(echo ${VER} | sed 's/-/_/g')

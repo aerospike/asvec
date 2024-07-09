@@ -8,11 +8,11 @@ on:
               required: false
               type: string
             preRelease:
-                description: 'Create Pre-release? SNAPSHOT will appended to the version above.'
+                description: 'Create Pre-release? -SNAPSHOT-{COMMIT} will appended to the version above.'
                 required: false
                 type: boolean
             deletePrevBuild:
-              description: 'Delete existing pre-releases?'
+              description: 'Cleanup existing pre-releases?'
               required: false
               type: boolean
 
@@ -147,6 +147,7 @@ jobs:
                 gh release create -R github.com/aerospike/asvec --notes-file ../../RELEASE.md --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip
             - name: "Delete previous pre-release"
               env:
+                  TAG: ${{ inputs.version }}
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   DELPREV: ${{ inputs.deletePrevBuild }}
               run: |
@@ -157,7 +158,7 @@ jobs:
                   do
                     if [ "$line" != "${TAG}" ]
                     then
-                      if [[ $line =~ ^${VER}- ]]
+                      if [[ $line =~ ^${TAG}- ]]
                       then
                         echo "Removing $line"
                         gh release delete $line -R github.com/aerospike/asvec --yes --cleanup-tag

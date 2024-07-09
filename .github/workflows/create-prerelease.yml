@@ -5,7 +5,7 @@ on:
         inputs:
             version:
               description: 'If this is a release what version is this for? If this is a pre-release what version are you developing toward?'
-              required: false
+              required: true
               type: string
             preRelease:
                 description: 'Create Pre-release? -SNAPSHOT-{COMMIT} will be appended to the version above.'

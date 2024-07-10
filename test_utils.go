@@ -127,7 +127,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				BatchingParams: &protos.HnswBatchingParams{
 					MaxRecords: getUint32Ptr(100000),
 					Interval:   getUint32Ptr(30000),
-					Disabled:   getBoolPtr(false),
+					// Disabled:   getBoolPtr(false),
 				},
 			},
 		},
@@ -160,9 +160,9 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	if idb.hnsfBatchingInterval != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Interval = idb.hnsfBatchingInterval
 	}
-	if idb.hnsfBatchingDisabled != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Disabled = idb.hnsfBatchingDisabled
-	}
+	// if idb.hnsfBatchingDisabled != nil {
+	// 	indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Disabled = idb.hnsfBatchingDisabled
+	// }
 
 	return indexDef
 }

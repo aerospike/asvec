@@ -10,12 +10,18 @@ tls:
   service-tls:
     mutual-auth: false
     trust-store:
-      store-file: /etc/aerospike-proximus/tls/ca.aerospike.com.truststore.jks
-      store-password-file: /etc/aerospike-proximus/tls/storepass
+      store-file: /etc/aerospike-vector-search/tls/ca.aerospike.com.truststore.jks
+      store-password-file: /etc/aerospike-vector-search/tls/storepass
     key-store:
-      store-file: /etc/aerospike-proximus/tls/localhost.keystore.jks
-      store-password-file: /etc/aerospike-proximus/tls/storepass
-      key-password-file: /etc/aerospike-proximus/tls/keypass
+      store-file: /etc/aerospike-vector-search/tls/localhost.keystore.jks
+      store-password-file: /etc/aerospike-vector-search/tls/storepass
+      key-password-file: /etc/aerospike-vector-search/tls/keypass
+
+security:
+  auth-token:
+    private-key: /etc/aerospike-vector-search/jwt/private_key.pem
+    public-key: /etc/aerospike-vector-search/jwt/public_key.pem
+    token-expiry: 30_000
 
 # The Proximus service listening ports, TLS and network interface.
 service:

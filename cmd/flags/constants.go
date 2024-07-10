@@ -27,7 +27,6 @@ const (
 	Ef               = "hnsw-ef"
 	BatchMaxRecords  = "hnsw-batch-max-records"
 	BatchInterval    = "hnsw-batch-interval"
-	BatchEnabled     = "hnsw-batch-enabled"
 	TLSProtocols     = "tls-protocols"
 	TLSCaFile        = "tls-cafile"
 	TLSCaPath        = "tls-capath"

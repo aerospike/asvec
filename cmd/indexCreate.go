@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
+	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
 	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
@@ -31,7 +32,6 @@ var indexCreateFlags = &struct {
 	hnswConstructionEf  flags.Uint32OptionalFlag
 	hnswBatchMaxRecords flags.Uint32OptionalFlag
 	hnswBatchInterval   flags.Uint32OptionalFlag
-	hnswBatchEnabled    flags.BoolOptionalFlag
 }{
 	clientFlags:         *flags.NewClientFlags(),
 	storageNamespace:    flags.StringOptionalFlag{},
@@ -41,7 +41,6 @@ var indexCreateFlags = &struct {
 	hnswConstructionEf:  flags.Uint32OptionalFlag{},
 	hnswBatchMaxRecords: flags.Uint32OptionalFlag{},
 	hnswBatchInterval:   flags.Uint32OptionalFlag{},
-	hnswBatchEnabled:    flags.BoolOptionalFlag{},
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
@@ -61,7 +60,6 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.Var(&indexCreateFlags.hnswEf, flags.Ef, commonFlags.DefaultWrapHelpString("The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100."))                                                                                                                                //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswBatchMaxRecords, flags.BatchMaxRecords, commonFlags.DefaultWrapHelpString("Maximum number of records to fit in a batch. The default value is 10000."))                                                                                                                                                                                                      //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswBatchInterval, flags.BatchInterval, commonFlags.DefaultWrapHelpString("The maximum amount of time in milliseconds to wait before finalizing a batch. The default value is 10000."))                                                                                                                                                                         //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswBatchEnabled, flags.BatchEnabled, commonFlags.DefaultWrapHelpString("Enables batching for index updates. Default is true meaning batching is enabled."))                                                                                                                                                                                                    //nolint:lll // For readability
 	flagSet.AddFlagSet(indexCreateFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
@@ -90,8 +88,8 @@ For example:
 
 %s
 asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
-	--%s test --%s false
-			`, HelpTxtSetupEnv, flags.VectorField, flags.StorageNamespace, flags.BatchEnabled),
+	--%s test
+			`, HelpTxtSetupEnv, flags.VectorField, flags.StorageNamespace),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return checkSeedsAndHost()
 		},
@@ -113,7 +111,6 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					slog.Any(flags.ConstructionEf, indexCreateFlags.hnswConstructionEf.String()),
 					slog.Any(flags.BatchMaxRecords, indexCreateFlags.hnswBatchMaxRecords.String()),
 					slog.Any(flags.BatchInterval, indexCreateFlags.hnswBatchInterval.String()),
-					slog.Any(flags.BatchEnabled, indexCreateFlags.hnswBatchEnabled.String()),
 				)...,
 			)
 
@@ -123,26 +120,21 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			}
 			defer adminClient.Close()
 
-			// Inverted to make it easier to understand
-			var hnswBatchDisabled *bool
-			if indexCreateFlags.hnswBatchEnabled.Val != nil {
-				bd := !(*indexCreateFlags.hnswBatchEnabled.Val)
-				hnswBatchDisabled = &bd
-			}
-
-			indexStorage := &protos.IndexStorage{
-				Namespace: indexCreateFlags.storageNamespace.Val,
-				Set:       indexCreateFlags.storageSet.Val,
-			}
-
-			hnswParams := &protos.HnswParams{
-				M:              indexCreateFlags.hnswMaxEdges.Val,
-				Ef:             indexCreateFlags.hnswEf.Val,
-				EfConstruction: indexCreateFlags.hnswConstructionEf.Val,
-				BatchingParams: &protos.HnswBatchingParams{
-					MaxRecords: indexCreateFlags.hnswBatchMaxRecords.Val,
-					Interval:   indexCreateFlags.hnswBatchInterval.Val,
-					Disabled:   hnswBatchDisabled,
+			indexOpts := &avs.IndexCreateOpts{
+				Sets:     indexCreateFlags.sets,
+				MetaData: indexCreateFlags.indexMeta,
+				Storage: &protos.IndexStorage{
+					Namespace: indexCreateFlags.storageNamespace.Val,
+					Set:       indexCreateFlags.storageSet.Val,
+				},
+				HnswParams: &protos.HnswParams{
+					M:              indexCreateFlags.hnswMaxEdges.Val,
+					Ef:             indexCreateFlags.hnswEf.Val,
+					EfConstruction: indexCreateFlags.hnswConstructionEf.Val,
+					BatchingParams: &protos.HnswBatchingParams{
+						MaxRecords: indexCreateFlags.hnswBatchMaxRecords.Val,
+						Interval:   indexCreateFlags.hnswBatchInterval.Val,
+					},
 				},
 			}
 
@@ -163,14 +155,11 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			err = adminClient.IndexCreate(
 				ctx,
 				indexCreateFlags.namespace,
-				indexCreateFlags.sets,
 				indexCreateFlags.indexName,
 				indexCreateFlags.vectorField,
 				indexCreateFlags.dimensions,
 				protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[indexCreateFlags.distanceMetric.String()]),
-				hnswParams,
-				indexCreateFlags.indexMeta,
-				indexStorage,
+				indexOpts,
 			)
 			if err != nil {
 				logger.Error("unable to create index", slog.Any("error", err))

@@ -56,8 +56,13 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 		}
 	}
 
+	var creds *avs.UserPassCredentials
+	if clientFlags.User.Val != nil {
+		creds = avs.NewCredntialsFromUserPass(*clientFlags.User.Val, *password)
+	}
+
 	adminClient, err := avs.NewAdminClient(
-		ctx, hosts, clientFlags.ListenerName.Val, isLoadBalancer, clientFlags.User.Val, password, tlsConfig, logger,
+		ctx, hosts, clientFlags.ListenerName.Val, isLoadBalancer, creds, tlsConfig, logger,
 	)
 	if err != nil {
 		logger.Error("failed to create AVS client", slog.Any("error", err))

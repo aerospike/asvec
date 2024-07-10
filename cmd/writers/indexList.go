@@ -69,7 +69,6 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Construction Ef", v.HnswParams.GetEfConstruction()},
 				{"Batch Max Records", v.HnswParams.BatchingParams.GetMaxRecords()},
 				{"Batch Interval", v.HnswParams.BatchingParams.GetInterval()},
-				{"Batch Enabled", !v.HnswParams.BatchingParams.GetDisabled()},
 			})
 
 			row = append(row, tHNSW.Render())

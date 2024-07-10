@@ -71,8 +71,7 @@ type CmdTestSuite struct {
 	avsPort      int
 	avsHostPort  *avs.HostPort
 	avsTLSConfig *tls.Config
-	avsUser      *string
-	avsPassword  *string
+	avsCreds     *avs.UserPassCredentials
 	avsClient    *avs.AdminClient
 }
 
@@ -135,8 +134,7 @@ func TestCmdSuite(t *testing.T) {
 			createFlagStr(flags.AuthUser, "admin"),
 			createFlagStr(flags.AuthPassword, "admin"),
 		},
-		avsUser:     getStrPtr("admin"),
-		avsPassword: getStrPtr("admin"),
+		avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
 		avsTLSConfig: &tls.Config{
 			Certificates: nil,
 			RootCAs:      rootCA,
@@ -181,8 +179,7 @@ func (suite *CmdTestSuite) SetupSuite() {
 			avs.HostPortSlice{suite.avsHostPort},
 			nil,
 			true,
-			suite.avsUser,
-			suite.avsPassword,
+			suite.avsCreds,
 			suite.avsTLSConfig,
 			logger,
 		)
@@ -212,6 +209,12 @@ func (suite *CmdTestSuite) TearDownSuite() {
 	err = docker_compose_down(suite.composeFile)
 	if err != nil {
 		fmt.Println("unable to stop docker compose down")
+	}
+}
+
+func (suite *CmdTestSuite) SkipIfUserPassAuthDisabled() {
+	if suite.avsCreds == nil {
+		suite.T().Skip("authentication is disabled. skipping test")
 	}
 }
 
@@ -274,7 +277,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw batch params",
 			"index3",
 			"test",
-			fmt.Sprintf("index create -y s --host %s -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-enabled false --hnsw-batch-interval 50 --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			fmt.Sprintf("index create -y s --host %s -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50 --hnsw-batch-max-records 100", suite.avsHostPort.String()),
 			NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
 				WithHnswBatchingMaxRecord(100).
 				WithHnswBatchingInterval(50).
@@ -341,7 +344,16 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.avsClient.IndexCreate(context.Background(), tc.indexNamespace, tc.indexSet, tc.indexName, "vector", 1, protos.VectorDistanceMetric_COSINE, nil, nil, nil)
+			err := suite.avsClient.IndexCreate(
+				context.Background(),
+				tc.indexNamespace,
+				tc.indexName,
+				"vector",
+				1,
+				protos.VectorDistanceMetric_COSINE,
+				&avs.IndexCreateOpts{
+					Sets: tc.indexSet,
+				})
 			if err != nil {
 				suite.FailNowf("unable to index create", "%v", err)
 			}
@@ -455,23 +467,21 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 │ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │ ╭───────────┬───────╮ │ ╭────────────────────────────╮ │
 │   │       │           │        │        │            │                 │          │ │ Namespace │ bar   │ │ │            HNSW            │ │
 │   │       │           │        │        │            │                 │          │ │ Set       │ list2 │ │ ├───────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │ 16     │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Ef                │ 100    │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │ 100    │ │
+│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │     16 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Ef                │    100 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │    100 │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records │ 100000 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │ 30000  │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Enabled     │ true   │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │  30000 │ │
 │   │       │           │        │        │            │                 │          │                       │ ╰───────────────────┴────────╯ │
 ├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼────────────────────────────────┤
 │ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │ ╭───────────┬───────╮ │ ╭────────────────────────────╮ │
 │   │       │           │        │        │            │                 │          │ │ Namespace │ test  │ │ │            HNSW            │ │
 │   │       │           │        │        │            │                 │          │ │ Set       │ list1 │ │ ├───────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │ 16     │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Ef                │ 100    │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │ 100    │ │
+│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │     16 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Ef                │    100 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │    100 │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records │ 100000 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │ 30000  │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Enabled     │ true   │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │  30000 │ │
 │   │       │           │        │        │            │                 │          │                       │ ╰───────────────────┴────────╯ │
 ╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────┴───────────────────────┴────────────────────────────────╯
 `,
@@ -489,14 +499,16 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 				err := suite.avsClient.IndexCreate(
 					context.Background(),
 					index.Id.Namespace,
-					setFilter,
 					index.Id.Name,
 					index.GetField(),
 					index.GetDimensions(),
 					index.GetVectorDistanceMetric(),
-					index.GetHnswParams(),
-					index.GetLabels(),
-					index.GetStorage(),
+					&avs.IndexCreateOpts{
+						Sets:       setFilter,
+						HnswParams: index.GetHnswParams(),
+						MetaData:   index.GetLabels(),
+						Storage:    index.GetStorage(),
+					},
 				)
 				if err != nil {
 					suite.FailNowf("unable to create index", "%v", err)
@@ -521,9 +533,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name         string
@@ -575,9 +585,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 }
 
 func (suite *CmdTestSuite) TestFailUserCreateCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name        string
@@ -602,9 +610,7 @@ func (suite *CmdTestSuite) TestFailUserCreateCmd() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulUserDropCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name string
@@ -650,9 +656,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserDropCmd() {
 // }
 
 func (suite *CmdTestSuite) TestSuccessfulUserGrantCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name         string
@@ -692,9 +696,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserGrantCmd() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulUserRevokeCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name         string
@@ -734,9 +736,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserRevokeCmd() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name        string
@@ -767,13 +767,13 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
 
+			creds := avs.NewCredntialsFromUserPass(tc.user, tc.newPassword)
 			_, err = avs.NewAdminClient(
 				ctx,
 				avs.HostPortSlice{suite.avsHostPort},
 				nil,
 				true,
-				&tc.user,
-				&tc.newPassword,
+				creds,
 				suite.avsTLSConfig,
 				logger,
 			)
@@ -783,9 +783,7 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulListUsersCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name          string
@@ -820,9 +818,7 @@ Use 'role list' to view available roles
 }
 
 func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidUser() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name        string
@@ -852,9 +848,7 @@ func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidUser() {
 }
 
 func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidRoles() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name        string
@@ -884,9 +878,7 @@ func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidRoles() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulListRolesCmd() {
-	if suite.avsUser == nil {
-		suite.T().Skip("authentication is disabled. skipping test")
-	}
+	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
 		name          string
@@ -953,11 +945,6 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"test with bad timeout",
 			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
 			"Error: invalid argument \"10\" for \"--timeout\"",
-		},
-		{
-			"test with bad hnsw-batch-enabled",
-			"index create -y --hnsw-batch-enabled foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
-			"Error: invalid argument \"foo\" for \"--hnsw-batch-enabled\"",
 		},
 		{
 			"test with bad hnsw-batch-interval",
@@ -1062,5 +1049,3 @@ func docker_compose_down(composeFile string) error {
 
 	return nil
 }
-
-// func Index

@@ -28,9 +28,9 @@ jobs:
     - name: Login to Aerospike Jfrog
       run: |
         docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
-    - name: Clear Docker Cache
-      run: |
-        docker system prune --all --force
+    # - name: Clear Docker Cache
+    #   run: |
+    #     docker system prune --all --force
         
     - name: Run tests
       run: |

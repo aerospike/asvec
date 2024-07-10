@@ -49,6 +49,53 @@ func (f *Uint32OptionalFlag) String() string {
 	return optionalEmptyString
 }
 
+type Uint64OptionalFlag struct {
+	Val *uint64
+}
+
+func (f *Uint64OptionalFlag) Set(val string) error {
+	v, err := strconv.ParseUint(val, 0, 64)
+	f.Val = &v
+
+	return err
+}
+
+func (f *Uint64OptionalFlag) Type() string {
+	return "uint64"
+}
+
+func (f *Uint64OptionalFlag) String() string {
+	if f.Val != nil {
+		return strconv.FormatUint(*f.Val, 10)
+	}
+
+	return optionalEmptyString
+}
+
+type Float32OptionalFlag struct {
+	Val *float32
+}
+
+func (f *Float32OptionalFlag) Set(val string) error {
+	v, err := strconv.ParseFloat(val, 32)
+	f32Val := float32(v)
+	f.Val = &f32Val
+
+	return err
+}
+
+func (f *Float32OptionalFlag) Type() string {
+	return "float32"
+}
+
+func (f *Float32OptionalFlag) String() string {
+	if f.Val != nil {
+		return strconv.FormatUint(uint64(*f.Val), 10)
+	}
+
+	return optionalEmptyString
+}
+
 type BoolOptionalFlag struct {
 	Val *bool
 }

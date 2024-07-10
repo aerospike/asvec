@@ -30,8 +30,11 @@ var indexCreateFlags = &struct {
 	hnswMaxEdges        flags.Uint32OptionalFlag
 	hnswEf              flags.Uint32OptionalFlag
 	hnswConstructionEf  flags.Uint32OptionalFlag
-	hnswBatchMaxRecords flags.Uint32OptionalFlag
-	hnswBatchInterval   flags.Uint32OptionalFlag
+	hnswMaxMemQueueSize flags.Uint32OptionalFlag
+	hnswBatch           flags.BatchingFlags
+	hnswCache           flags.CachingFlags
+	hnswHealer          flags.HealerFlags
+	hnswMerge           flags.MergeFlags
 }{
 	clientFlags:         *flags.NewClientFlags(),
 	storageNamespace:    flags.StringOptionalFlag{},
@@ -39,8 +42,11 @@ var indexCreateFlags = &struct {
 	hnswMaxEdges:        flags.Uint32OptionalFlag{},
 	hnswEf:              flags.Uint32OptionalFlag{},
 	hnswConstructionEf:  flags.Uint32OptionalFlag{},
-	hnswBatchMaxRecords: flags.Uint32OptionalFlag{},
-	hnswBatchInterval:   flags.Uint32OptionalFlag{},
+	hnswMaxMemQueueSize: flags.Uint32OptionalFlag{},
+	hnswBatch:           *flags.NewBatchingFlags(),
+	hnswCache:           *flags.NewCachingFlags(),
+	hnswHealer:          *flags.NewHealerFlags(),
+	hnswMerge:           *flags.NewMergeFlags(),
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
@@ -58,10 +64,12 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.Var(&indexCreateFlags.hnswMaxEdges, flags.MaxEdges, commonFlags.DefaultWrapHelpString("Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'.")) //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswConstructionEf, flags.ConstructionEf, commonFlags.DefaultWrapHelpString("The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times. The default is 100."))                                                                                                  //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswEf, flags.Ef, commonFlags.DefaultWrapHelpString("The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100."))                                                                                                                                //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswBatchMaxRecords, flags.BatchMaxRecords, commonFlags.DefaultWrapHelpString("Maximum number of records to fit in a batch. The default value is 10000."))                                                                                                                                                                                                      //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswBatchInterval, flags.BatchInterval, commonFlags.DefaultWrapHelpString("The maximum amount of time in milliseconds to wait before finalizing a batch. The default value is 10000."))                                                                                                                                                                         //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("TODO"))                                                                                                                                                                                                                                                                      //nolint:lll // For readability                                                                                                                                                                       //nolint:lll // For readability
 	flagSet.AddFlagSet(indexCreateFlags.clientFlags.NewClientFlagSet())
-
+	flagSet.AddFlagSet(indexCreateFlags.hnswBatch.NewFlagSet())
+	flagSet.AddFlagSet(indexCreateFlags.hnswCache.NewFlagSet())
+	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
+	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
 	return flagSet
 }
 
@@ -109,8 +117,10 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					slog.Any(flags.MaxEdges, indexCreateFlags.hnswMaxEdges.String()),
 					slog.Any(flags.Ef, indexCreateFlags.hnswEf),
 					slog.Any(flags.ConstructionEf, indexCreateFlags.hnswConstructionEf.String()),
-					slog.Any(flags.BatchMaxRecords, indexCreateFlags.hnswBatchMaxRecords.String()),
-					slog.Any(flags.BatchInterval, indexCreateFlags.hnswBatchInterval.String()),
+					indexCreateFlags.hnswBatch.NewSLogAttr(),
+					// slog.Any(flags.BatchMaxRecords, indexCreateFlags.hnswBatchMaxRecords.String()),
+					// slog.Any(flags.BatchInterval,
+					// indexCreateFlags.hnswBatchInterval.String()), TODO
 				)...,
 			)
 
@@ -132,8 +142,8 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					Ef:             indexCreateFlags.hnswEf.Val,
 					EfConstruction: indexCreateFlags.hnswConstructionEf.Val,
 					BatchingParams: &protos.HnswBatchingParams{
-						MaxRecords: indexCreateFlags.hnswBatchMaxRecords.Val,
-						Interval:   indexCreateFlags.hnswBatchInterval.Val,
+						MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
+						Interval:   indexCreateFlags.hnswBatch.Interval.Val,
 					},
 				},
 			}

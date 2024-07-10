@@ -7,7 +7,7 @@ on:
   
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: aerospike_large_runners_8
     steps:
     - uses: actions/checkout@v3
     - name: Get go version from go.mod
@@ -28,6 +28,10 @@ jobs:
     - name: Login to Aerospike Jfrog
       run: |
         docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+    # - name: Clear Docker Cache
+    #   run: |
+    #     docker system prune --all --force
+        
     - name: Run tests
       run: |
         make coverage

@@ -1031,7 +1031,7 @@ func docker_compose_up(composeFile string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "docker", "compose", fmt.Sprintf("-f%s", composeFile), "up", "-d")
+	cmd := exec.CommandContext(ctx, "docker", "-lDEBUG", "compose", fmt.Sprintf("-f%s", composeFile), "up", "-d")
 	output, err := cmd.CombinedOutput()
 
 	fmt.Printf("docker compose up output: %s\n", string(output))

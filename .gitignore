@@ -4,3 +4,4 @@ embed_*.go
 tmp
 /vendor
 /coverage
+VERSION.md

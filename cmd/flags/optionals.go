@@ -1,6 +1,10 @@
 package flags
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
 
 const optionalEmptyString = "<nil>"
 
@@ -117,4 +121,49 @@ func (f *BoolOptionalFlag) String() string {
 	}
 
 	return optionalEmptyString
+}
+
+type DurationOptionalFlag struct {
+	Val *time.Duration
+}
+
+func (f *DurationOptionalFlag) Set(val string) error {
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		return fmt.Errorf("invalid duration: %w", err)
+	}
+
+	f.Val = &d
+
+	return err
+}
+
+func (f *DurationOptionalFlag) Type() string {
+	return "time.Duration"
+}
+
+func (f *DurationOptionalFlag) String() string {
+	if f.Val != nil {
+		return f.Val.String()
+	}
+
+	return optionalEmptyString
+}
+
+func (f *DurationOptionalFlag) Uint64() *uint64 {
+	if f.Val == nil {
+		return nil
+	}
+
+	milli := uint64(f.Val.Milliseconds())
+	return &milli
+}
+
+func (f *DurationOptionalFlag) Uint32() *uint32 {
+	if f.Val == nil {
+		return nil
+	}
+
+	milli := uint32(f.Val.Milliseconds())
+	return &milli
 }

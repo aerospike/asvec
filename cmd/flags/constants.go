@@ -22,6 +22,7 @@ const (
 	Verbose                      = "verbose"
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"
+	CutoffTime                   = "cutoff-time"
 	MaxEdges                     = "hnsw-max-edges"
 	ConstructionEf               = "hnsw-ef-construction"
 	Ef                           = "hnsw-ef"

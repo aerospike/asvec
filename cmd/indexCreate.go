@@ -43,10 +43,10 @@ var indexCreateFlags = &struct {
 	hnswEf:              flags.Uint32OptionalFlag{},
 	hnswConstructionEf:  flags.Uint32OptionalFlag{},
 	hnswMaxMemQueueSize: flags.Uint32OptionalFlag{},
-	hnswBatch:           *flags.NewBatchingFlags(),
-	hnswCache:           *flags.NewCachingFlags(),
-	hnswHealer:          *flags.NewHealerFlags(),
-	hnswMerge:           *flags.NewMergeFlags(),
+	hnswBatch:           *flags.NewHnswBatchingFlags(),
+	hnswCache:           *flags.NewHnswCachingFlags(),
+	hnswHealer:          *flags.NewHnswHealerFlags(),
+	hnswMerge:           *flags.NewHnswMergeFlags(),
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
@@ -64,12 +64,13 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.Var(&indexCreateFlags.hnswMaxEdges, flags.MaxEdges, commonFlags.DefaultWrapHelpString("Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'.")) //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswConstructionEf, flags.ConstructionEf, commonFlags.DefaultWrapHelpString("The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times. The default is 100."))                                                                                                  //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswEf, flags.Ef, commonFlags.DefaultWrapHelpString("The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100."))                                                                                                                                //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("TODO"))                                                                                                                                                                                                                                                                      //nolint:lll // For readability                                                                                                                                                                       //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("Maximum size of in-memory queue for inserted/updated vector records."))                                                                                                                                                                                                      //nolint:lll // For readability                                                                                                                                                                       //nolint:lll // For readability
 	flagSet.AddFlagSet(indexCreateFlags.clientFlags.NewClientFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
+
 	return flagSet
 }
 
@@ -90,7 +91,8 @@ func newIndexCreateCmd() *cobra.Command {
 search on your data. The index tells AVS where your data is located, 
 what your vectors look like, and how vectors should be compared to each other. 
 Optionally, you can tweak where your index is stored and how the HNSW algorithm 
-behaves. For more information see: https://aerospike.com/docs/vector
+behaves. For guidance on creating indexes and for viewing defaults, refer to: 
+https://aerospike.com/docs/vector/operate/index-management"
 
 For example:
 
@@ -102,8 +104,13 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			return checkSeedsAndHost()
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			debugFlags := indexCreateFlags.clientFlags.NewSLogAttr()
+			debugFlags = append(debugFlags, indexCreateFlags.hnswBatch.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexCreateFlags.hnswCache.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexCreateFlags.hnswHealer.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexCreateFlags.hnswMerge.NewSLogAttr()...)
 			logger.Debug("parsed flags",
-				append(indexCreateFlags.clientFlags.NewSLogAttr(),
+				append(debugFlags,
 					slog.Bool(flags.Yes, indexCreateFlags.yes),
 					slog.String(flags.Namespace, indexCreateFlags.namespace),
 					slog.Any(flags.Sets, indexCreateFlags.sets),
@@ -117,10 +124,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					slog.Any(flags.MaxEdges, indexCreateFlags.hnswMaxEdges.String()),
 					slog.Any(flags.Ef, indexCreateFlags.hnswEf),
 					slog.Any(flags.ConstructionEf, indexCreateFlags.hnswConstructionEf.String()),
-					indexCreateFlags.hnswBatch.NewSLogAttr(),
-					// slog.Any(flags.BatchMaxRecords, indexCreateFlags.hnswBatchMaxRecords.String()),
-					// slog.Any(flags.BatchInterval,
-					// indexCreateFlags.hnswBatchInterval.String()), TODO
+					slog.Any(flags.HnswMaxMemQueueSize, indexCreateFlags.hnswMaxMemQueueSize.String()),
 				)...,
 			)
 
@@ -143,17 +147,32 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					EfConstruction: indexCreateFlags.hnswConstructionEf.Val,
 					BatchingParams: &protos.HnswBatchingParams{
 						MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
-						Interval:   indexCreateFlags.hnswBatch.Interval.Val,
+						Interval:   indexCreateFlags.hnswBatch.Interval.Uint32(),
+					},
+					CachingParams: &protos.HnswCachingParams{
+						MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
+						Expiry:     indexCreateFlags.hnswCache.Expiry.Uint64(),
+					},
+					HealerParams: &protos.HnswHealerParams{
+						MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,
+						MaxScanPageSize:    indexCreateFlags.hnswHealer.MaxScanPageSize.Val,
+						ReindexPercent:     indexCreateFlags.hnswHealer.ReindexPercent.Val,
+						ScheduleDelay:      indexCreateFlags.hnswHealer.ScheduleDelay.Uint64(),
+						Parallelism:        indexCreateFlags.hnswHealer.Parallelism.Val,
+					},
+					MergeParams: &protos.HnswIndexMergeParams{
+						Parallelism: indexCreateFlags.hnswMerge.Parallelism.Val,
 					},
 				},
 			}
 
 			if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
-				"Are you sure you want to create the index %s field %s?",
+				"Are you sure you want to create the index %s.%s on field %s?",
 				nsAndSetString(
 					indexCreateFlags.namespace,
 					indexCreateFlags.sets,
 				),
+				indexCreateFlags.indexName,
 				indexCreateFlags.vectorField,
 			)) {
 				return nil

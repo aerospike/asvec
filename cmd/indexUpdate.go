@@ -38,7 +38,7 @@ func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, commonFlags.DefaultWrapHelpString("When true do not prompt for confirmation."))                                           //nolint:lll // For readability
 	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                             //nolint:lll // For readability
 	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                   //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexUpdateFlags.indexMeta, flags.IndexMeta, nil, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                    //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexUpdateFlags.indexMeta, flags.IndexLabels, nil, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                  //nolint:lll // For readability
 	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("Maximum size of in-memory queue for inserted/updated vector records.")) //nolint:lll // For readability
 	flagSet.AddFlagSet(indexUpdateFlags.clientFlags.NewClientFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
@@ -58,8 +58,8 @@ var indexUpdateRequiredFlags = []string{
 func newIndexUpdateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",
-		Short: "A command for changing indexes",
-		Long: fmt.Sprintf(`A command for changing the behavior of your hnsw indexes. 
+		Short: "A command for updating your indexes",
+		Long: fmt.Sprintf(`A command for updating the behavior of your hnsw indexes. 
 Modify parameters such as batching, caching, index healing, and index merging. 
 For guidance on updating your indexes and to view defaults, refer to: 
 https://aerospike.com/docs/vector/operate/index-management"
@@ -94,7 +94,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 			defer adminClient.Close()
 
 			hnswParams := &protos.HnswIndexUpdate{
-				MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
+				MaxMemQueueSize: indexUpdateFlags.hnswMaxMemQueueSize.Val,
 				BatchingParams: &protos.HnswBatchingParams{
 					MaxRecords: indexUpdateFlags.hnswBatch.MaxRecords.Val,
 					Interval:   indexUpdateFlags.hnswBatch.Interval.Uint32(),

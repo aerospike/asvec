@@ -253,6 +253,15 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 		expected_index *protos.IndexDefinition
 	}{
 		{
+			"test with labels",
+			"index0",
+			"test",
+			fmt.Sprintf("index create -y --host %s -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar", suite.avsHostPort.String()),
+			NewIndexDefinitionBuilder("index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+				WithLabels(map[string]string{"model": "all-MiniLM-L6-v2", "foo": "bar"}).
+				Build(),
+		},
+		{
 			"test with storage config",
 			"index1",
 			"test",
@@ -266,22 +275,54 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw params and seeds",
 			"index2",
 			"test",
-			fmt.Sprintf("index create -y s --seeds %s -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-max-edges 10 --hnsw-ef 11 --hnsw-ef-construction 12", suite.avsHostPort.String()),
+			fmt.Sprintf("index create -y --seeds %s -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-max-edges 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10", suite.avsHostPort.String()),
 			NewIndexDefinitionBuilder("index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
 				WithHnswM(10).
 				WithHnswEf(11).
 				WithHnswEfConstruction(12).
+				WithHnswMaxMemQueueSize(10).
 				Build(),
 		},
 		{
 			"test with hnsw batch params",
 			"index3",
 			"test",
-			fmt.Sprintf("index create -y s --host %s -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50 --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			fmt.Sprintf("index create -y --host %s -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
 			NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
 				WithHnswBatchingMaxRecord(100).
-				WithHnswBatchingInterval(50).
-				WithHnswBatchingDisabled(true).
+				WithHnswBatchingInterval(50000).
+				Build(),
+		},
+		{
+			"test with hnsw cache params",
+			"index4",
+			"test",
+			fmt.Sprintf("index create -y --host %s -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s", suite.avsHostPort.String()),
+			NewIndexDefinitionBuilder("index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
+				WithHnswCacheExpiry(10000).
+				WithHnswCacheMaxEntries(1000).
+				Build(),
+		},
+		{
+			"test with hnsw healer params",
+			"index5",
+			"test",
+			fmt.Sprintf("index create -y --host %s -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10", suite.avsHostPort.String()),
+			NewIndexDefinitionBuilder("index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
+				WithHnswHealerMaxScanRatePerNode(1000).
+				WithHnswHealerMaxScanPageSize(1000).
+				WithHnswHealerReindexPercent(10.10).
+				WithHnswHealerScheduleDelay(10000).
+				WithHnswHealerParallelism(10).
+				Build(),
+		},
+		{
+			"test with hnsw merge params",
+			"index6",
+			"test",
+			fmt.Sprintf("index create -y --host %s -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-parallelism 10", suite.avsHostPort.String()),
+			NewIndexDefinitionBuilder("index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
+				WithHnswMergeParallelism(10).
 				Build(),
 		},
 	}
@@ -304,6 +345,139 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			suite.EqualExportedValues(tc.expected_index, actual)
 		})
 	}
+}
+
+func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
+	suite.avsClient.IndexCreate(context.Background(), "test", "successful-update", "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
+	ns := "test"
+	index := "successful-update"
+	builder := NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
+	testCases := []struct {
+		name           string
+		indexName      string // index names must be unique for the suite
+		indexNamespace string
+		cmd            string
+		expected_index *protos.IndexDefinition
+	}{
+		{
+			"test with hnsw params and seeds",
+			"successful-update",
+			ns,
+			fmt.Sprintf("index update -y --seeds %s -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10 --hnsw-batch-max-records 100  --hnsw-batch-interval 10s", suite.avsHostPort.String()),
+			builder.
+				WithLabels(map[string]string{"new-label": "foo"}).
+				WithHnswBatchingInterval(10000).
+				WithHnswBatchingMaxRecord(100).
+				WithHnswMaxMemQueueSize(10).
+				Build(),
+		},
+		{
+			"test with hnsw batch params",
+			"successful-update",
+			"test",
+			fmt.Sprintf("index update -y --host %s -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			builder.
+				WithHnswBatchingMaxRecord(100).
+				WithHnswBatchingInterval(50000).
+				Build(),
+		},
+		{
+			"test with hnsw cache params",
+			"successful-update",
+			"test",
+			fmt.Sprintf("index update -y --host %s -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			builder.
+				WithHnswCacheExpiry(10000).
+				WithHnswCacheMaxEntries(1000).
+				Build(),
+		},
+		{
+			"test with hnsw healer params",
+			"successful-update",
+			"test",
+			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10 --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			builder.
+				WithHnswHealerMaxScanRatePerNode(1000).
+				WithHnswHealerMaxScanPageSize(1000).
+				WithHnswHealerReindexPercent(10.10).
+				WithHnswHealerScheduleDelay(10000).
+				WithHnswHealerParallelism(10).
+				Build(),
+		},
+		{
+			"test with hnsw merge params",
+			"successful-update",
+			"test",
+			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-merge-parallelism 10  --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			builder.
+				WithHnswMergeParallelism(10).
+				Build(),
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+
+			if err != nil {
+				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+				suite.FailNow("unable to index update")
+			}
+
+			time.Sleep(5 * time.Second)
+
+			actual, err := suite.avsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+
+			if err != nil {
+				suite.FailNowf("unable to get index", "%v", err)
+			}
+
+			suite.EqualExportedValues(tc.expected_index, actual)
+		})
+	}
+
+}
+
+func (suite *CmdTestSuite) TestUpdateIndexDoesNotExist() {
+	lines, err := suite.runSuiteCmd(strings.Split(fmt.Sprintf("index update -y --host %s -n test -i DNE --hnsw-merge-parallelism 10", suite.avsHostPort.String()), " ")...)
+	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
+	suite.Assert().Contains(lines[0], "server error")
+}
+
+func (suite *CmdTestSuite) TestSuccessfulGCIndexCmd() {
+	index := "successful-gc"
+	ns := "test"
+	suite.avsClient.IndexCreate(context.Background(), ns, index, "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
+	testCases := []struct {
+		name           string
+		indexName      string // index names must be unique for the suite
+		indexNamespace string
+		cmd            string
+	}{
+		{
+			"test with hnsw params and seeds",
+			"successful-gc",
+			ns,
+			fmt.Sprintf("index gc --host %s -n test -i successful-gc -c 10", suite.avsHostPort.String()),
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+
+			if err != nil {
+				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+				suite.FailNow("unable to index gc")
+			}
+		})
+	}
+}
+
+func (suite *CmdTestSuite) TestGCIndexDoesNotExist() {
+	lines, err := suite.runSuiteCmd(strings.Split(fmt.Sprintf("index gc --host %s -n test -i DNE -c 10", suite.avsHostPort.String()), " ")...)
+	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
+	suite.Assert().Contains(lines[0], "server error")
 }
 
 func (suite *CmdTestSuite) TestCreateIndexFailsAlreadyExistsCmd() {
@@ -459,31 +633,49 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 				).WithSet("barset").Build(),
 			},
 			fmt.Sprintf("index list -h %s --verbose", suite.avsHostPort.String()),
-			`╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                   Indexes                                                                  │
-├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┬───────────────────────┬────────────────────────────────┤
-│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │ STORAGE               │ INDEX PARAMETERS               │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼────────────────────────────────┤
-│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │ ╭───────────┬───────╮ │ ╭────────────────────────────╮ │
-│   │       │           │        │        │            │                 │          │ │ Namespace │ bar   │ │ │            HNSW            │ │
-│   │       │           │        │        │            │                 │          │ │ Set       │ list2 │ │ ├───────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │     16 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Ef                │    100 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │    100 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records │ 100000 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │  30000 │ │
-│   │       │           │        │        │            │                 │          │                       │ ╰───────────────────┴────────╯ │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼────────────────────────────────┤
-│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │ ╭───────────┬───────╮ │ ╭────────────────────────────╮ │
-│   │       │           │        │        │            │                 │          │ │ Namespace │ test  │ │ │            HNSW            │ │
-│   │       │           │        │        │            │                 │          │ │ Set       │ list1 │ │ ├───────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges         │     16 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Ef                │    100 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef   │    100 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records │ 100000 │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval    │  30000 │ │
-│   │       │           │        │        │            │                 │          │                       │ ╰───────────────────┴────────╯ │
-╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────┴───────────────────────┴────────────────────────────────╯
+			`╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                        Indexes                                                                       │
+├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┬───────────────────────┬──────────────────────────────────────────┤
+│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │ STORAGE               │ INDEX PARAMETERS                         │
+├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼──────────────────────────────────────────┤
+│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │ ╭───────────┬───────╮ │ ╭──────────────────────────────────────╮ │
+│   │       │           │        │        │            │                 │          │ │ Namespace │ bar   │ │ │                 HNSW                 │ │
+│   │       │           │        │        │            │                 │          │ │ Set       │ list2 │ │ ├─────────────────────────────┬────────┤ │
+│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges                   │ 16     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Ef                          │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef             │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ MaxMemQueueSize             │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records           │ 100000 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval              │ 30s    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Catch Max Entires           │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Catch Expiry                │ 0s     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Max Scan Rate / Node │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Max Page Size        │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Re-index %           │ 0.00%  │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Schedule Delay       │ 0s     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Parallelism          │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Merge Parallelism           │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ ╰─────────────────────────────┴────────╯ │
+├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼───────────────────────┼──────────────────────────────────────────┤
+│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │ ╭───────────┬───────╮ │ ╭──────────────────────────────────────╮ │
+│   │       │           │        │        │            │                 │          │ │ Namespace │ test  │ │ │                 HNSW                 │ │
+│   │       │           │        │        │            │                 │          │ │ Set       │ list1 │ │ ├─────────────────────────────┬────────┤ │
+│   │       │           │        │        │            │                 │          │ ╰───────────┴───────╯ │ │ Max Edges                   │ 16     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Ef                          │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Construction Ef             │ 100    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ MaxMemQueueSize             │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records           │ 100000 │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Batch Interval              │ 30s    │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Catch Max Entires           │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Catch Expiry                │ 0s     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Max Scan Rate / Node │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Max Page Size        │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Re-index %           │ 0.00%  │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Schedule Delay       │ 0s     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Healer Parallelism          │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Merge Parallelism           │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ ╰─────────────────────────────┴────────╯ │
+╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────┴───────────────────────┴──────────────────────────────────────────╯
 `,
 		},
 	}
@@ -506,7 +698,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					&avs.IndexCreateOpts{
 						Sets:       setFilter,
 						HnswParams: index.GetHnswParams(),
-						MetaData:   index.GetLabels(),
+						Labels:     index.GetLabels(),
 						Storage:    index.GetStorage(),
 					},
 				)
@@ -947,16 +1139,6 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"Error: invalid argument \"10\" for \"--timeout\"",
 		},
 		{
-			"test with bad hnsw-batch-interval",
-			"index create -y --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
-		},
-		{
-			"test with bad hnsw-batch-max-records",
-			"index create -y --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
-		},
-		{
 			"test with bad hnsw-ef",
 			"index create -y --hnsw-ef foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
 			"Error: invalid argument \"foo\" for \"--hnsw-ef\"",
@@ -972,10 +1154,61 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"Error: invalid argument \"foo\" for \"--hnsw-max-edges\"",
 		},
 		{
-			"test with bad password",
-			"user create --password file:blah --name foo --roles admin",
-			"blah: no such file or directory",
+			"test with bad hnsw-batch-interval",
+			"index create -y --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
 		},
+		{
+			"test with bad hnsw-batch-max-records",
+			"index create -y --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
+		},
+		{
+			"test with bad hnsw-cache-max-entries",
+			"index create -y --hnsw-cache-max-entries foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-cache-max-entries\"",
+		},
+		{
+			"test with bad hnsw-cache-expiry",
+			"index create -y --hnsw-cache-expiry 10 --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"10\" for \"--hnsw-cache-expiry\"",
+		},
+		{
+			"test with bad hnsw-healer-max-scan-rate-per-node",
+			"index create -y --hnsw-healer-max-scan-rate-per-node foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-healer-max-scan-rate-per-node\"",
+		},
+		{
+			"test with bad hnsw-healer-max-scan-page-size",
+			"index create -y --hnsw-healer-max-scan-page-size foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-healer-max-scan-page-size\"",
+		},
+		{
+			"test with bad hnsw-healer-reindex-percent",
+			"index create -y --hnsw-healer-reindex-percent foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-healer-reindex-percent\"",
+		},
+		{
+			"test with bad hnsw-healer-schedule-delay",
+			"index create -y --hnsw-healer-schedule-delay foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-healer-schedule-delay\"",
+		},
+		{
+			"test with bad hnsw-healer-parallelism",
+			"index create -y --hnsw-healer-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-healer-parallelism\"",
+		},
+		{
+			"test with bad hnsw-merge-parallelism",
+			"index create -y --hnsw-merge-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-merge-parallelism\"",
+		},
+
+		// {
+		// 	"test with bad password",
+		// 	"user create --password file:blah --name foo --roles admin",
+		// 	"blah: no such file or directory",
+		// },
 		{
 			"test with bad tls-cafile",
 			"user create --tls-cafile blah --name foo --roles admin",

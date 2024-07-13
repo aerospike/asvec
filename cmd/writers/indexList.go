@@ -1,8 +1,10 @@
 package writers
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -67,8 +69,17 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Max Edges", v.HnswParams.GetM()},
 				{"Ef", v.HnswParams.GetEf()},
 				{"Construction Ef", v.HnswParams.GetEfConstruction()},
+				{"MaxMemQueueSize", v.HnswParams.GetMaxMemQueueSize()},
 				{"Batch Max Records", v.HnswParams.BatchingParams.GetMaxRecords()},
-				{"Batch Interval", v.HnswParams.BatchingParams.GetInterval()},
+				{"Batch Interval", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetInterval()))},
+				{"Catch Max Entires", v.HnswParams.CachingParams.GetMaxEntries()},
+				{"Catch Expiry", convertMillisecondToDuration(v.HnswParams.CachingParams.GetExpiry())},
+				{"Healer Max Scan Rate / Node", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},
+				{"Healer Max Page Size", v.HnswParams.HealerParams.GetMaxScanPageSize()},
+				{"Healer Re-index %", convertFloatToPercentStr(v.HnswParams.HealerParams.GetReindexPercent())},
+				{"Healer Schedule Delay", convertMillisecondToDuration(v.HnswParams.HealerParams.GetScheduleDelay())},
+				{"Healer Parallelism", v.HnswParams.HealerParams.GetParallelism()},
+				{"Merge Parallelism", v.HnswParams.MergeParams.GetParallelism()},
 			})
 
 			row = append(row, tHNSW.Render())
@@ -78,4 +89,12 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 	}
 
 	itw.AppendRow(row)
+}
+
+func convertMillisecondToDuration(m uint64) time.Duration {
+	return time.Millisecond * time.Duration(m)
+}
+
+func convertFloatToPercentStr(f float32) string {
+	return fmt.Sprintf("%.2f%%", f*100)
 }

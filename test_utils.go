@@ -28,20 +28,29 @@ func createFlagStr(name, value string) string {
 }
 
 type IndexDefinitionBuilder struct {
-	indexName             string
-	namespace             string
-	set                   *string
-	dimension             int
-	vectorDistanceMetric  protos.VectorDistanceMetric
-	vectorField           string
-	storageNamespace      *string
-	storageSet            *string
-	hnsfM                 *uint32
-	hnsfEfC               *uint32
-	hnsfEf                *uint32
-	hnsfBatchingMaxRecord *uint32
-	hnsfBatchingInterval  *uint32
-	hnsfBatchingDisabled  *bool
+	indexName                      string
+	namespace                      string
+	set                            *string
+	dimension                      int
+	vectorDistanceMetric           protos.VectorDistanceMetric
+	vectorField                    string
+	storageNamespace               *string
+	storageSet                     *string
+	labels                         map[string]string
+	hnsfM                          *uint32
+	hnsfEfC                        *uint32
+	hnsfEf                         *uint32
+	hnswMemQueueSize               *uint32
+	hnsfBatchingMaxRecord          *uint32
+	hnsfBatchingInterval           *uint32
+	hnswCacheExpiry                *uint64
+	hnswCacheMaxEntries            *uint64
+	hnswHealerMaxScanPageSize      *uint32
+	hnswHealerMaxScanRatePerSecond *uint32
+	hnswHealerParallelism          *uint32
+	HnswHealerReindexPercent       *float32
+	HnswHealerScheduleDelay        *uint64
+	hnswMergeParallelism           *uint32
 }
 
 func NewIndexDefinitionBuilder(
@@ -62,6 +71,11 @@ func NewIndexDefinitionBuilder(
 
 func (idb *IndexDefinitionBuilder) WithSet(set string) *IndexDefinitionBuilder {
 	idb.set = &set
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithLabels(labels map[string]string) *IndexDefinitionBuilder {
+	idb.labels = labels
 	return idb
 }
 
@@ -90,6 +104,11 @@ func (idb *IndexDefinitionBuilder) WithHnswEfConstruction(efConstruction uint32)
 	return idb
 }
 
+func (idb *IndexDefinitionBuilder) WithHnswMaxMemQueueSize(maxMemQueueSize uint32) *IndexDefinitionBuilder {
+	idb.hnswMemQueueSize = &maxMemQueueSize
+	return idb
+}
+
 func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxRecord(maxRecord uint32) *IndexDefinitionBuilder {
 	idb.hnsfBatchingMaxRecord = &maxRecord
 	return idb
@@ -100,8 +119,43 @@ func (idb *IndexDefinitionBuilder) WithHnswBatchingInterval(interval uint32) *In
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswBatchingDisabled(disabled bool) *IndexDefinitionBuilder {
-	idb.hnsfBatchingDisabled = &disabled
+func (idb *IndexDefinitionBuilder) WithHnswCacheExpiry(expiry uint64) *IndexDefinitionBuilder {
+	idb.hnswCacheExpiry = &expiry
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswCacheMaxEntries(maxEntries uint64) *IndexDefinitionBuilder {
+	idb.hnswCacheMaxEntries = &maxEntries
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswHealerMaxScanPageSize(maxScanPageSize uint32) *IndexDefinitionBuilder {
+	idb.hnswHealerMaxScanPageSize = &maxScanPageSize
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswHealerMaxScanRatePerNode(maxScanRatePerSecond uint32) *IndexDefinitionBuilder {
+	idb.hnswHealerMaxScanRatePerSecond = &maxScanRatePerSecond
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswHealerParallelism(parallelism uint32) *IndexDefinitionBuilder {
+	idb.hnswHealerParallelism = &parallelism
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswHealerReindexPercent(reindexPercent float32) *IndexDefinitionBuilder {
+	idb.HnswHealerReindexPercent = &reindexPercent
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswHealerScheduleDelay(scheduleDelay uint64) *IndexDefinitionBuilder {
+	idb.HnswHealerScheduleDelay = &scheduleDelay
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswMergeParallelism(mergeParallelism uint32) *IndexDefinitionBuilder {
+	idb.hnswMergeParallelism = &mergeParallelism
 	return idb
 }
 
@@ -127,14 +181,18 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				BatchingParams: &protos.HnswBatchingParams{
 					MaxRecords: getUint32Ptr(100000),
 					Interval:   getUint32Ptr(30000),
-					// Disabled:   getBoolPtr(false),
 				},
+				CachingParams: &protos.HnswCachingParams{},
+				HealerParams:  &protos.HnswHealerParams{},
+				MergeParams:   &protos.HnswIndexMergeParams{},
 			},
 		},
 	}
 
-	if idb.set != nil {
-		indexDef.SetFilter = idb.set
+	indexDef.SetFilter = idb.set
+
+	if idb.labels != nil {
+		indexDef.Labels = idb.labels
 	}
 
 	if idb.storageNamespace != nil {
@@ -160,9 +218,33 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	if idb.hnsfBatchingInterval != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Interval = idb.hnsfBatchingInterval
 	}
-	// if idb.hnsfBatchingDisabled != nil {
-	// 	indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Disabled = idb.hnsfBatchingDisabled
-	// }
+	if idb.hnswMemQueueSize != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MaxMemQueueSize = idb.hnswMemQueueSize
+	}
+	if idb.hnswCacheExpiry != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.Expiry = idb.hnswCacheExpiry
+	}
+	if idb.hnswCacheMaxEntries != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.MaxEntries = idb.hnswCacheMaxEntries
+	}
+	if idb.hnswHealerMaxScanPageSize != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.MaxScanPageSize = idb.hnswHealerMaxScanPageSize
+	}
+	if idb.hnswHealerMaxScanRatePerSecond != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.MaxScanRatePerNode = idb.hnswHealerMaxScanRatePerSecond
+	}
+	if idb.hnswHealerParallelism != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.Parallelism = idb.hnswHealerParallelism
+	}
+	if idb.HnswHealerReindexPercent != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.ReindexPercent = idb.HnswHealerReindexPercent
+	}
+	if idb.HnswHealerScheduleDelay != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.ScheduleDelay = idb.HnswHealerScheduleDelay
+	}
+	if idb.hnswMergeParallelism != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MergeParams.Parallelism = idb.hnswMergeParallelism
+	}
 
 	return indexDef
 }

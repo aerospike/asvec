@@ -51,10 +51,6 @@ asvec --help
 			handler.Enabled(context.Background(), lvl.Level())
 		}
 
-		if viper.IsSet(flags.Seeds) && viper.IsSet(flags.Host) {
-			return fmt.Errorf("only --%s or --%s allowed", flags.Seeds, flags.Host)
-		}
-
 		cmd.SilenceUsage = true
 
 		if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
@@ -101,7 +97,18 @@ func init() {
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version) // TODO: Handle version
 	viper.SetEnvPrefix("ASVEC")
 
-	bindEnvs := []string{flags.Host, flags.Seeds, flags.AuthUser, flags.AuthPassword}
+	bindEnvs := []string{
+		flags.Host,
+		flags.Seeds,
+		flags.AuthUser,
+		flags.AuthPassword,
+		flags.AuthCredentials,
+		flags.TLSCaFile,
+		flags.TLSCaPath,
+		flags.TLSCertFile,
+		flags.TLSKeyFile,
+		flags.TLSKeyFilePass,
+	}
 
 	// Bind specified flags to ASVEC_*
 	for _, env := range bindEnvs {

@@ -41,9 +41,9 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 
 	var password *string
 
-	if clientFlags.User.Val != nil {
-		if len(clientFlags.Password) != 0 {
-			strPass := clientFlags.Password.String()
+	if clientFlags.AuthCredentials.User.Val != nil {
+		if len(*clientFlags.AuthCredentials.Password.Val) != 0 {
+			strPass := clientFlags.AuthCredentials.Password.String()
 			password = &strPass
 		} else {
 			pass, err := passwordPrompt("Enter Password: ")
@@ -57,8 +57,8 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 	}
 
 	var creds *avs.UserPassCredentials
-	if clientFlags.User.Val != nil {
-		creds = avs.NewCredntialsFromUserPass(*clientFlags.User.Val, *password)
+	if clientFlags.AuthCredentials.User.Val != nil {
+		creds = avs.NewCredntialsFromUserPass(*clientFlags.AuthCredentials.User.Val, *password)
 	}
 
 	adminClient, err := avs.NewAdminClient(

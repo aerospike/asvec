@@ -24,7 +24,7 @@ var indexCreateFlags = &struct {
 	vectorField         string
 	dimensions          uint32
 	distanceMetric      flags.DistanceMetricFlag
-	indexMeta           map[string]string
+	indexLabels         map[string]string
 	storageNamespace    flags.StringOptionalFlag
 	storageSet          flags.StringOptionalFlag
 	hnswMaxEdges        flags.Uint32OptionalFlag
@@ -58,7 +58,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.StringVarP(&indexCreateFlags.vectorField, flags.VectorField, "f", "", commonFlags.DefaultWrapHelpString("The name of the vector field."))                                                                                                                                                                                                                                             //nolint:lll // For readability
 	flagSet.Uint32VarP(&indexCreateFlags.dimensions, flags.Dimension, "d", 0, commonFlags.DefaultWrapHelpString("The dimension of the vector field."))                                                                                                                                                                                                                                            //nolint:lll // For readability
 	flagSet.VarP(&indexCreateFlags.distanceMetric, flags.DistanceMetric, "m", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The distance metric for the index. Valid values: %s", strings.Join(flags.DistanceMetricEnum(), ", "))))                                                                                                                                                              //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexCreateFlags.indexMeta, flags.IndexMeta, nil, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                                                                                                                                                                                                                         //nolint:lll // For readability                                                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexCreateFlags.indexLabels, flags.IndexLabels, nil, commonFlags.DefaultWrapHelpString("Optional labels to assign to the index. Example: \"model=all-MiniLM-L6-v2,foo=bar\""))                                                                                                                                                                                    //nolint:lll // For readability                                                                                                                                                                                                                                //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.storageNamespace, flags.StorageNamespace, commonFlags.DefaultWrapHelpString("Optional storage namespace where the index is stored. Defaults to the index namespace."))                                                                                                                                                                                          //nolint:lll // For readability                                                                                                                                                                                                                  //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.storageSet, flags.StorageSet, commonFlags.DefaultWrapHelpString("Optional storage set where the index is stored. Defaults to the index name."))                                                                                                                                                                                                                 //nolint:lll // For readability                                                                                                                                                                                                                  //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswMaxEdges, flags.MaxEdges, commonFlags.DefaultWrapHelpString("Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'.")) //nolint:lll // For readability
@@ -117,7 +117,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					slog.String(flags.IndexName, indexCreateFlags.indexName),
 					slog.String(flags.VectorField, indexCreateFlags.vectorField),
 					slog.Uint64(flags.Dimension, uint64(indexCreateFlags.dimensions)),
-					slog.Any(flags.IndexMeta, indexCreateFlags.indexMeta),
+					slog.Any(flags.IndexLabels, indexCreateFlags.indexLabels),
 					slog.String(flags.DistanceMetric, indexCreateFlags.distanceMetric.String()),
 					slog.Any(flags.StorageNamespace, indexCreateFlags.storageNamespace.String()),
 					slog.Any(flags.StorageSet, indexCreateFlags.storageSet.String()),
@@ -135,16 +135,17 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			defer adminClient.Close()
 
 			indexOpts := &avs.IndexCreateOpts{
-				Sets:     indexCreateFlags.sets,
-				MetaData: indexCreateFlags.indexMeta,
+				Sets:   indexCreateFlags.sets,
+				Labels: indexCreateFlags.indexLabels,
 				Storage: &protos.IndexStorage{
 					Namespace: indexCreateFlags.storageNamespace.Val,
 					Set:       indexCreateFlags.storageSet.Val,
 				},
 				HnswParams: &protos.HnswParams{
-					M:              indexCreateFlags.hnswMaxEdges.Val,
-					Ef:             indexCreateFlags.hnswEf.Val,
-					EfConstruction: indexCreateFlags.hnswConstructionEf.Val,
+					M:               indexCreateFlags.hnswMaxEdges.Val,
+					Ef:              indexCreateFlags.hnswEf.Val,
+					EfConstruction:  indexCreateFlags.hnswConstructionEf.Val,
+					MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
 					BatchingParams: &protos.HnswBatchingParams{
 						MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
 						Interval:   indexCreateFlags.hnswBatch.Interval.Uint32(),

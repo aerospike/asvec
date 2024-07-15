@@ -4,6 +4,7 @@ package main
 
 import (
 	"asvec/cmd/flags"
+	"asvec/tests"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -102,7 +103,7 @@ func TestCmdSuite(t *testing.T) {
 		suiteFlags: []string{
 			"--log-level debug",
 			"--timeout 10s",
-			createFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+			tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
 		},
 		avsTLSConfig: &tls.Config{
 			Certificates: nil,
@@ -115,9 +116,9 @@ func TestCmdSuite(t *testing.T) {
 		suiteFlags: []string{
 			"--log-level debug",
 			"--timeout 10s",
-			createFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
-			createFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
-			createFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+			tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+			tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+			tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
 		},
 		avsTLSConfig: &tls.Config{
 			Certificates: certificates,
@@ -130,9 +131,9 @@ func TestCmdSuite(t *testing.T) {
 		suiteFlags: []string{
 			"--log-level debug",
 			"--timeout 10s",
-			createFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
-			createFlagStr(flags.AuthUser, "admin"),
-			createFlagStr(flags.AuthPassword, "admin"),
+			tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+			tests.CreateFlagStr(flags.AuthUser, "admin"),
+			tests.CreateFlagStr(flags.AuthPassword, "admin"),
 		},
 		avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
 		avsTLSConfig: &tls.Config{
@@ -257,7 +258,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index0",
 			"test",
 			fmt.Sprintf("index create -y --host %s -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+			tests.NewIndexDefinitionBuilder("index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
 				WithLabels(map[string]string{"model": "all-MiniLM-L6-v2", "foo": "bar"}).
 				Build(),
 		},
@@ -266,7 +267,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index1",
 			"test",
 			fmt.Sprintf("index create -y --host %s -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
+			tests.NewIndexDefinitionBuilder("index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
 				WithStorageNamespace("bar").
 				WithStorageSet("testbar").
 				Build(),
@@ -276,7 +277,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index2",
 			"test",
 			fmt.Sprintf("index create -y --seeds %s -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-max-edges 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
+			tests.NewIndexDefinitionBuilder("index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
 				WithHnswM(10).
 				WithHnswEf(11).
 				WithHnswEfConstruction(12).
@@ -288,7 +289,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index3",
 			"test",
 			fmt.Sprintf("index create -y --host %s -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
+			tests.NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
 				WithHnswBatchingMaxRecord(100).
 				WithHnswBatchingInterval(50000).
 				Build(),
@@ -298,7 +299,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index4",
 			"test",
 			fmt.Sprintf("index create -y --host %s -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
+			tests.NewIndexDefinitionBuilder("index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
 				Build(),
@@ -308,7 +309,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index5",
 			"test",
 			fmt.Sprintf("index create -y --host %s -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
+			tests.NewIndexDefinitionBuilder("index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
@@ -321,7 +322,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index6",
 			"test",
 			fmt.Sprintf("index create -y --host %s -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-parallelism 10", suite.avsHostPort.String()),
-			NewIndexDefinitionBuilder("index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
+			tests.NewIndexDefinitionBuilder("index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
 				WithHnswMergeParallelism(10).
 				Build(),
 		},
@@ -351,7 +352,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 	suite.avsClient.IndexCreate(context.Background(), "test", "successful-update", "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
 	ns := "test"
 	index := "successful-update"
-	builder := NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
+	builder := tests.NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
 	testCases := []struct {
 		name           string
 		indexName      string // index names must be unique for the suite
@@ -586,7 +587,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		{
 			"single index",
 			[]*protos.IndexDefinition{
-				NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(
 					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 			},
@@ -603,10 +604,10 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		{
 			"double index with set",
 			[]*protos.IndexDefinition{
-				NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
-				NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
@@ -625,10 +626,10 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		{
 			"double index with set and verbose",
 			[]*protos.IndexDefinition{
-				NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
-				NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
@@ -647,8 +648,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 │   │       │           │        │        │            │                 │          │                       │ │ MaxMemQueueSize             │ 0      │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records           │ 100000 │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Batch Interval              │ 30s    │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Catch Max Entires           │ 0      │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Catch Expiry                │ 0s     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Cache Max Entires           │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Cache Expiry                │ 0s     │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Healer Max Scan Rate / Node │ 0      │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Healer Max Page Size        │ 0      │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Healer Re-index %           │ 0.00%  │ │
@@ -666,8 +667,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 │   │       │           │        │        │            │                 │          │                       │ │ MaxMemQueueSize             │ 0      │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Batch Max Records           │ 100000 │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Batch Interval              │ 30s    │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Catch Max Entires           │ 0      │ │
-│   │       │           │        │        │            │                 │          │                       │ │ Catch Expiry                │ 0s     │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Cache Max Entires           │ 0      │ │
+│   │       │           │        │        │            │                 │          │                       │ │ Cache Expiry                │ 0s     │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Healer Max Scan Rate / Node │ 0      │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Healer Max Page Size        │ 0      │ │
 │   │       │           │        │        │            │                 │          │                       │ │ Healer Re-index %           │ 0.00%  │ │

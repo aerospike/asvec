@@ -1,6 +1,4 @@
-//go:build integration
-
-package main
+package tests
 
 import (
 	"fmt"
@@ -8,22 +6,22 @@ import (
 	"github.com/aerospike/avs-client-go/protos"
 )
 
-func getStrPtr(str string) *string {
+func GetStrPtr(str string) *string {
 	ptr := str
 	return &ptr
 }
 
-func getUint32Ptr(i int) *uint32 {
+func GetUint32Ptr(i int) *uint32 {
 	ptr := uint32(i)
 	return &ptr
 }
 
-func getBoolPtr(b bool) *bool {
+func GetBoolPtr(b bool) *bool {
 	ptr := b
 	return &ptr
 }
 
-func createFlagStr(name, value string) string {
+func CreateFlagStr(name, value string) string {
 	return fmt.Sprintf("--%s %s", name, value)
 }
 
@@ -175,12 +173,12 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		},
 		Params: &protos.IndexDefinition_HnswParams{
 			HnswParams: &protos.HnswParams{
-				M:              getUint32Ptr(16),
-				EfConstruction: getUint32Ptr(100),
-				Ef:             getUint32Ptr(100),
+				M:              GetUint32Ptr(16),
+				EfConstruction: GetUint32Ptr(100),
+				Ef:             GetUint32Ptr(100),
 				BatchingParams: &protos.HnswBatchingParams{
-					MaxRecords: getUint32Ptr(100000),
-					Interval:   getUint32Ptr(30000),
+					MaxRecords: GetUint32Ptr(100000),
+					Interval:   GetUint32Ptr(30000),
 				},
 				CachingParams: &protos.HnswCachingParams{},
 				HealerParams:  &protos.HnswHealerParams{},

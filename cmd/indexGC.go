@@ -61,7 +61,7 @@ asvec index gc -i myindex -n test -c 1720744696
 				append(debugFlags,
 					slog.String(flags.Namespace, indexGCFlags.namespace),
 					slog.String(flags.IndexName, indexGCFlags.indexName),
-					slog.Time(flags.HnswMaxMemQueueSize, indexGCFlags.cutoffTime.Time()),
+					slog.Time(flags.CutoffTime, indexGCFlags.cutoffTime.Time()),
 				)...,
 			)
 

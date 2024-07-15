@@ -18,7 +18,7 @@ var indexUpdateFlags = &struct {
 	yes                 bool
 	namespace           string
 	indexName           string
-	indexMeta           map[string]string
+	indexLabels         map[string]string
 	hnswMaxMemQueueSize flags.Uint32OptionalFlag
 	hnswBatch           flags.BatchingFlags
 	hnswCache           flags.CachingFlags
@@ -38,7 +38,7 @@ func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, commonFlags.DefaultWrapHelpString("When true do not prompt for confirmation."))                                           //nolint:lll // For readability
 	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                             //nolint:lll // For readability
 	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                   //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexUpdateFlags.indexMeta, flags.IndexLabels, nil, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                  //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                //nolint:lll // For readability
 	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("Maximum size of in-memory queue for inserted/updated vector records.")) //nolint:lll // For readability
 	flagSet.AddFlagSet(indexUpdateFlags.clientFlags.NewClientFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
@@ -84,6 +84,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					slog.Bool(flags.Yes, indexUpdateFlags.yes),
 					slog.String(flags.Namespace, indexUpdateFlags.namespace),
 					slog.String(flags.IndexName, indexUpdateFlags.indexName),
+					slog.Any(flags.IndexLabels, indexUpdateFlags.indexLabels),
 					slog.String(flags.HnswMaxMemQueueSize, indexUpdateFlags.hnswMaxMemQueueSize.String()),
 				)...,
 			)
@@ -131,7 +132,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				ctx,
 				indexUpdateFlags.namespace,
 				indexUpdateFlags.indexName,
-				indexUpdateFlags.indexMeta,
+				indexUpdateFlags.indexLabels,
 				hnswParams,
 			)
 			if err != nil {

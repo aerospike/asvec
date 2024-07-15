@@ -48,8 +48,8 @@ func NewHnswCachingFlags() *CachingFlags {
 
 func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, commonFlags.DefaultWrapHelpString("Maximum number of entries to cache."))                                                        //nolint:lll // For readability
-	flagSet.Var(&cf.Expiry, HnswCacheExpiry, commonFlags.DefaultWrapHelpString("A cache entry will expire after this amount of time has expired after the entry was added to cache")) //nolint:lll // For readability
+	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, commonFlags.DefaultWrapHelpString("Maximum number of entries to cache."))                                                       //nolint:lll // For readability
+	flagSet.Var(&cf.Expiry, HnswCacheExpiry, commonFlags.DefaultWrapHelpString("A cache entry will expire after this amount of time has passed since the entry was added to cache")) //nolint:lll // For readability
 
 	return flagSet
 }
@@ -92,11 +92,11 @@ func (cf *HealerFlags) NewFlagSet() *pflag.FlagSet {
 
 func (cf *HealerFlags) NewSLogAttr() []any {
 	return []any{
-		slog.Any(HnswHealerMaxScanRatePerNode, cf.MaxScanRatePerNode.Val),
-		slog.Any(HnswHealerMaxScanPageSize, cf.MaxScanPageSize.Val),
-		slog.Any(HnswHealerReindexPercent, cf.ReindexPercent.Val),
-		slog.Any(HnswHealerScheduleDelay, cf.ScheduleDelay.Val),
-		slog.Any(HnswHealerParallelism, cf.Parallelism.Val),
+		slog.Any(HnswHealerMaxScanRatePerNode, cf.MaxScanRatePerNode.String()),
+		slog.Any(HnswHealerMaxScanPageSize, cf.MaxScanPageSize.String()),
+		slog.Any(HnswHealerReindexPercent, cf.ReindexPercent.String()),
+		slog.Any(HnswHealerScheduleDelay, cf.ScheduleDelay.String()),
+		slog.Any(HnswHealerParallelism, cf.Parallelism.String()),
 	}
 }
 

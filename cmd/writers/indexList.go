@@ -97,5 +97,5 @@ func convertMillisecondToDuration(m uint64) time.Duration {
 }
 
 func convertFloatToPercentStr(f float32) string {
-	return fmt.Sprintf("%.2f%%", f*100)
+	return fmt.Sprintf("%.2f%%", f)
 }

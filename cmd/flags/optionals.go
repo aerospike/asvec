@@ -94,7 +94,7 @@ func (f *Float32OptionalFlag) Type() string {
 
 func (f *Float32OptionalFlag) String() string {
 	if f.Val != nil {
-		return strconv.FormatUint(uint64(*f.Val), 10)
+		return strconv.FormatFloat(float64(*f.Val), 'f', 2, 32)
 	}
 
 	return optionalEmptyString

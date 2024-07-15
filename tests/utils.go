@@ -1,3 +1,5 @@
+//go:build unit && integration
+
 package tests
 
 import (
@@ -204,42 +206,55 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	if idb.hnsfM != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.M = idb.hnsfM
 	}
+
 	if idb.hnsfEf != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.Ef = idb.hnsfEf
 	}
+
 	if idb.hnsfEfC != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EfConstruction = idb.hnsfEfC
 	}
+
 	if idb.hnsfBatchingMaxRecord != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxRecords = idb.hnsfBatchingMaxRecord
 	}
+
 	if idb.hnsfBatchingInterval != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Interval = idb.hnsfBatchingInterval
 	}
+
 	if idb.hnswMemQueueSize != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MaxMemQueueSize = idb.hnswMemQueueSize
 	}
+
 	if idb.hnswCacheExpiry != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.Expiry = idb.hnswCacheExpiry
 	}
+
 	if idb.hnswCacheMaxEntries != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.MaxEntries = idb.hnswCacheMaxEntries
 	}
+
 	if idb.hnswHealerMaxScanPageSize != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.MaxScanPageSize = idb.hnswHealerMaxScanPageSize
 	}
+
 	if idb.hnswHealerMaxScanRatePerSecond != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.MaxScanRatePerNode = idb.hnswHealerMaxScanRatePerSecond
 	}
+
 	if idb.hnswHealerParallelism != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.Parallelism = idb.hnswHealerParallelism
 	}
+
 	if idb.HnswHealerReindexPercent != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.ReindexPercent = idb.HnswHealerReindexPercent
 	}
+
 	if idb.HnswHealerScheduleDelay != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.ScheduleDelay = idb.HnswHealerScheduleDelay
 	}
+
 	if idb.hnswMergeParallelism != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MergeParams.Parallelism = idb.hnswMergeParallelism
 	}

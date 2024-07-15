@@ -102,6 +102,10 @@ asvec index ls
 
 			view.PrintIndexes(indexList, indexStatusList, indexListFlags.verbose)
 
+			if indexListFlags.verbose {
+				view.Print("Values ending with * can be dynamically configured using the 'asvec index update' command.")
+			}
+
 			return nil
 		},
 	}

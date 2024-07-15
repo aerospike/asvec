@@ -24,7 +24,7 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 
 	if verbose {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions",
-			"Distance Metric", "Unmerged", "Storage", "Index Parameters"}, rowConfigAutoMerge)
+			"Distance Metric", "Unmerged", "Labels*", "Storage", "Index Parameters"}, rowConfigAutoMerge)
 	} else {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged"})
 	}
@@ -54,8 +54,9 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 		index.Dimensions, index.VectorDistanceMetric, status.GetUnmergedRecordCount()}
 
 	if itw.verbose {
-		tStorage := NewDefaultWriter(nil)
+		row = append(row, index.Labels)
 
+		tStorage := NewDefaultWriter(nil)
 		tStorage.AppendRow(table.Row{"Namespace", index.Storage.GetNamespace()})
 		tStorage.AppendRow(table.Row{"Set", index.Storage.GetSet()})
 
@@ -69,17 +70,17 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Max Edges", v.HnswParams.GetM()},
 				{"Ef", v.HnswParams.GetEf()},
 				{"Construction Ef", v.HnswParams.GetEfConstruction()},
-				{"MaxMemQueueSize", v.HnswParams.GetMaxMemQueueSize()},
-				{"Batch Max Records", v.HnswParams.BatchingParams.GetMaxRecords()},
-				{"Batch Interval", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetInterval()))},
-				{"Cache Max Entires", v.HnswParams.CachingParams.GetMaxEntries()},
-				{"Cache Expiry", convertMillisecondToDuration(v.HnswParams.CachingParams.GetExpiry())},
-				{"Healer Max Scan Rate / Node", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},
-				{"Healer Max Page Size", v.HnswParams.HealerParams.GetMaxScanPageSize()},
-				{"Healer Re-index %", convertFloatToPercentStr(v.HnswParams.HealerParams.GetReindexPercent())},
-				{"Healer Schedule Delay", convertMillisecondToDuration(v.HnswParams.HealerParams.GetScheduleDelay())},
-				{"Healer Parallelism", v.HnswParams.HealerParams.GetParallelism()},
-				{"Merge Parallelism", v.HnswParams.MergeParams.GetParallelism()},
+				{"MaxMemQueueSize*", v.HnswParams.GetMaxMemQueueSize()},
+				{"Batch Max Records*", v.HnswParams.BatchingParams.GetMaxRecords()},
+				{"Batch Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetInterval()))},
+				{"Cache Max Entires*", v.HnswParams.CachingParams.GetMaxEntries()},
+				{"Cache Expiry*", convertMillisecondToDuration(v.HnswParams.CachingParams.GetExpiry())},
+				{"Healer Max Scan Rate / Node*", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},
+				{"Healer Max Page Size*", v.HnswParams.HealerParams.GetMaxScanPageSize()},
+				{"Healer Re-index % *", convertFloatToPercentStr(v.HnswParams.HealerParams.GetReindexPercent())},
+				{"Healer Schedule Delay*", convertMillisecondToDuration(v.HnswParams.HealerParams.GetScheduleDelay())},
+				{"Healer Parallelism*", v.HnswParams.HealerParams.GetParallelism()},
+				{"Merge Parallelism*", v.HnswParams.MergeParams.GetParallelism()},
 			})
 
 			row = append(row, tHNSW.Render())

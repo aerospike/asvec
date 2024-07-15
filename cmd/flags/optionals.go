@@ -156,6 +156,7 @@ func (f *DurationOptionalFlag) Uint64() *uint64 {
 	}
 
 	milli := uint64(f.Val.Milliseconds())
+
 	return &milli
 }
 
@@ -165,5 +166,6 @@ func (f *DurationOptionalFlag) Uint32() *uint32 {
 	}
 
 	milli := uint32(f.Val.Milliseconds())
+
 	return &milli
 }

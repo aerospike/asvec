@@ -68,7 +68,8 @@ For example:
 
 %s
 asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 --%s 16
-			`, HelpTxtSetupEnv, flags.BatchMaxRecords, flags.BatchInterval, flags.HnswCacheExpiry, flags.HnswHealerParallelism, flags.HnswMergeParallelism),
+			`, HelpTxtSetupEnv, flags.BatchMaxRecords, flags.BatchInterval,
+			flags.HnswCacheExpiry, flags.HnswHealerParallelism, flags.HnswMergeParallelism),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return checkSeedsAndHost()
 		},

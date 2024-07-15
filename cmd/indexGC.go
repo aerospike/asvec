@@ -85,7 +85,12 @@ asvec index gc -i myindex -n test -c 1720744696
 				return err
 			}
 
-			view.Printf("Successfully started garbage collection for index %s.%s", indexGCFlags.namespace, indexGCFlags.indexName)
+			view.Printf(
+				"Successfully started garbage collection for index %s.%s",
+				indexGCFlags.namespace,
+				indexGCFlags.indexName,
+			)
+
 			return nil
 		},
 	}

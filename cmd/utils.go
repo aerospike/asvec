@@ -42,7 +42,7 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 	var password *string
 
 	if clientFlags.AuthCredentials.User.Val != nil {
-		if len(*clientFlags.AuthCredentials.Password.Val) != 0 {
+		if *clientFlags.AuthCredentials.Password.Val != "" {
 			strPass := clientFlags.AuthCredentials.Password.String()
 			password = &strPass
 		} else {

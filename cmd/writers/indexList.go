@@ -1,8 +1,10 @@
 package writers
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -22,7 +24,7 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 
 	if verbose {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions",
-			"Distance Metric", "Unmerged", "Storage", "Index Parameters"}, rowConfigAutoMerge)
+			"Distance Metric", "Unmerged", "Labels*", "Storage", "Index Parameters"}, rowConfigAutoMerge)
 	} else {
 		t.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged"})
 	}
@@ -52,8 +54,9 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 		index.Dimensions, index.VectorDistanceMetric, status.GetUnmergedRecordCount()}
 
 	if itw.verbose {
-		tStorage := NewDefaultWriter(nil)
+		row = append(row, index.Labels)
 
+		tStorage := NewDefaultWriter(nil)
 		tStorage.AppendRow(table.Row{"Namespace", index.Storage.GetNamespace()})
 		tStorage.AppendRow(table.Row{"Set", index.Storage.GetSet()})
 
@@ -67,9 +70,17 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Max Edges", v.HnswParams.GetM()},
 				{"Ef", v.HnswParams.GetEf()},
 				{"Construction Ef", v.HnswParams.GetEfConstruction()},
-				{"Batch Max Records", v.HnswParams.BatchingParams.GetMaxRecords()},
-				{"Batch Interval", v.HnswParams.BatchingParams.GetInterval()},
-				{"Batch Enabled", !v.HnswParams.BatchingParams.GetDisabled()},
+				{"MaxMemQueueSize*", v.HnswParams.GetMaxMemQueueSize()},
+				{"Batch Max Records*", v.HnswParams.BatchingParams.GetMaxRecords()},
+				{"Batch Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetInterval()))},
+				{"Cache Max Entires*", v.HnswParams.CachingParams.GetMaxEntries()},
+				{"Cache Expiry*", convertMillisecondToDuration(v.HnswParams.CachingParams.GetExpiry())},
+				{"Healer Max Scan Rate / Node*", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},
+				{"Healer Max Page Size*", v.HnswParams.HealerParams.GetMaxScanPageSize()},
+				{"Healer Re-index % *", convertFloatToPercentStr(v.HnswParams.HealerParams.GetReindexPercent())},
+				{"Healer Schedule Delay*", convertMillisecondToDuration(v.HnswParams.HealerParams.GetScheduleDelay())},
+				{"Healer Parallelism*", v.HnswParams.HealerParams.GetParallelism()},
+				{"Merge Parallelism*", v.HnswParams.MergeParams.GetParallelism()},
 			})
 
 			row = append(row, tHNSW.Render())
@@ -79,4 +90,12 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 	}
 
 	itw.AppendRow(row)
+}
+
+func convertMillisecondToDuration(m uint64) time.Duration {
+	return time.Millisecond * time.Duration(m)
+}
+
+func convertFloatToPercentStr(f float32) string {
+	return fmt.Sprintf("%.2f%%", f)
 }

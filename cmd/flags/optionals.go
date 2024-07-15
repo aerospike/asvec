@@ -1,6 +1,10 @@
 package flags
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
 
 const optionalEmptyString = "<nil>"
 
@@ -49,6 +53,53 @@ func (f *Uint32OptionalFlag) String() string {
 	return optionalEmptyString
 }
 
+type Uint64OptionalFlag struct {
+	Val *uint64
+}
+
+func (f *Uint64OptionalFlag) Set(val string) error {
+	v, err := strconv.ParseUint(val, 0, 64)
+	f.Val = &v
+
+	return err
+}
+
+func (f *Uint64OptionalFlag) Type() string {
+	return "uint64"
+}
+
+func (f *Uint64OptionalFlag) String() string {
+	if f.Val != nil {
+		return strconv.FormatUint(*f.Val, 10)
+	}
+
+	return optionalEmptyString
+}
+
+type Float32OptionalFlag struct {
+	Val *float32
+}
+
+func (f *Float32OptionalFlag) Set(val string) error {
+	v, err := strconv.ParseFloat(val, 32)
+	f32Val := float32(v)
+	f.Val = &f32Val
+
+	return err
+}
+
+func (f *Float32OptionalFlag) Type() string {
+	return "float32"
+}
+
+func (f *Float32OptionalFlag) String() string {
+	if f.Val != nil {
+		return strconv.FormatFloat(float64(*f.Val), 'f', 2, 32)
+	}
+
+	return optionalEmptyString
+}
+
 type BoolOptionalFlag struct {
 	Val *bool
 }
@@ -70,4 +121,51 @@ func (f *BoolOptionalFlag) String() string {
 	}
 
 	return optionalEmptyString
+}
+
+type DurationOptionalFlag struct {
+	Val *time.Duration
+}
+
+func (f *DurationOptionalFlag) Set(val string) error {
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		return fmt.Errorf("invalid duration: %w", err)
+	}
+
+	f.Val = &d
+
+	return err
+}
+
+func (f *DurationOptionalFlag) Type() string {
+	return "time.Duration"
+}
+
+func (f *DurationOptionalFlag) String() string {
+	if f.Val != nil {
+		return f.Val.String()
+	}
+
+	return optionalEmptyString
+}
+
+func (f *DurationOptionalFlag) Uint64() *uint64 {
+	if f.Val == nil {
+		return nil
+	}
+
+	milli := uint64(f.Val.Milliseconds())
+
+	return &milli
+}
+
+func (f *DurationOptionalFlag) Uint32() *uint32 {
+	if f.Val == nil {
+		return nil
+	}
+
+	milli := uint32(f.Val.Milliseconds())
+
+	return &milli
 }

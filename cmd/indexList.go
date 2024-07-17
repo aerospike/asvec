@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/aerospike/avs-client-go/protos"
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -22,7 +21,7 @@ var indexListFlags = &struct {
 
 func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, commonFlags.DefaultWrapHelpString("Print detailed index information.")) //nolint:lll // For readability
+	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet

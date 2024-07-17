@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,9 +22,9 @@ var userCreateFlags = &struct {
 func newUserCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userCreateFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userCreateFlags.newUsername, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the new user."))                                                                                                 //nolint:lll // For readability
-	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", commonFlags.DefaultWrapHelpString("The password for the new user. If a new password is not provided you you will be prompted to enter a new password.")) //nolint:lll // For readability
-	flagSet.StringSliceVar(&userCreateFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to assign to the new user. To see valid roles run 'asvec role ls'."))                                      //nolint:lll // For readability
+	flagSet.StringVar(&userCreateFlags.newUsername, flags.Name, "", "The name of the new user.")                                                                                                 //nolint:lll // For readability
+	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", "The password for the new user. If a new password is not provided you you will be prompted to enter a new password.") //nolint:lll // For readability
+	flagSet.StringSliceVar(&userCreateFlags.roles, flags.Roles, []string{}, "The roles to assign to the new user. To see valid roles run 'asvec role ls'.")                                      //nolint:lll // For readability
 
 	return flagSet
 }

@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"strings"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -24,8 +23,8 @@ var userGrantFlags = &struct {
 func newUserGrantFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userGrantFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userGrantFlags.grantUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to grant new roles"))                                                           //nolint:lll // For readability
-	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to grant the existing user. New roles are added to a users existing roles.")) //nolint:lll // For readability
+	flagSet.StringVar(&userGrantFlags.grantUser, flags.Name, "", "The existing user to grant new roles")                                                           //nolint:lll // For readability
+	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, "The roles to grant the existing user. New roles are added to a users existing roles.") //nolint:lll // For readability
 
 	return flagSet
 }

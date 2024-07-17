@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/pflag"
 )
 
@@ -30,14 +29,14 @@ func NewClientFlags() *ClientFlags {
 
 func (cf *ClientFlags) NewClientFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.VarP(cf.Host, Host, "h", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s. Additionally can be set using the environment variable ASVEC_HOST.", Seeds)))                                                                                                     //nolint:lll // For readability
-	flagSet.Var(cf.Seeds, Seeds, commonFlags.DefaultWrapHelpString(fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s. Additionally can be set using the environment variable ASVEC_SEEDS.", Host)))                                                            //nolint:lll // For readability
-	flagSet.VarP(&cf.ListenerName, ListenerName, "l", commonFlags.DefaultWrapHelpString("The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments."))                                                                                                                                 //nolint:lll // For readability
-	flagSet.VarP(&cf.AuthCredentials.User, AuthUser, "U", commonFlags.DefaultWrapHelpString("The AVS user used to authenticate. Additionally can be set using the environment variable ASVEC_USER"))                                                                                                                                       //nolint:lll // For readability
-	flagSet.VarP(&cf.AuthCredentials.Password, AuthPassword, "P", commonFlags.DefaultWrapHelpString("The AVS password for the specified user. If a password is not provided you will be prompted. Additionally can be set using the environment variable ASVEC_PASSWORD."))                                                                //nolint:lll // For readability
-	flagSet.VarP(&cf.AuthCredentials, AuthCredentials, "C", commonFlags.DefaultWrapHelpString("The AVS user and password used to authenticate. Additionally can be set using the environment variable ASVEC_CREDENTIALS. If a password is not provided you will be prompted. This flag is provided in addition to --user and --password")) //nolint:lll // For readability
-	flagSet.DurationVar(&cf.Timeout, Timeout, time.Second*5, commonFlags.DefaultWrapHelpString("The timeout to use for each request to AVS"))                                                                                                                                                                                              //nolint:lll // For readability
-	flagSet.AddFlagSet(cf.NewTLSFlagSet(commonFlags.DefaultWrapHelpString))
+	flagSet.VarP(cf.Host, Host, "h", fmt.Sprintf("The AVS host to connect to. If cluster discovery is needed use --%s. Additionally can be set using the environment variable ASVEC_HOST.", Seeds))                                                                                                     //nolint:lll // For readability
+	flagSet.Var(cf.Seeds, Seeds, fmt.Sprintf("The AVS seeds to use for cluster discovery. If no cluster discovery is needed (i.e. load-balancer) then use --%s. Additionally can be set using the environment variable ASVEC_SEEDS.", Host))                                                            //nolint:lll // For readability
+	flagSet.VarP(&cf.ListenerName, ListenerName, "l", "The listener to ask the AVS server for as configured in the AVS server. Likely required for cloud deployments.")                                                                                                                                 //nolint:lll // For readability
+	flagSet.VarP(&cf.AuthCredentials.User, AuthUser, "U", "The AVS user used to authenticate. Additionally can be set using the environment variable ASVEC_USER")                                                                                                                                       //nolint:lll // For readability
+	flagSet.VarP(&cf.AuthCredentials.Password, AuthPassword, "P", "The AVS password for the specified user. If a password is not provided you will be prompted. Additionally can be set using the environment variable ASVEC_PASSWORD.")                                                                //nolint:lll // For readability
+	flagSet.VarP(&cf.AuthCredentials, AuthCredentials, "C", "The AVS user and password used to authenticate. Additionally can be set using the environment variable ASVEC_CREDENTIALS. If a password is not provided you will be prompted. This flag is provided in addition to --user and --password") //nolint:lll // For readability
+	flagSet.DurationVar(&cf.Timeout, Timeout, time.Second*5, "The timeout to use for each request to AVS")                                                                                                                                                                                              //nolint:lll // For readability
+	flagSet.AddFlagSet(cf.NewTLSFlagSet(func(s string) string { return s }))
 
 	return flagSet
 }

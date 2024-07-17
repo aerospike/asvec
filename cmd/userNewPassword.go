@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,8 +22,8 @@ var userNewPassFlags = &struct {
 func newUserNewPassFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userNewPassFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userNewPassFlags.username, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the user."))                                                                                                     //nolint:lll // For readability
-	flagSet.StringVar(&userNewPassFlags.password, flags.NewPassword, "", commonFlags.DefaultWrapHelpString("The new password for the user. If a new password is not provided you you will be prompted to enter a new password.")) //nolint:lll // For readability
+	flagSet.StringVar(&userNewPassFlags.username, flags.Name, "", "The name of the user.")                                                                                                     //nolint:lll // For readability
+	flagSet.StringVar(&userNewPassFlags.password, flags.NewPassword, "", "The new password for the user. If a new password is not provided you you will be prompted to enter a new password.") //nolint:lll // For readability
 
 	return flagSet
 }

@@ -2,6 +2,8 @@ module asvec
 
 go 1.21.7
 
+// replace github.com/aerospike/avs-client-go => ../avs-client-go
+
 require (
 	github.com/aerospike/avs-client-go v0.0.0-20240715163208-0e4de7f46838
 	github.com/aerospike/tools-common-go v0.0.0-20240701164814-36eec593d9c6
@@ -11,6 +13,8 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/term v0.21.0
+	google.golang.org/protobuf v1.34.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -43,7 +47,5 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240610135401-a8a62080eff3 // indirect
 	google.golang.org/grpc v1.64.0 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -2,22 +2,28 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"strings"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v3"
 )
 
 //nolint:govet // Padding not a concern for a CLI
 var indexCreateFlags = &struct {
 	clientFlags         flags.ClientFlags
 	yes                 bool
+	inputFile           string
 	namespace           string
 	sets                []string
 	indexName           string
@@ -51,20 +57,21 @@ var indexCreateFlags = &struct {
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, commonFlags.DefaultWrapHelpString("When true do not prompt for confirmation."))                                                                                                                                                                                                                                                //nolint:lll // For readability
-	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                                                                                                                                                                                                                                  //nolint:lll // For readability
-	flagSet.StringSliceVarP(&indexCreateFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))                                                                                                                                                                                                                                                           //nolint:lll // For readability
-	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                                                                                                                                                                                                                        //nolint:lll // For readability
-	flagSet.StringVarP(&indexCreateFlags.vectorField, flags.VectorField, "f", "", commonFlags.DefaultWrapHelpString("The name of the vector field."))                                                                                                                                                                                                                                             //nolint:lll // For readability
-	flagSet.Uint32VarP(&indexCreateFlags.dimensions, flags.Dimension, "d", 0, commonFlags.DefaultWrapHelpString("The dimension of the vector field."))                                                                                                                                                                                                                                            //nolint:lll // For readability
-	flagSet.VarP(&indexCreateFlags.distanceMetric, flags.DistanceMetric, "m", commonFlags.DefaultWrapHelpString(fmt.Sprintf("The distance metric for the index. Valid values: %s", strings.Join(flags.DistanceMetricEnum(), ", "))))                                                                                                                                                              //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexCreateFlags.indexLabels, flags.IndexLabels, nil, commonFlags.DefaultWrapHelpString("Optional labels to assign to the index. Example: \"model=all-MiniLM-L6-v2,foo=bar\""))                                                                                                                                                                                    //nolint:lll // For readability                                                                                                                                                                                                                                //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.storageNamespace, flags.StorageNamespace, commonFlags.DefaultWrapHelpString("Optional storage namespace where the index is stored. Defaults to the index namespace."))                                                                                                                                                                                          //nolint:lll // For readability                                                                                                                                                                                                                  //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.storageSet, flags.StorageSet, commonFlags.DefaultWrapHelpString("Optional storage set where the index is stored. Defaults to the index name."))                                                                                                                                                                                                                 //nolint:lll // For readability                                                                                                                                                                                                                  //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswMaxEdges, flags.MaxEdges, commonFlags.DefaultWrapHelpString("Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'.")) //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswConstructionEf, flags.ConstructionEf, commonFlags.DefaultWrapHelpString("The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times. The default is 100."))                                                                                                  //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswEf, flags.Ef, commonFlags.DefaultWrapHelpString("The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100."))                                                                                                                                //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("Maximum size of in-memory queue for inserted/updated vector records."))                                                                                                                                                                                                      //nolint:lll // For readability                                                                                                                                                                       //nolint:lll // For readability
+	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")
+	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, "STDIN", "TODO")                                                                                                                                                                                                                                                                           //nolint:lll // For readability
+	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")                                                                                                                                                                                                                                                  //nolint:lll // For readability
+	flagSet.StringSliceVarP(&indexCreateFlags.sets, flags.Sets, "s", nil, "The sets for the index.")                                                                                                                                                                                                                                                           //nolint:lll // For readability
+	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, "i", "", "The name of the index.")                                                                                                                                                                                                                                                        //nolint:lll // For readability
+	flagSet.StringVarP(&indexCreateFlags.vectorField, flags.VectorField, "f", "", "The name of the vector field.")                                                                                                                                                                                                                                             //nolint:lll // For readability
+	flagSet.Uint32VarP(&indexCreateFlags.dimensions, flags.Dimension, "d", 0, "The dimension of the vector field.")                                                                                                                                                                                                                                            //nolint:lll // For readability
+	flagSet.VarP(&indexCreateFlags.distanceMetric, flags.DistanceMetric, "m", fmt.Sprintf("The distance metric for the index. Valid values: %s", strings.Join(flags.DistanceMetricEnum(), ", ")))                                                                                                                                                              //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexCreateFlags.indexLabels, flags.IndexLabels, nil, "Optional labels to assign to the index. Example: \"model=all-MiniLM-L6-v2,foo=bar\"")                                                                                                                                                                                    //nolint:lll // For readability                                                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.storageNamespace, flags.StorageNamespace, "Optional storage namespace where the index is stored. Defaults to the index namespace.")                                                                                                                                                                                          //nolint:lll // For readability                                                                                                                                                                                                                  //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.storageSet, flags.StorageSet, "Optional storage set where the index is stored. Defaults to the index name.")                                                                                                                                                                                                                 //nolint:lll // For readability                                                                                                                                                                                                                  //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswMaxEdges, flags.MaxEdges, "Maximum number bi-directional links per HNSW vertex. Greater values of 'm' in general provide better recall for data with high dimensionality, while lower values work well for data with lower dimensionality. The storage space required for the index increases proportionally with 'm'.") //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswConstructionEf, flags.ConstructionEf, "The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times. The default is 100.")                                                                                                  //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswEf, flags.Ef, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times. The default is 100.")                                                                                                                                //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")                                                                                                                                                                                                      //nolint:lll // For readability                                                                                                                                                                       //nolint:lll // For readability
 	flagSet.AddFlagSet(indexCreateFlags.clientFlags.NewClientFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswCache.NewFlagSet())
@@ -74,13 +81,8 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var indexCreateRequiredFlags = []string{
-	flags.Namespace,
-	flags.IndexName,
-	flags.VectorField,
-	flags.Dimension,
-	flags.DistanceMetric,
-}
+var indexCreateRequiredFlags = []string{}
+var stdinIndexDefinitions = &protos.IndexDefinitionList{}
 
 // createIndexCmd represents the createIndex command
 func newIndexCreateCmd() *cobra.Command {
@@ -100,8 +102,61 @@ For example:
 asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 	--%s test
 			`, HelpTxtSetupEnv, flags.VectorField, flags.StorageNamespace),
-		PreRunE: func(_ *cobra.Command, _ []string) error {
-			return checkSeedsAndHost()
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			err := checkSeedsAndHost()
+			if err != nil {
+				return err
+			}
+
+			if indexCreateFlags.namespace == "" && indexCreateFlags.inputFile == "STDIN" {
+				reader := bufio.NewReader(os.Stdin)
+				if _, err := reader.Peek(1); err == nil {
+					data, err := reader.ReadString(io.SeekEnd)
+					if err != io.EOF {
+						logger.Error("failed to unmarshal index definitions", slog.Any("error", err))
+						return err
+					}
+
+					logger.Debug("read index definitions from stdin", slog.Any("data", string(data)))
+
+					// Unmarshal YAML data
+					intermediate := map[string]interface{}{}
+					err = yaml.Unmarshal([]byte(data), &intermediate)
+					if err != nil {
+						logger.Error("failed to unmarshal index definitions", slog.Any("error", err))
+						return err
+					}
+
+					jsonBytes, err := json.Marshal(intermediate)
+					if err != nil {
+						logger.Error("failed to marshal index definitions", slog.Any("error", err))
+						return err
+					}
+
+					logger.Debug("marshalled index definitions", slog.Any("data", string(jsonBytes)))
+
+					err = protojson.Unmarshal(jsonBytes, stdinIndexDefinitions)
+					if err != nil {
+						logger.Error("failed to unmarshal index definitions", slog.Any("error", err))
+						return err
+					}
+
+					logger.Debug("parsed index definitions from stdin", slog.Any("indexes", stdinIndexDefinitions))
+				} else {
+					// If no input is provided then these flags are required.
+					indexCreateRequiredFlags = []string{
+						flags.Namespace,
+						flags.IndexName,
+						flags.VectorField,
+						flags.Dimension,
+						flags.DistanceMetric,
+					}
+
+					markFlagsRequired(cmd, indexCreateRequiredFlags)
+				}
+			}
+
+			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			debugFlags := indexCreateFlags.clientFlags.NewSLogAttr()
@@ -212,10 +267,15 @@ func init() {
 	flagSet := newIndexCreateFlagSet()
 	createIndexCmd.Flags().AddFlagSet(flagSet)
 
-	for _, flag := range indexCreateRequiredFlags {
-		err := createIndexCmd.MarkFlagRequired(flag)
+	markFlagsRequired(createIndexCmd, indexCreateRequiredFlags)
+}
+
+func markFlagsRequired(cmd *cobra.Command, flagNames []string) {
+	for _, flag := range flagNames {
+		err := cmd.MarkFlagRequired(flag)
 		if err != nil {
 			panic(err)
 		}
 	}
+
 }

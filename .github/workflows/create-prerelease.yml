@@ -17,9 +17,9 @@ on:
               type: boolean
 
 
-    push:
-        branches:
-          - "update-go" # remove before merge into main
+    # push:
+    #     branches:
+    #       - "update-go" 
 jobs:
     build-and-release:
         runs-on: macos-13

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"asvec/cmd/flags"
 	"asvec/tests"
 	"context"
 	"crypto/tls"
@@ -84,12 +85,12 @@ func TestCmdSuite(t *testing.T) {
 		logger.Error("Failed to read cert")
 	}
 
-	// certificates, err := GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
-	// if err != nil {
-	// 	t.Fatalf("unable to read certificates %v", err)
-	// 	t.FailNow()
-	// 	logger.Error("Failed to read cert")
-	// }
+	certificates, err := GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
+	if err != nil {
+		t.Fatalf("unable to read certificates %v", err)
+		t.FailNow()
+		logger.Error("Failed to read cert")
+	}
 
 	logger.Info("%v", slog.Any("cert", rootCA))
 	suite.Run(t, &CmdTestSuite{
@@ -97,50 +98,50 @@ func TestCmdSuite(t *testing.T) {
 		suiteFlags:  []string{"--log-level debug", "--timeout 10s"},
 		avsIP:       "localhost",
 	})
-	// suite.Run(t, &CmdTestSuite{
-	// 	composeFile: "docker/tls/docker-compose.yml", // tls
-	// 	suiteFlags: []string{
-	// 		"--log-level debug",
-	// 		"--timeout 10s",
-	// 		tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
-	// 	},
-	// 	avsTLSConfig: &tls.Config{
-	// 		Certificates: nil,
-	// 		RootCAs:      rootCA,
-	// 	},
-	// 	avsIP: "localhost",
-	// })
-	// suite.Run(t, &CmdTestSuite{
-	// 	composeFile: "docker/mtls/docker-compose.yml", // mutual tls
-	// 	suiteFlags: []string{
-	// 		"--log-level debug",
-	// 		"--timeout 10s",
-	// 		tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
-	// 		tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
-	// 		tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
-	// 	},
-	// 	avsTLSConfig: &tls.Config{
-	// 		Certificates: certificates,
-	// 		RootCAs:      rootCA,
-	// 	},
-	// 	avsIP: "localhost",
-	// })
-	// suite.Run(t, &CmdTestSuite{
-	// 	composeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
-	// 	suiteFlags: []string{
-	// 		"--log-level debug",
-	// 		"--timeout 10s",
-	// 		tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
-	// 		tests.CreateFlagStr(flags.AuthUser, "admin"),
-	// 		tests.CreateFlagStr(flags.AuthPassword, "admin"),
-	// 	},
-	// 	avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
-	// 	avsTLSConfig: &tls.Config{
-	// 		Certificates: nil,
-	// 		RootCAs:      rootCA,
-	// 	},
-	// 	avsIP: "localhost",
-	// })
+	suite.Run(t, &CmdTestSuite{
+		composeFile: "docker/tls/docker-compose.yml", // tls
+		suiteFlags: []string{
+			"--log-level debug",
+			"--timeout 10s",
+			tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+		},
+		avsTLSConfig: &tls.Config{
+			Certificates: nil,
+			RootCAs:      rootCA,
+		},
+		avsIP: "localhost",
+	})
+	suite.Run(t, &CmdTestSuite{
+		composeFile: "docker/mtls/docker-compose.yml", // mutual tls
+		suiteFlags: []string{
+			"--log-level debug",
+			"--timeout 10s",
+			tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+			tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+			tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+		},
+		avsTLSConfig: &tls.Config{
+			Certificates: certificates,
+			RootCAs:      rootCA,
+		},
+		avsIP: "localhost",
+	})
+	suite.Run(t, &CmdTestSuite{
+		composeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
+		suiteFlags: []string{
+			"--log-level debug",
+			"--timeout 10s",
+			tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+			tests.CreateFlagStr(flags.AuthUser, "admin"),
+			tests.CreateFlagStr(flags.AuthPassword, "admin"),
+		},
+		avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+		avsTLSConfig: &tls.Config{
+			Certificates: nil,
+			RootCAs:      rootCA,
+		},
+		avsIP: "localhost",
+	})
 }
 
 func (suite *CmdTestSuite) SetupSuite() {

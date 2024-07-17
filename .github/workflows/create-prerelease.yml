@@ -19,7 +19,7 @@ on:
 
     # push:
     #     branches:
-    #       - "actions-hub" # remove before merge into main
+    #       - "update-go" 
 jobs:
     build-and-release:
         runs-on: macos-13
@@ -40,10 +40,13 @@ jobs:
                 /usr/local/bin/brew install python-tk@3.11 || echo "I1.5"
                 for i in dpkg upx zip make wget jq rpm python3.11; do command -v $i || exit 1; done
                 echo "Dependencies checked"
-            - name: "Install golang"
+            - name: Get go version from go.mod
               run: |
-                wget https://go.dev/dl/go1.22.2.darwin-amd64.pkg
-                sudo installer -store -pkg go1.22.2.darwin-amd64.pkg -target /
+                echo "GO_VERSION=$(grep '^go ' go.mod | cut -d " " -f 2)" >> $GITHUB_ENV
+            - uses: actions/setup-go@v4
+              with:
+                go-version: ${{ env.GO_VERSION }}
+                check-latest: true
             - name: "Install Packages.pkg for making macos PKG files"
               run: |
                 wget http://s.sudre.free.fr/Software/files/Packages.dmg

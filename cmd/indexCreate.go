@@ -82,7 +82,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 }
 
 var indexCreateRequiredFlags = []string{}
-var stdinIndexDefinitions = &protos.IndexDefinitionList{}
+var stdinIndexDefinitions *protos.IndexDefinitionList
 
 // createIndexCmd represents the createIndex command
 func newIndexCreateCmd() *cobra.Command {
@@ -134,6 +134,8 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					}
 
 					logger.Debug("marshalled index definitions", slog.Any("data", string(jsonBytes)))
+
+					stdinIndexDefinitions = &protos.IndexDefinitionList{}
 
 					err = protojson.Unmarshal(jsonBytes, stdinIndexDefinitions)
 					if err != nil {
@@ -189,72 +191,130 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			}
 			defer adminClient.Close()
 
-			indexOpts := &avs.IndexCreateOpts{
-				Sets:   indexCreateFlags.sets,
-				Labels: indexCreateFlags.indexLabels,
-				Storage: &protos.IndexStorage{
-					Namespace: indexCreateFlags.storageNamespace.Val,
-					Set:       indexCreateFlags.storageSet.Val,
-				},
-				HnswParams: &protos.HnswParams{
-					M:               indexCreateFlags.hnswMaxEdges.Val,
-					Ef:              indexCreateFlags.hnswEf.Val,
-					EfConstruction:  indexCreateFlags.hnswConstructionEf.Val,
-					MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
-					BatchingParams: &protos.HnswBatchingParams{
-						MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
-						Interval:   indexCreateFlags.hnswBatch.Interval.Uint32(),
-					},
-					CachingParams: &protos.HnswCachingParams{
-						MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
-						Expiry:     indexCreateFlags.hnswCache.Expiry.Uint64(),
-					},
-					HealerParams: &protos.HnswHealerParams{
-						MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,
-						MaxScanPageSize:    indexCreateFlags.hnswHealer.MaxScanPageSize.Val,
-						ReindexPercent:     indexCreateFlags.hnswHealer.ReindexPercent.Val,
-						ScheduleDelay:      indexCreateFlags.hnswHealer.ScheduleDelay.Uint64(),
-						Parallelism:        indexCreateFlags.hnswHealer.Parallelism.Val,
-					},
-					MergeParams: &protos.HnswIndexMergeParams{
-						Parallelism: indexCreateFlags.hnswMerge.Parallelism.Val,
-					},
-				},
+			if stdinIndexDefinitions != nil {
+				return runCreateIndexFromDef(adminClient)
 			}
 
-			if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
-				"Are you sure you want to create the index %s.%s on field %s?",
-				nsAndSetString(
-					indexCreateFlags.namespace,
-					indexCreateFlags.sets,
-				),
-				indexCreateFlags.indexName,
-				indexCreateFlags.vectorField,
-			)) {
-				return nil
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
-			defer cancel()
-
-			err = adminClient.IndexCreate(
-				ctx,
-				indexCreateFlags.namespace,
-				indexCreateFlags.indexName,
-				indexCreateFlags.vectorField,
-				indexCreateFlags.dimensions,
-				protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[indexCreateFlags.distanceMetric.String()]),
-				indexOpts,
-			)
-			if err != nil {
-				logger.Error("unable to create index", slog.Any("error", err))
-				return err
-			}
-
-			view.Printf("Successfully created index %s.%s", indexCreateFlags.namespace, indexCreateFlags.indexName)
-			return nil
+			return runCreateIndexFromFlags(adminClient)
 		},
 	}
+}
+
+func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
+	if len(stdinIndexDefinitions.GetIndices()) == 0 {
+		view.Print("No indexes to create")
+		return nil
+	}
+
+	successful := 0
+	for _, indexDef := range stdinIndexDefinitions.GetIndices() {
+		ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
+		defer cancel()
+
+		err := adminClient.IndexCreateFromIndexDef(ctx, indexDef)
+		cancel()
+
+		if err != nil {
+			logger.Warn("failed to create index from yaml", slog.Any("error", err))
+			view.Printf("Failed to create index %s.%s from yaml: %s",
+				nsAndSetString(
+					indexDef.Id.Namespace,
+					[]string{*indexDef.SetFilter},
+				),
+				indexDef.Id.Name, err)
+		} else {
+			view.Printf("Successfully created index %s.%s", nsAndSetString(
+				indexDef.Id.Namespace,
+				[]string{*indexDef.SetFilter},
+			), indexDef.Id.Name)
+			successful += 1
+		}
+
+	}
+
+	if successful == 0 {
+		err := fmt.Errorf("unable to create any new indexes")
+		logger.Error(err.Error())
+		view.Print("Unable to create any new indexes")
+		return err
+	} else if successful < len(stdinIndexDefinitions.GetIndices()) {
+		err := fmt.Errorf("some indexes failed to create")
+		logger.Warn(err.Error())
+		view.Print("Some indexes failed to be created")
+		return err
+	} else {
+		view.Print("Successfully created all indexes from yaml")
+	}
+
+	return nil
+}
+
+func runCreateIndexFromFlags(adminClient *avs.AdminClient) error {
+	if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
+		"Are you sure you want to create the index %s.%s on field %s?",
+		nsAndSetString(
+			indexCreateFlags.namespace,
+			indexCreateFlags.sets,
+		),
+		indexCreateFlags.indexName,
+		indexCreateFlags.vectorField,
+	)) {
+		return nil
+	}
+
+	indexOpts := &avs.IndexCreateOpts{
+		Sets:   indexCreateFlags.sets,
+		Labels: indexCreateFlags.indexLabels,
+		Storage: &protos.IndexStorage{
+			Namespace: indexCreateFlags.storageNamespace.Val,
+			Set:       indexCreateFlags.storageSet.Val,
+		},
+		HnswParams: &protos.HnswParams{
+			M:               indexCreateFlags.hnswMaxEdges.Val,
+			Ef:              indexCreateFlags.hnswEf.Val,
+			EfConstruction:  indexCreateFlags.hnswConstructionEf.Val,
+			MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
+			BatchingParams: &protos.HnswBatchingParams{
+				MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
+				Interval:   indexCreateFlags.hnswBatch.Interval.Uint32(),
+			},
+			CachingParams: &protos.HnswCachingParams{
+				MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
+				Expiry:     indexCreateFlags.hnswCache.Expiry.Uint64(),
+			},
+			HealerParams: &protos.HnswHealerParams{
+				MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,
+				MaxScanPageSize:    indexCreateFlags.hnswHealer.MaxScanPageSize.Val,
+				ReindexPercent:     indexCreateFlags.hnswHealer.ReindexPercent.Val,
+				ScheduleDelay:      indexCreateFlags.hnswHealer.ScheduleDelay.Uint64(),
+				Parallelism:        indexCreateFlags.hnswHealer.Parallelism.Val,
+			},
+			MergeParams: &protos.HnswIndexMergeParams{
+				Parallelism: indexCreateFlags.hnswMerge.Parallelism.Val,
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
+	defer cancel()
+
+	err := adminClient.IndexCreate(
+		ctx,
+		indexCreateFlags.namespace,
+		indexCreateFlags.indexName,
+		indexCreateFlags.vectorField,
+		indexCreateFlags.dimensions,
+		protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[indexCreateFlags.distanceMetric.String()]),
+		indexOpts,
+	)
+
+	if err != nil {
+		logger.Error("unable to create index", slog.Any("error", err))
+		return err
+	}
+
+	view.Printf("Successfully created index %s.%s", indexCreateFlags.namespace, indexCreateFlags.indexName)
+	return nil
 }
 
 func init() {

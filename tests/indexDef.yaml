@@ -1,0 +1,31 @@
+indices:
+    - dimensions: 10
+      field: vector
+      hnswParams:
+        batchingParams:
+            interval: 30001
+            maxRecords: 100001
+        cachingParams: 
+          maxEntries: 1001
+          expiry: 1002
+        ef: 101
+        efConstruction: 102
+        healerParams:
+          maxScanRatePerNode: 1
+          maxScanPageSize: 2
+          reindexPercent: 3
+          scheduleDelay: 4
+          parallelism: 7
+        m: 103
+        maxMemQueueSize: 10004
+        mergeParams:
+          parallelism: 7
+      id:
+        name: yaml-file-index
+        namespace: test
+      setFilter: testset
+      storage:
+        namespace: test
+        set: name
+      vectorDistanceMetric: COSINE
+

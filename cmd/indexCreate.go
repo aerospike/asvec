@@ -15,6 +15,7 @@ import (
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/yaml.v3"
 )
@@ -58,7 +59,7 @@ var indexCreateFlags = &struct {
 func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")
-	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, "STDIN", "TODO")                                                                                                                                                                                                                                                                           //nolint:lll // For readability
+	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, StdIn, "TODO")                                                                                                                                                                                                                                                                             //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")                                                                                                                                                                                                                                                  //nolint:lll // For readability
 	flagSet.StringSliceVarP(&indexCreateFlags.sets, flags.Sets, "s", nil, "The sets for the index.")                                                                                                                                                                                                                                                           //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, "i", "", "The name of the index.")                                                                                                                                                                                                                                                        //nolint:lll // For readability
@@ -81,7 +82,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var indexCreateRequiredFlags = []string{}
+var indexCreateRequiredFlags = []string{flags.Namespace, flags.IndexName, flags.VectorField, flags.Dimension, flags.DistanceMetric}
 var stdinIndexDefinitions *protos.IndexDefinitionList
 
 // createIndexCmd represents the createIndex command
@@ -108,8 +109,28 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 				return err
 			}
 
-			if indexCreateFlags.namespace == "" && indexCreateFlags.inputFile == "STDIN" {
-				reader := bufio.NewReader(os.Stdin)
+			oneRequiredFlagsSet := false
+			configureRequiredFlags := true
+
+			for _, name := range indexCreateRequiredFlags {
+				if viper.IsSet(name) {
+					oneRequiredFlagsSet = true
+					break
+				}
+			}
+
+			if !oneRequiredFlagsSet {
+				ioReader := os.Stdin
+				if indexCreateFlags.inputFile != StdIn {
+					r, err := os.Open(indexCreateFlags.inputFile)
+					if err != nil {
+						return err
+					}
+
+					ioReader = r
+				}
+
+				reader := bufio.NewReader(ioReader)
 				if _, err := reader.Peek(1); err == nil {
 					data, err := reader.ReadString(io.SeekEnd)
 					if err != io.EOF {
@@ -144,18 +165,12 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					}
 
 					logger.Debug("parsed index definitions from stdin", slog.Any("indexes", stdinIndexDefinitions))
-				} else {
-					// If no input is provided then these flags are required.
-					indexCreateRequiredFlags = []string{
-						flags.Namespace,
-						flags.IndexName,
-						flags.VectorField,
-						flags.Dimension,
-						flags.DistanceMetric,
-					}
-
-					markFlagsRequired(cmd, indexCreateRequiredFlags)
+					configureRequiredFlags = false
 				}
+			}
+
+			if configureRequiredFlags {
+				markFlagsRequired(cmd, indexCreateRequiredFlags)
 			}
 
 			return nil
@@ -214,18 +229,24 @@ func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
 		err := adminClient.IndexCreateFromIndexDef(ctx, indexDef)
 		cancel()
 
+		setFilter := []string{}
+
+		if indexDef.SetFilter != nil {
+			setFilter = append(setFilter, *indexDef.SetFilter)
+		}
+
 		if err != nil {
 			logger.Warn("failed to create index from yaml", slog.Any("error", err))
 			view.Printf("Failed to create index %s.%s from yaml: %s",
 				nsAndSetString(
 					indexDef.Id.Namespace,
-					[]string{*indexDef.SetFilter},
+					setFilter,
 				),
 				indexDef.Id.Name, err)
 		} else {
 			view.Printf("Successfully created index %s.%s", nsAndSetString(
 				indexDef.Id.Namespace,
-				[]string{*indexDef.SetFilter},
+				setFilter,
 			), indexDef.Id.Name)
 			successful += 1
 		}
@@ -327,7 +348,6 @@ func init() {
 	flagSet := newIndexCreateFlagSet()
 	createIndexCmd.Flags().AddFlagSet(flagSet)
 
-	markFlagsRequired(createIndexCmd, indexCreateRequiredFlags)
 }
 
 func markFlagsRequired(cmd *cobra.Command, flagNames []string) {

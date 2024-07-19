@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -24,10 +23,10 @@ var indexDropFlags = &struct {
 
 func newIndexDropFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexDropFlags.yes, flags.Yes, "y", false, commonFlags.DefaultWrapHelpString("When true do not prompt for confirmation.")) //nolint:lll // For readability
-	flagSet.StringVarP(&indexDropFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))   //nolint:lll // For readability
-	flagSet.StringSliceVarP(&indexDropFlags.sets, flags.Sets, "s", nil, commonFlags.DefaultWrapHelpString("The sets for the index."))            //nolint:lll // For readability
-	flagSet.StringVarP(&indexDropFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))         //nolint:lll // For readability
+	flagSet.BoolVarP(&indexDropFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.") //nolint:lll // For readability
+	flagSet.StringVarP(&indexDropFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")   //nolint:lll // For readability
+	flagSet.StringSliceVarP(&indexDropFlags.sets, flags.Sets, "s", nil, "The sets for the index.")            //nolint:lll // For readability
+	flagSet.StringVarP(&indexDropFlags.indexName, flags.IndexName, "i", "", "The name of the index.")         //nolint:lll // For readability
 	flagSet.AddFlagSet(indexDropFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,9 +22,9 @@ var indexGCFlags = &struct {
 
 func newIndexGCFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.StringVarP(&indexGCFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index.")) //nolint:lll // For readability
-	flagSet.StringVarP(&indexGCFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))       //nolint:lll // For readability
-	flagSet.VarP(&indexGCFlags.cutoffTime, flags.CutoffTime, "c", commonFlags.DefaultWrapHelpString("The cutoff time for gc."))              //nolint:lll // For readability
+	flagSet.StringVarP(&indexGCFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.") //nolint:lll // For readability
+	flagSet.StringVarP(&indexGCFlags.indexName, flags.IndexName, "i", "", "The name of the index.")       //nolint:lll // For readability
+	flagSet.VarP(&indexGCFlags.cutoffTime, flags.CutoffTime, "c", "The cutoff time for gc.")              //nolint:lll // For readability
 	flagSet.AddFlagSet(indexGCFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet

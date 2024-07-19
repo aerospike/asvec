@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"strings"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -24,8 +23,8 @@ var userRevokeFlags = &struct {
 func newUserRevokeFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userRevokeFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The existing user to revoke new roles."))                                                      //nolint:lll // For readability
-	flagSet.StringSliceVar(&userRevokeFlags.roles, flags.Roles, []string{}, commonFlags.DefaultWrapHelpString("The roles to revoke from the user. Roles are removed from a user's existing roles.")) //nolint:lll // For readability
+	flagSet.StringVar(&userRevokeFlags.revokeUser, flags.Name, "", "The existing user to revoke new roles.")                                                      //nolint:lll // For readability
+	flagSet.StringSliceVar(&userRevokeFlags.roles, flags.Roles, []string{}, "The roles to revoke from the user. Roles are removed from a user's existing roles.") //nolint:lll // For readability
 
 	return flagSet
 }

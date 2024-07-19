@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 var lvl = new(slog.LevelVar)
@@ -92,9 +93,22 @@ func init() {
 	rootCmd.PersistentFlags().Var(
 		&rootFlags.logLevel,
 		flags.LogLevel,
-		common.DefaultWrapHelpString(fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))), //nolint:lll // For readability
+		fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", ")), //nolint:lll // For readability
 	)
-	common.SetupRoot(rootCmd, "aerospike-vector-search", Version) // TODO: Handle version
+	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)
+
+	// TODO: Add custom template for usage to take into account terminal width
+	// Ex: https://github.com/sigstore/cosign/pull/3011/files
+	// Below is the poor man version
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err == nil {
+		usageTemplate := rootCmd.UsageTemplate()
+		usageTemplate = strings.ReplaceAll(usageTemplate, ".FlagUsages", fmt.Sprintf(".FlagUsagesWrapped %d", width))
+		rootCmd.SetUsageTemplate(usageTemplate)
+	} else {
+		logger.Debug("failed to get terminal width", slog.Any("error", err))
+	}
+
 	viper.SetEnvPrefix("ASVEC")
 
 	bindEnvs := []string{

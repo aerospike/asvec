@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -22,7 +21,7 @@ var userDropFlags = &struct {
 func newUserDropFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(userDropFlags.clientFlags.NewClientFlagSet())
-	flagSet.StringVar(&userDropFlags.dropUser, flags.Name, "", commonFlags.DefaultWrapHelpString("The name of the user to drop.")) //nolint:lll // For readability
+	flagSet.StringVar(&userDropFlags.dropUser, flags.Name, "", "The name of the user to drop.") //nolint:lll // For readability
 
 	return flagSet
 }

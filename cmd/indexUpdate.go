@@ -7,7 +7,6 @@ import (
 	"log/slog"
 
 	"github.com/aerospike/avs-client-go/protos"
-	commonFlags "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -35,11 +34,11 @@ var indexUpdateFlags = &struct {
 
 func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, commonFlags.DefaultWrapHelpString("When true do not prompt for confirmation."))                                           //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, "n", "", commonFlags.DefaultWrapHelpString("The namespace for the index."))                                             //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, "i", "", commonFlags.DefaultWrapHelpString("The name of the index."))                                                   //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, commonFlags.DefaultWrapHelpString("The distance metric for the index."))                                //nolint:lll // For readability
-	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, commonFlags.DefaultWrapHelpString("Maximum size of in-memory queue for inserted/updated vector records.")) //nolint:lll // For readability
+	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                           //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")                                             //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, "i", "", "The name of the index.")                                                   //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, "The distance metric for the index.")                                //nolint:lll // For readability
+	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexUpdateFlags.clientFlags.NewClientFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswCache.NewFlagSet())
@@ -95,12 +94,17 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 			}
 			defer adminClient.Close()
 
-			hnswParams := &protos.HnswIndexUpdate{
-				MaxMemQueueSize: indexUpdateFlags.hnswMaxMemQueueSize.Val,
-				BatchingParams: &protos.HnswBatchingParams{
+			var batchingParams *protos.HnswBatchingParams
+			if indexUpdateFlags.hnswBatch.MaxRecords.Val != nil || indexUpdateFlags.hnswBatch.Interval.Uint32() != nil {
+				batchingParams = &protos.HnswBatchingParams{
 					MaxRecords: indexUpdateFlags.hnswBatch.MaxRecords.Val,
 					Interval:   indexUpdateFlags.hnswBatch.Interval.Uint32(),
-				},
+				}
+			}
+
+			hnswParams := &protos.HnswIndexUpdate{
+				MaxMemQueueSize: indexUpdateFlags.hnswMaxMemQueueSize.Val,
+				BatchingParams:  batchingParams,
 				CachingParams: &protos.HnswCachingParams{
 					MaxEntries: indexUpdateFlags.hnswCache.MaxEntries.Val,
 					Expiry:     indexUpdateFlags.hnswCache.Expiry.Uint64(),
@@ -115,14 +119,6 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				MergeParams: &protos.HnswIndexMergeParams{
 					Parallelism: indexUpdateFlags.hnswMerge.Parallelism.Val,
 				},
-			}
-
-			if !indexUpdateFlags.yes && !confirm(fmt.Sprintf(
-				"Are you sure you want to update the index %s.%s?",
-				indexUpdateFlags.namespace,
-				indexUpdateFlags.indexName,
-			)) {
-				return nil
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)

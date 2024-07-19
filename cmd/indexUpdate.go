@@ -94,12 +94,17 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 			}
 			defer adminClient.Close()
 
-			hnswParams := &protos.HnswIndexUpdate{
-				MaxMemQueueSize: indexUpdateFlags.hnswMaxMemQueueSize.Val,
-				BatchingParams: &protos.HnswBatchingParams{
+			var batchingParams *protos.HnswBatchingParams
+			if indexUpdateFlags.hnswBatch.MaxRecords.Val != nil || indexUpdateFlags.hnswBatch.Interval.Uint32() != nil {
+				batchingParams = &protos.HnswBatchingParams{
 					MaxRecords: indexUpdateFlags.hnswBatch.MaxRecords.Val,
 					Interval:   indexUpdateFlags.hnswBatch.Interval.Uint32(),
-				},
+				}
+			}
+
+			hnswParams := &protos.HnswIndexUpdate{
+				MaxMemQueueSize: indexUpdateFlags.hnswMaxMemQueueSize.Val,
+				BatchingParams:  batchingParams,
 				CachingParams: &protos.HnswCachingParams{
 					MaxEntries: indexUpdateFlags.hnswCache.MaxEntries.Val,
 					Expiry:     indexUpdateFlags.hnswCache.Expiry.Uint64(),
@@ -114,14 +119,6 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				MergeParams: &protos.HnswIndexMergeParams{
 					Parallelism: indexUpdateFlags.hnswMerge.Parallelism.Val,
 				},
-			}
-
-			if !indexUpdateFlags.yes && !confirm(fmt.Sprintf(
-				"Are you sure you want to update the index %s.%s?",
-				indexUpdateFlags.namespace,
-				indexUpdateFlags.indexName,
-			)) {
-				return nil
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)

@@ -364,11 +364,9 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw params and seeds",
 			"successful-update",
 			ns,
-			fmt.Sprintf("index update -y --seeds %s -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10 --hnsw-batch-max-records 100  --hnsw-batch-interval 10s", suite.avsHostPort.String()),
+			fmt.Sprintf("index update -y --seeds %s -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10", suite.avsHostPort.String()),
 			builder.
 				WithLabels(map[string]string{"new-label": "foo"}).
-				WithHnswBatchingInterval(10000).
-				WithHnswBatchingMaxRecord(100).
 				WithHnswMaxMemQueueSize(10).
 				Build(),
 		},
@@ -386,7 +384,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw cache params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y --host %s -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			fmt.Sprintf("index update -y --host %s -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s", suite.avsHostPort.String()),
 			builder.
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
@@ -396,7 +394,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw healer params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10 --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10", suite.avsHostPort.String()),
 			builder.
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
@@ -409,7 +407,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw merge params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-merge-parallelism 10  --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-merge-parallelism 10", suite.avsHostPort.String()),
 			builder.
 				WithHnswMergeParallelism(10).
 				Build(),

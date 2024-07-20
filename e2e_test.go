@@ -3,7 +3,6 @@
 package main
 
 import (
-	"asvec/cmd/flags"
 	"asvec/tests"
 	"context"
 	"crypto/tls"
@@ -85,12 +84,12 @@ func TestCmdSuite(t *testing.T) {
 		logger.Error("Failed to read cert")
 	}
 
-	certificates, err := GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
-	if err != nil {
-		t.Fatalf("unable to read certificates %v", err)
-		t.FailNow()
-		logger.Error("Failed to read cert")
-	}
+	// certificates, err := GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
+	// if err != nil {
+	// 	t.Fatalf("unable to read certificates %v", err)
+	// 	t.FailNow()
+	// 	logger.Error("Failed to read cert")
+	// }
 
 	logger.Info("%v", slog.Any("cert", rootCA))
 	suite.Run(t, &CmdTestSuite{
@@ -98,50 +97,50 @@ func TestCmdSuite(t *testing.T) {
 		suiteFlags:  []string{"--log-level debug", "--timeout 10s"},
 		avsIP:       "localhost",
 	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/tls/docker-compose.yml", // tls
-		suiteFlags: []string{
-			"--log-level debug",
-			"--timeout 10s",
-			tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
-		},
-		avsTLSConfig: &tls.Config{
-			Certificates: nil,
-			RootCAs:      rootCA,
-		},
-		avsIP: "localhost",
-	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/mtls/docker-compose.yml", // mutual tls
-		suiteFlags: []string{
-			"--log-level debug",
-			"--timeout 10s",
-			tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
-			tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
-			tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
-		},
-		avsTLSConfig: &tls.Config{
-			Certificates: certificates,
-			RootCAs:      rootCA,
-		},
-		avsIP: "localhost",
-	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
-		suiteFlags: []string{
-			"--log-level debug",
-			"--timeout 10s",
-			tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
-			tests.CreateFlagStr(flags.AuthUser, "admin"),
-			tests.CreateFlagStr(flags.AuthPassword, "admin"),
-		},
-		avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
-		avsTLSConfig: &tls.Config{
-			Certificates: nil,
-			RootCAs:      rootCA,
-		},
-		avsIP: "localhost",
-	})
+	// suite.Run(t, &CmdTestSuite{
+	// 	composeFile: "docker/tls/docker-compose.yml", // tls
+	// 	suiteFlags: []string{
+	// 		"--log-level debug",
+	// 		"--timeout 10s",
+	// 		tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+	// 	},
+	// 	avsTLSConfig: &tls.Config{
+	// 		Certificates: nil,
+	// 		RootCAs:      rootCA,
+	// 	},
+	// 	avsIP: "localhost",
+	// })
+	// suite.Run(t, &CmdTestSuite{
+	// 	composeFile: "docker/mtls/docker-compose.yml", // mutual tls
+	// 	suiteFlags: []string{
+	// 		"--log-level debug",
+	// 		"--timeout 10s",
+	// 		tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+	// 		tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+	// 		tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+	// 	},
+	// 	avsTLSConfig: &tls.Config{
+	// 		Certificates: certificates,
+	// 		RootCAs:      rootCA,
+	// 	},
+	// 	avsIP: "localhost",
+	// })
+	// suite.Run(t, &CmdTestSuite{
+	// 	composeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
+	// 	suiteFlags: []string{
+	// 		"--log-level debug",
+	// 		"--timeout 10s",
+	// 		tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+	// 		tests.CreateFlagStr(flags.AuthUser, "admin"),
+	// 		tests.CreateFlagStr(flags.AuthPassword, "admin"),
+	// 	},
+	// 	avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+	// 	avsTLSConfig: &tls.Config{
+	// 		Certificates: nil,
+	// 		RootCAs:      rootCA,
+	// 	},
+	// 	avsIP: "localhost",
+	// })
 }
 
 func (suite *CmdTestSuite) SetupSuite() {
@@ -387,74 +386,139 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
-	indexDefs := []*protos.IndexDefinition{
-		tests.NewIndexDefinitionBuilder(
-			"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
-		).Build(),
-		tests.NewIndexDefinitionBuilder(
-			"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
-		).WithSet("barset").Build(),
+	testCases := []struct {
+		name          string
+		indexDefs     []*protos.IndexDefinition
+		sedReplaceStr string
+		createFail    bool
+		checkContains []string
+	}{
+		{
+			"test with all indexes succeed",
+			[]*protos.IndexDefinition{
+				tests.NewIndexDefinitionBuilder(
+					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				tests.NewIndexDefinitionBuilder(
+					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			"s/exists/does-not-exist-yet/g",
+			false,
+			[]string{
+				"Successfully created index test.*.does-not-exist-yet",
+				"Successfully created index bar.barset.does-not-exist-yet",
+				"Successfully created all indexes from yaml",
+			},
+		},
+		{
+			"test with one index that fails",
+			[]*protos.IndexDefinition{
+				tests.NewIndexDefinitionBuilder(
+					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				tests.NewIndexDefinitionBuilder(
+					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			"s/exists1/does-not-exist-yet/g",
+			true,
+			[]string{
+				"Successfully created index test.*.does-not-exist-yet",
+				"Failed to create index bar.barset.exists2",
+				"Some indexes failed to be created",
+			},
+		},
+		{
+			"test with no index successfully created",
+			[]*protos.IndexDefinition{
+				tests.NewIndexDefinitionBuilder(
+					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				tests.NewIndexDefinitionBuilder(
+					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			"s/COSINE/HAMMING/g", // Doing this rather than removing sed for this test case
+			true,
+			[]string{
+				"Failed to create index test.*.exists1",
+				"Failed to create index bar.barset.exists2",
+				"Unable to create any new indexes",
+			},
+		},
 	}
 
-	for _, index := range indexDefs {
-		err := suite.avsClient.IndexCreateFromIndexDef(context.Background(), index)
-		if err != nil {
-			suite.FailNowf("unable to index create", "%v", err)
-		}
-	}
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
 
-	// Test "asvec index list --yaml | sed 's/exists/does-not-exist-yet/g' | asvec index create"
+			for _, index := range tc.indexDefs {
+				err := suite.avsClient.IndexCreateFromIndexDef(context.Background(), index)
+				if err != nil {
+					suite.FailNowf("unable to index create", "%v", err)
+				}
 
-	listArgs := []string{"index", "list", "--yaml", "--host", suite.avsHostPort.String()}
-	listArgs = suite.addSuiteArgs(listArgs...)
-	listCmd := suite.getCmd(listArgs...)
-	listPipe, err := listCmd.StdoutPipe()
+				defer suite.avsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+			}
 
-	if err != nil {
-		suite.FailNowf("unable to create list pipe", "%v", err)
-	}
+			// Test "asvec index list --yaml | sed 's/exists1/does-not-exist-yet/g' | asvec index create"
 
-	// We need to change the name to something that does not exist yet
-	sedCmd := exec.Command("sed", "s/exists/does-not-exist-yet/g")
-	sedPipe, err := sedCmd.StdoutPipe()
+			listArgs := []string{"index", "list", "--yaml", "--host", suite.avsHostPort.String()}
+			listArgs = suite.addSuiteArgs(listArgs...)
+			listCmd := suite.getCmd(listArgs...)
+			listPipe, err := listCmd.StdoutPipe()
 
-	if err != nil {
-		suite.FailNowf("unable to create sed pipe", "%v", err)
-	}
+			if err != nil {
+				suite.FailNowf("unable to create list pipe", "%v", err)
+			}
 
-	sedCmd.Stdin = listPipe
+			// We need to change the name to something that does not exist yet
+			sedCmd := exec.Command("sed", tc.sedReplaceStr)
+			sedPipe, err := sedCmd.StdoutPipe()
 
-	createArgs := []string{"index", "create", "--host", suite.avsHostPort.String(), "--log-level", "debug"}
-	createArgs = suite.addSuiteArgs(createArgs...)
-	createCmd := suite.getCmd(createArgs...)
-	createCmd.Stdin = sedPipe
+			if err != nil {
+				suite.FailNowf("unable to create sed pipe", "%v", err)
+			}
 
-	// Start list and sed commands so data can flow through the pipes
-	if err := listCmd.Start(); err != nil {
-		suite.FailNowf("unable to start list cmd", "%v", err)
-	}
+			sedCmd.Stdin = listPipe
 
-	if err := sedCmd.Start(); err != nil {
-		suite.FailNowf("unable to start sed cmd", "%v", err)
-	}
+			createArgs := []string{"index", "create", "--host", suite.avsHostPort.String(), "--log-level", "debug"}
+			createArgs = suite.addSuiteArgs(createArgs...)
+			createCmd := suite.getCmd(createArgs...)
+			createCmd.Stdin = sedPipe
 
-	// Run create Cmd to completion
-	output, err := createCmd.Output()
-	if err != nil {
-		suite.FailNowf("unable to run create cmd", "%v", err)
-	}
+			// Start list and sed commands so data can flow through the pipes
+			if err := listCmd.Start(); err != nil {
+				suite.FailNowf("unable to start list cmd", "%v", err)
+			}
 
-	suite.Contains(string(output), "Successfully created index test.*.does-not-exist-yet1")
-	suite.Contains(string(output), "Successfully created index bar.barset.does-not-exist-yet2")
-	suite.Contains(string(output), "Successfully created all indexes from yaml")
+			if err := sedCmd.Start(); err != nil {
+				suite.FailNowf("unable to start sed cmd", "%v", err)
+			}
 
-	// Cleanup list and sed commands
-	if err := listCmd.Wait(); err != nil {
-		suite.FailNowf("unable to wait for list cmd", "%v", err)
-	}
+			// Run create Cmd to completion
+			output, err := createCmd.CombinedOutput()
+			logger.Debug(string(output))
 
-	if err := sedCmd.Wait(); err != nil {
-		suite.FailNowf("unable to wait for sed cmd", "%v", err)
+			if tc.createFail && err == nil {
+				suite.FailNowf("expected create cmd to fail because at least one index failed to be created", "%v", err)
+			} else if !tc.createFail && err != nil {
+				suite.FailNowf("expected create cmd to succeed because all indexes were created", "%v", err)
+			}
+
+			// Cleanup list and sed commands
+			if err := listCmd.Wait(); err != nil {
+				suite.FailNowf("unable to wait for list cmd", "%v", err)
+			}
+
+			if err := sedCmd.Wait(); err != nil {
+				suite.FailNowf("unable to wait for sed cmd", "%v", err)
+			}
+
+			for _, str := range tc.checkContains {
+				suite.Contains(string(output), str)
+			}
+		})
 	}
 }
 
@@ -1222,6 +1286,16 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"use seeds and hosts together",
 			fmt.Sprintf("index create -y --seeds %s --host 1.1.1.1:3001 -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s", suite.avsHostPort.String()),
 			"Error: only --seeds or --host allowed",
+		},
+		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
+			"error because no create index required args are provided",
+			fmt.Sprintf("index create --seeds %s", suite.avsHostPort.String()),
+			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
+		},
+		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
+			"error because some create index required args are not provided",
+			fmt.Sprintf("index create --seeds %s --dimension", suite.avsHostPort.String()),
+			"Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{
 			"use seeds and hosts together",

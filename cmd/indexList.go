@@ -25,8 +25,8 @@ var indexListFlags = &struct {
 
 func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.") //nolint:lll // For readability
-	flagSet.BoolVar(&indexListFlags.yaml, flags.Yaml, false, "Output indexes in yaml format to later be used with \"asvec index create --file <index-def.yaml>")
+	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.")                                                    //nolint:lll // For readability
+	flagSet.BoolVar(&indexListFlags.yaml, flags.Yaml, false, "Output indexes in yaml format to later be used with \"asvec index create --file <index-def.yaml>") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet

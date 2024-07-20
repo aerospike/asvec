@@ -82,7 +82,13 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var indexCreateRequiredFlags = []string{flags.Namespace, flags.IndexName, flags.VectorField, flags.Dimension, flags.DistanceMetric}
+var indexCreateRequiredFlags = []string{
+	flags.Namespace,
+	flags.IndexName,
+	flags.VectorField,
+	flags.Dimension,
+	flags.DistanceMetric,
+}
 var stdinIndexDefinitions *protos.IndexDefinitionList
 
 // createIndexCmd represents the createIndex command
@@ -138,7 +144,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 						return err
 					}
 
-					logger.Debug("read index definitions from stdin", slog.Any("data", string(data)))
+					logger.Debug("read index definitions from stdin", slog.Any("data", data))
 
 					// Unmarshal YAML data
 					intermediate := map[string]interface{}{}
@@ -222,11 +228,12 @@ func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
 	}
 
 	successful := 0
+
 	for _, indexDef := range stdinIndexDefinitions.GetIndices() {
 		ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
-		defer cancel()
 
 		err := adminClient.IndexCreateFromIndexDef(ctx, indexDef)
+
 		cancel()
 
 		setFilter := []string{}
@@ -248,24 +255,26 @@ func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
 				indexDef.Id.Namespace,
 				setFilter,
 			), indexDef.Id.Name)
-			successful += 1
-		}
 
+			successful++
+		}
 	}
 
 	if successful == 0 {
 		err := fmt.Errorf("unable to create any new indexes")
 		logger.Error(err.Error())
 		view.Print("Unable to create any new indexes")
+
 		return err
 	} else if successful < len(stdinIndexDefinitions.GetIndices()) {
 		err := fmt.Errorf("some indexes failed to create")
 		logger.Warn(err.Error())
 		view.Print("Some indexes failed to be created")
+
 		return err
-	} else {
-		view.Print("Successfully created all indexes from yaml")
 	}
+
+	view.Print("Successfully created all indexes from yaml")
 
 	return nil
 }
@@ -335,6 +344,7 @@ func runCreateIndexFromFlags(adminClient *avs.AdminClient) error {
 	}
 
 	view.Printf("Successfully created index %s.%s", indexCreateFlags.namespace, indexCreateFlags.indexName)
+
 	return nil
 }
 
@@ -344,10 +354,8 @@ func init() {
 
 	// TODO: Add custom template for usage to take into account terminal width
 	// Ex: https://github.com/sigstore/cosign/pull/3011/files
-
 	flagSet := newIndexCreateFlagSet()
 	createIndexCmd.Flags().AddFlagSet(flagSet)
-
 }
 
 func markFlagsRequired(cmd *cobra.Command, flagNames []string) {
@@ -357,5 +365,4 @@ func markFlagsRequired(cmd *cobra.Command, flagNames []string) {
 			panic(err)
 		}
 	}
-
 }

@@ -415,17 +415,17 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			"test with one index that fails",
 			[]*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(
-					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+					"exists3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 				tests.NewIndexDefinitionBuilder(
-					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+					"exists4", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"s/exists1/does-not-exist-yet/g",
+			"s/exists3/does-not-exist-yet/g",
 			true,
 			[]string{
 				"Successfully created index test.*.does-not-exist-yet",
-				"Failed to create index bar.barset.exists2",
+				"Failed to create index bar.barset.exists4",
 				"Some indexes failed to be created",
 			},
 		},

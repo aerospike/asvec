@@ -421,10 +421,10 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 					"exists4", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"s/exists3/does-not-exist-yet/g",
+			"s/exists3/does-not-exist-yet2/g",
 			true,
 			[]string{
-				"Successfully created index test.*.does-not-exist-yet",
+				"Successfully created index test.*.does-not-exist-yet2",
 				"Failed to create index bar.barset.exists4",
 				"Some indexes failed to be created",
 			},
@@ -1294,7 +1294,7 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because some create index required args are not provided",
-			fmt.Sprintf("index create --seeds %s --dimension", suite.avsHostPort.String()),
+			fmt.Sprintf("index create --seeds %s --dimension 10", suite.avsHostPort.String()),
 			"Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{

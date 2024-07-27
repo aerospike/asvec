@@ -94,3 +94,21 @@ func (v *View) PrintRoles(usersList *protos.ListRolesResponse) {
 
 	t.Render()
 }
+
+func (v *View) getClusterStateListWriter() *writers.ClusterTableWriter {
+	return writers.NewClusterTableWriter(v.writer, v.logger)
+}
+
+func (v *View) PrintNodesClusterState(usersList []*writers.NodeClusterInfo) {
+	t := v.getClusterStateListWriter()
+
+	for _, node := range usersList {
+		if node == nil {
+			continue
+		}
+
+		t.AppendNodeRow(node)
+	}
+
+	t.Render()
+}

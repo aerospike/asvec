@@ -28,7 +28,8 @@ func passwordPrompt(prompt string) (string, error) {
 }
 
 func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, error) {
-	hosts, isLoadBalancer := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
+	hosts := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
+	isLoadBalancer := isLoadBalancer(clientFlags.Seeds, clientFlags.Host)
 
 	ctx, cancel := context.WithTimeout(context.Background(), clientFlags.Timeout)
 	defer cancel()
@@ -71,8 +72,7 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 
 	return adminClient, nil
 }
-func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) (avs.HostPortSlice, bool) {
-	isLoadBalancer := false
+func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) avs.HostPortSlice {
 	hosts := avs.HostPortSlice{}
 
 	if len(seeds.Seeds) > 0 {
@@ -82,12 +82,14 @@ func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFla
 	} else {
 		logger.Debug("hosts is set")
 
-		isLoadBalancer = true
-
 		hosts = append(hosts, &host.HostPort)
 	}
 
-	return hosts, isLoadBalancer
+	return hosts
+}
+
+func isLoadBalancer(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) bool {
+	return len(seeds.Seeds) <= 0
 }
 
 func nsAndSetString(namespace string, sets []string) string {

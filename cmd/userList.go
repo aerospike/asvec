@@ -11,6 +11,7 @@ import (
 )
 
 var userListFlags = &struct {
+	format      int
 	clientFlags flags.ClientFlags
 }{
 	clientFlags: *flags.NewClientFlags(),
@@ -19,6 +20,7 @@ var userListFlags = &struct {
 func newUserListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 
+	flags.AddFormatTestFlag(flagSet, &userListFlags.format)
 	flagSet.AddFlagSet(userListFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
@@ -63,7 +65,7 @@ asvec user ls
 
 			logger.Debug("server user list", slog.String("response", userList.String()))
 
-			view.PrintUsers(userList)
+			view.PrintUsers(userList, userListFlags.format)
 			view.Print("Use 'role list' to view available roles")
 
 			return nil

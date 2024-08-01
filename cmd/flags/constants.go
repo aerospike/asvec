@@ -1,7 +1,10 @@
 package flags
 
+import "github.com/spf13/pflag"
+
 const (
 	LogLevel                     = "log-level"
+	NoColor                      = "no-color"
 	Seeds                        = "seeds"
 	Host                         = "host"
 	ListenerName                 = "listener-name"
@@ -21,6 +24,7 @@ const (
 	IndexLabels                  = "index-labels"
 	Timeout                      = "timeout"
 	Verbose                      = "verbose"
+	Format                       = "format"
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"
 	CutoffTime                   = "cutoff-time"
@@ -45,3 +49,8 @@ const (
 	TLSKeyFile                   = "tls-keyfile"
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
 )
+
+func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) {
+	flagSet.IntVar(val, Format, 0, "For testing only")
+	flagSet.MarkHidden(Format)
+}

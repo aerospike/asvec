@@ -15,6 +15,7 @@ import (
 var indexListFlags = &struct {
 	clientFlags flags.ClientFlags
 	verbose     bool
+	format      int
 }{
 	clientFlags: *flags.NewClientFlags(),
 }
@@ -23,6 +24,7 @@ func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
+	flags.AddFormatTestFlag(flagSet, &indexListFlags.format)
 
 	return flagSet
 }
@@ -99,7 +101,7 @@ asvec index ls
 
 			logger.Debug("server index list", slog.String("response", indexList.String()))
 
-			view.PrintIndexes(indexList, indexStatusList, indexListFlags.verbose)
+			view.PrintIndexes(indexList, indexStatusList, indexListFlags.verbose, indexListFlags.format)
 
 			if indexListFlags.verbose {
 				view.Print("Values ending with * can be dynamically configured using the 'asvec index update' command.")

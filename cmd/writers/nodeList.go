@@ -8,41 +8,58 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-type NodeClusterInfo struct {
-	NodeId    *protos.NodeId
-	Endpoints *protos.ClusterNodeEndpoints
-	State     *protos.ClusteringState
-	About     *protos.AboutResponse
+type NodeInfo struct {
+	NodeId            *protos.NodeId
+	ConnectedEndpoint *protos.ServerEndpoint
+	Endpoints         *protos.ClusterNodeEndpoints
+	State             *protos.ClusteringState
+	About             *protos.AboutResponse
 }
 
 //nolint:govet // Padding not a concern for a CLI
-type ClusterTableWriter struct {
-	table.Writer
+type NodeTableWriter struct {
+	table  table.Writer
+	isLB   bool
 	logger *slog.Logger
 }
 
-func NewClusterTableWriter(writer io.Writer, logger *slog.Logger) *ClusterTableWriter {
-	t := ClusterTableWriter{NewDefaultWriter(writer), logger}
+func NewNodeTableWriter(writer io.Writer, isLB bool, logger *slog.Logger) *NodeTableWriter {
+	t := NodeTableWriter{NewDefaultWriter(writer), isLB, logger}
 
-	t.SetTitle("Nodes")
-	t.AppendHeader(table.Row{"Node ID", "Cluster ID", "Version", "In Cluster?", "Visible Nodes"}, rowConfigAutoMerge)
-	t.SetAutoIndex(true)
-	t.SortBy([]table.SortBy{
-		{Name: "Node ID", Mode: table.Asc},
+	t.table.SetTitle("Nodes")
+	t.table.AppendHeader(table.Row{"Node", "Endpoint", "Cluster ID", "Version", "Visible Nodes"}, rowConfigAutoMerge)
+	t.table.SetAutoIndex(true)
+	t.table.SortBy([]table.SortBy{
+		{Name: "Node", Mode: table.Asc},
 	})
-	// t.SetColumnConfigs([]table.ColumnConfig{
-	// 	{},
-	// })
+	t.table.SetColumnConfigs([]table.ColumnConfig{
+		{
+			Name:      "Cluster ID",
+			AutoMerge: true,
+		},
+	})
 
-	t.Style().Options.SeparateRows = true
+	t.table.Style().Options.SeparateRows = true
 
 	return &t
 }
 
-func (itw *ClusterTableWriter) AppendNodeRow(node *NodeClusterInfo) {
+func (itw *NodeTableWriter) AppendNodeRow(node *NodeInfo) {
 	var id = node.NodeId.GetId()
 
-	row := table.Row{id}
+	row := table.Row{}
+
+	if id == 0 {
+		if itw.isLB {
+			row = append(row, "LB")
+		} else {
+			row = append(row, "Seed")
+		}
+	} else {
+		row = append(row, id)
+	}
+
+	row = append(row, formatEndpoint(node.ConnectedEndpoint))
 
 	if node.State != nil {
 		row = append(row, node.State.ClusterId.GetId())
@@ -56,17 +73,19 @@ func (itw *ClusterTableWriter) AppendNodeRow(node *NodeClusterInfo) {
 		row = append(row, "N/A")
 	}
 
-	if node.State != nil {
-		row = append(row, node.State.IsInCluster)
-	} else {
-		row = append(row, "N/A")
-	}
-
 	if node.Endpoints != nil {
 		row = append(row, formatEndpoints(id, node.Endpoints.Endpoints))
 	} else {
 		row = append(row, "N/A")
 	}
 
-	itw.AppendRow(row)
+	itw.table.AppendRow(row)
+}
+
+func (itw *NodeTableWriter) Render(renderFormat int) {
+	if renderFormat == RenderFormatCSV {
+		itw.table.RenderCSV()
+	} else {
+		itw.table.Render()
+	}
 }

@@ -17,11 +17,12 @@ import (
 
 var lvl = new(slog.LevelVar)
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
-var view = NewView(os.Stdout, logger)
+var view = NewView(os.Stdout, os.Stderr, logger)
 var Version = "development" // Overwritten at build time by ld_flags
 
 var rootFlags = &struct {
 	logLevel flags.LogLevelFlag
+	noColor  bool
 }{}
 
 // rootCmd represents the base command when called without any subcommands
@@ -52,6 +53,10 @@ asvec --help
 			handler.Enabled(context.Background(), lvl.Level())
 		}
 
+		if rootFlags.noColor {
+			view.SetNoColor(true)
+		}
+
 		cmd.SilenceUsage = true
 
 		if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
@@ -78,6 +83,13 @@ asvec --help
 
 		return persistedErr
 	},
+	PersistentPostRun: func(cmd *cobra.Command, _ []string) {
+		code := errCode.Load()
+
+		if code != 0 {
+			os.Exit(int(code))
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -94,6 +106,12 @@ func init() {
 		&rootFlags.logLevel,
 		flags.LogLevel,
 		fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", ")), //nolint:lll // For readability
+	)
+	rootCmd.PersistentFlags().BoolVar(
+		&rootFlags.noColor,
+		flags.NoColor,
+		false,
+		"Disable color in output",
 	)
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)
 

@@ -3,9 +3,19 @@
 package tests
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"log"
+	"log/slog"
+	"os"
+	"os/exec"
+	"time"
 
+	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
+	"github.com/aerospike/tools-common-go/client"
 )
 
 func GetStrPtr(str string) *string {
@@ -260,4 +270,127 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	}
 
 	return indexDef
+}
+
+func DockerComposeUp(composeFile string) error {
+	fmt.Println("Starting docker containers")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "docker", "-lDEBUG", "compose", fmt.Sprintf("-f%s", composeFile), "up", "-d")
+	err := cmd.Run()
+	cmd.Wait()
+
+	// fmt.Printf("docker compose up output: %s\n", string())
+
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return err
+		}
+		return err
+	}
+
+	return nil
+}
+
+func DockerComposeDown(composeFile string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "docker", "compose", fmt.Sprintf("-f%s", composeFile), "down")
+	_, err := cmd.Output()
+
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return err
+		}
+		return err
+	}
+
+	return nil
+}
+
+func GetAdminClient(
+	avsHostPort *avs.HostPort,
+	avsCreds *avs.UserPassCredentials,
+	avsTLSConfig *tls.Config,
+	logger *slog.Logger,
+) (*avs.AdminClient, error) {
+	// Connect avs client
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*50)
+	defer cancel()
+
+	var (
+		avsClient *avs.AdminClient
+		err       error
+	)
+
+	for {
+		avsClient, err = avs.NewAdminClient(
+			ctx,
+			avs.HostPortSlice{avsHostPort},
+			nil,
+			true,
+			avsCreds,
+			avsTLSConfig,
+			logger,
+		)
+
+		if err == nil {
+			break
+		}
+
+		fmt.Printf("unable to create avs client %v", err)
+
+		if ctx.Err() != nil {
+			return nil, err
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	// Wait for cluster to be ready
+	for {
+		_, err := avsClient.IndexList(ctx)
+		if err == nil {
+			break
+		}
+
+		fmt.Printf("waiting for the cluster to be ready %v", err)
+
+		if ctx.Err() != nil {
+			return nil, err
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return avsClient, nil
+}
+
+func GetCACert(cert string) (*x509.CertPool, error) {
+	// read in file
+	certBytes, err := os.ReadFile(cert)
+	if err != nil {
+		log.Fatalf("unable to read cert file %v", err)
+		return nil, err
+	}
+
+	return client.LoadCACerts([][]byte{certBytes}), nil
+}
+
+func GetCertificates(certFile string, keyFile string) ([]tls.Certificate, error) {
+	cert, err := os.ReadFile(certFile)
+	if err != nil {
+		log.Fatalf("unable to read cert file %v", err)
+		return nil, err
+	}
+
+	key, err := os.ReadFile(keyFile)
+	if err != nil {
+		log.Fatalf("unable to read key file %v", err)
+		return nil, err
+	}
+
+	return client.LoadServerCertAndKey([]byte(cert), []byte(key), nil)
 }

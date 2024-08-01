@@ -42,7 +42,8 @@ func TestParseBothHostSeedsFlag(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		actualSlice, actualBool := parseBothHostSeedsFlag(tc.seeds, tc.host)
+		actualSlice := parseBothHostSeedsFlag(tc.seeds, tc.host)
+		actualBool := isLoadBalancer(tc.seeds, tc.host)
 		assert.Equal(t, tc.expectedSlice, actualSlice)
 		assert.Equal(t, tc.expectedIsLoadBalancer, actualBool)
 	}

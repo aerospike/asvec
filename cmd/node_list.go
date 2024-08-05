@@ -87,7 +87,7 @@ asvec node ls
 					// TODO handle case where only seedConn are available.
 					view.Warningf(`Not all nodes are visible to asvec. 
 Asvec can't reach: %s
-Possible scenarios:	
+Possible scenarios:
 1. You should use --host instead of --seeds to indicate you are connection through a load balancer.
 2. Asvec was able to connect to your seeds but the server(s) are returning unreachable endpoints. Did you forget --listener-name.
 `, strings.Join(idsNotVisibleToClient, ", "))

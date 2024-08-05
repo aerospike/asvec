@@ -3,9 +3,9 @@
 package main
 
 import (
+	"asvec/tests"
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"testing"
 
@@ -14,12 +14,10 @@ import (
 )
 
 type MultiNodeLBCmdTestSuite struct {
-	CmdBaseTestSuite
+	tests.CmdBaseTestSuite
 }
 
 func TestMultiNodeLBCmdSuite(t *testing.T) {
-	logger = logger.With(slog.Bool("test-logger", true)) // makes it easy to see which logger is which
-
 	avsSeed := "localhost"
 	avsPort := 10000
 	avsHostPort := avs.NewHostPort(avsSeed, avsPort)
@@ -27,14 +25,14 @@ func TestMultiNodeLBCmdSuite(t *testing.T) {
 
 	suites := []*MultiNodeLBCmdTestSuite{
 		{
-			CmdBaseTestSuite: CmdBaseTestSuite{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 
-				suiteFlags: []string{
+				SuiteFlags: []string{
 					// "--log-level Error",
 					"--timeout 10s",
 				},
-				avsHostPort: avsHostPort,
-				composeFile: composeFile,
+				AvsHostPort: avsHostPort,
+				ComposeFile: composeFile,
 			},
 		},
 	}
@@ -47,14 +45,15 @@ func TestMultiNodeLBCmdSuite(t *testing.T) {
 func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
 
 	testCases := []struct {
-		name           string
-		cmd            string
-		expectErrCoded bool
-		expectedTable  string
+		name            string
+		cmd             string
+		expectErrCoded  bool
+		expectedTable   string
+		expectedWarning string
 	}{
 		{
 			"node ls with LB and seeds",
-			fmt.Sprintf("node ls --format 1 --no-color --seeds %s", suite.avsHostPort.String()),
+			fmt.Sprintf("node ls --format 1 --no-color --seeds %s", suite.AvsHostPort.String()),
 			true,
 			`Nodes
 ,Node,Endpoint,Cluster ID,Version,Visible Nodes
@@ -62,12 +61,17 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
     18446651800632365960: [172.20.0.3:5000]
     18446651800632431496: [172.20.0.4:5000]
     18446651800632497032: [172.20.0.5:5000]
-}"
+}"`,
+			`Warning: Not all nodes are visible to asvec. 
+Asvec can't reach: 18446651800632497032, 18446651800632431496, 18446651800632365960
+Possible scenarios:
+1. You should use --host instead of --seeds to indicate you are connection through a load balancer.
+2. Asvec was able to connect to your seeds but the server(s) are returning unreachable endpoints. Did you forget --listener-name.
 `,
 		},
 		{
 			"node ls with LB and host",
-			fmt.Sprintf("node ls --format 1 --no-color --host %s", suite.avsHostPort.String()),
+			fmt.Sprintf("node ls --format 1 --no-color --host %s", suite.AvsHostPort.String()),
 			false,
 			`Nodes
 ,Node,Endpoint,Cluster ID,Version,Visible Nodes
@@ -75,19 +79,19 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
     18446651800632365960: [172.20.0.3:5000]
     18446651800632431496: [172.20.0.4:5000]
     18446651800632497032: [172.20.0.5:5000]
-}"
-`,
+}"`,
+			"",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			state, err := suite.avsClient.ClusteringState(context.Background(), nil)
+			state, err := suite.AvsClient.ClusteringState(context.Background(), nil)
 			suite.Assert().NoError(err)
 
 			clusterIDStr := fmt.Sprintf("%d", state.ClusterId.GetId())
 			tc.expectedTable = strings.ReplaceAll(tc.expectedTable, "<cluster-id>", clusterIDStr)
-			outLines, _, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			outLines, errLines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 
 			if tc.expectErrCoded {
 				suite.Assert().Error(err)
@@ -95,12 +99,13 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
 				suite.Assert().NoError(err)
 			}
 
-			expectedTableLines := strings.Split(tc.expectedTable, "\n")
+			// expectedTableLines := strings.Split(tc.expectedTable, "\n")
 
-			for i, expectedLine := range expectedTableLines {
-				suite.Assert().Equal(expectedLine, outLines[i])
+			suite.Assert().Contains(outLines, tc.expectedTable)
+
+			if tc.expectedWarning != "" {
+				suite.Assert().Contains(errLines, tc.expectedWarning)
 			}
-
 		})
 	}
 }

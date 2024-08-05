@@ -140,23 +140,23 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 				if _, err := reader.Peek(1); err == nil {
 					data, err := reader.ReadString(io.SeekEnd)
 					if err != io.EOF {
-						logger.Error("failed to unmarshal index definitions", slog.Any("error", err))
+						logger.Error("failed to read index definitions", slog.Any("error", err))
 						return err
 					}
 
-					logger.Debug("read index definitions from stdin", slog.Any("data", data))
+					logger.Debug("read index definitions", slog.Any("data", data))
 
 					// Unmarshal YAML data
 					intermediate := map[string]interface{}{}
 					err = yaml.Unmarshal([]byte(data), &intermediate)
 					if err != nil {
-						logger.Error("failed to unmarshal index definitions", slog.Any("error", err))
+						logger.Error("failed to unmarshal index definitions to untyped map", slog.Any("error", err))
 						return err
 					}
 
 					jsonBytes, err := json.Marshal(intermediate)
 					if err != nil {
-						logger.Error("failed to marshal index definitions", slog.Any("error", err))
+						logger.Error("failed to marshal index definitions to json", slog.Any("error", err))
 						return err
 					}
 
@@ -166,7 +166,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 
 					err = protojson.Unmarshal(jsonBytes, stdinIndexDefinitions)
 					if err != nil {
-						logger.Error("failed to unmarshal index definitions", slog.Any("error", err))
+						logger.Error("failed to unmarshal index definitions IndexDefinitionList", slog.Any("error", err))
 						return err
 					}
 

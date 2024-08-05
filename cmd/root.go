@@ -54,7 +54,7 @@ asvec --help
 		}
 
 		if rootFlags.noColor {
-			view.SetNoColor(true)
+			view.DisableColor()
 		}
 
 		cmd.SilenceUsage = true

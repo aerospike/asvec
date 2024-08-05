@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"github.com/fatih/color"
 	tableColor "github.com/jedib0t/go-pretty/v6/text"
 
 	"github.com/aerospike/avs-client-go/protos"
@@ -16,18 +15,16 @@ import (
 var errCode atomic.Uint32
 
 type View struct {
-	out     io.Writer
-	err     io.Writer
-	noColor bool
-	logger  *slog.Logger
+	out    io.Writer
+	err    io.Writer
+	logger *slog.Logger
 }
 
 func NewView(out io.Writer, err io.Writer, logger *slog.Logger) *View {
 	return &View{out: out, err: err, logger: logger}
 }
 
-func (v *View) SetNoColor(noColor bool) {
-	v.noColor = noColor
+func (v *View) DisableColor() {
 	tableColor.DisableColors()
 }
 
@@ -154,15 +151,9 @@ func (v *View) PrintNodeInfoList(nodeInfos []*writers.NodeInfo, isLB bool, forma
 }
 
 func (v *View) redString(f string, a ...any) string {
-	if v.noColor {
-		return fmt.Sprintf(f, a...)
-	}
-	return color.RedString(f, a...)
+	return tableColor.FgRed.Sprint(fmt.Sprintf(f, a...))
 }
 
 func (v *View) yellowString(f string, a ...any) string {
-	if v.noColor {
-		return fmt.Sprintf(f, a...)
-	}
-	return color.YellowString(f, a...)
+	return tableColor.FgYellow.Sprint(fmt.Sprintf(f, a...))
 }

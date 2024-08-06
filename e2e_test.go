@@ -40,12 +40,12 @@ func TestCmdSuite(t *testing.T) {
 		logger.Error("Failed to read cert")
 	}
 
-	// certificates, err := tests.GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
-	// if err != nil {
-	// 	t.Fatalf("unable to read certificates %v", err)
-	// 	t.FailNow()
-	// 	logger.Error("Failed to read cert")
-	// }
+	certificates, err := tests.GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
+	if err != nil {
+		t.Fatalf("unable to read certificates %v", err)
+		t.FailNow()
+		logger.Error("Failed to read cert")
+	}
 
 	avsSeed := "localhost"
 	avsPort := 10000

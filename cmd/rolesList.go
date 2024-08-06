@@ -11,8 +11,8 @@ import (
 )
 
 var rolesListFlags = &struct {
-	format      int
 	clientFlags flags.ClientFlags
+	format      int
 }{
 	clientFlags: *flags.NewClientFlags(),
 }
@@ -20,7 +20,11 @@ var rolesListFlags = &struct {
 func newRoleListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 
-	flags.AddFormatTestFlag(flagSet, &rolesListFlags.format)
+	err := flags.AddFormatTestFlag(flagSet, &rolesListFlags.format)
+	if err != nil {
+		panic(err)
+	}
+
 	flagSet.AddFlagSet(rolesListFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet

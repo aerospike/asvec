@@ -20,7 +20,7 @@ type View struct {
 	logger *slog.Logger
 }
 
-func NewView(out io.Writer, err io.Writer, logger *slog.Logger) *View {
+func NewView(out, err io.Writer, logger *slog.Logger) *View {
 	return &View{out: out, err: err, logger: logger}
 }
 

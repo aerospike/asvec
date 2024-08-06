@@ -9,7 +9,7 @@ import (
 )
 
 type NodeInfo struct {
-	NodeId            *protos.NodeId
+	NodeID            *protos.NodeId
 	ConnectedEndpoint *protos.ServerEndpoint
 	Endpoints         *protos.ClusterNodeEndpoints
 	State             *protos.ClusteringState
@@ -45,7 +45,7 @@ func NewNodeTableWriter(writer io.Writer, isLB bool, logger *slog.Logger) *NodeT
 }
 
 func (itw *NodeTableWriter) AppendNodeRow(node *NodeInfo) {
-	var id = node.NodeId.GetId()
+	var id = node.NodeID.GetId()
 
 	row := table.Row{}
 

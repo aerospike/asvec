@@ -8,16 +8,6 @@ import (
 	"github.com/aerospike/avs-client-go/protos"
 )
 
-func formatNodeIdList(nodeIds []*protos.NodeId) string {
-	ids := make([]string, 0, len(nodeIds))
-
-	for _, nodeId := range nodeIds {
-		ids = append(ids, fmt.Sprintf("%d", nodeId.GetId()))
-	}
-
-	return strings.Join(ids, "\n")
-}
-
 func formatEndpoint(nodeEndpoint *protos.ServerEndpoint) string {
 	if nodeEndpoint == nil {
 		return "N/A"
@@ -26,7 +16,7 @@ func formatEndpoint(nodeEndpoint *protos.ServerEndpoint) string {
 	return fmt.Sprintf("%s:%d", nodeEndpoint.GetAddress(), nodeEndpoint.GetPort())
 }
 
-func formatEndpoints(nodeId uint64, nodeEndpoints map[uint64]*protos.ServerEndpointList) string {
+func formatEndpoints(nodeID uint64, nodeEndpoints map[uint64]*protos.ServerEndpointList) string {
 	if len(nodeEndpoints) == 0 {
 		return "N/A"
 	}
@@ -44,7 +34,7 @@ func formatEndpoints(nodeId uint64, nodeEndpoints map[uint64]*protos.ServerEndpo
 	})
 
 	for _, id := range ids {
-		if nodeId == id {
+		if nodeID == id {
 			// Node endpoint include themselves. Remove it from output
 			continue
 		}

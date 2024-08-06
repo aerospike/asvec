@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+//nolint:govet // Padding not a concern for a CLI
 var indexListFlags = &struct {
 	clientFlags flags.ClientFlags
 	verbose     bool
@@ -29,7 +30,11 @@ func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.")                                                    //nolint:lll // For readability
 	flagSet.BoolVar(&indexListFlags.yaml, flags.Yaml, false, "Output indexes in yaml format to later be used with \"asvec index create --file <index-def.yaml>") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
-	flags.AddFormatTestFlag(flagSet, &indexListFlags.format)
+
+	err := flags.AddFormatTestFlag(flagSet, &indexListFlags.format)
+	if err != nil {
+		panic(err)
+	}
 
 	return flagSet
 }
@@ -105,7 +110,7 @@ asvec index ls
 			wg.Wait()
 
 			logger.Debug("server index list", slog.String("response", indexList.String()))
-				
+
 			if indexListFlags.yaml {
 				out, err := protojson.Marshal(indexList)
 				if err != nil {

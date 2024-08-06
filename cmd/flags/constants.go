@@ -52,7 +52,7 @@ const (
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
 )
 
-func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) {
+func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) error {
 	flagSet.IntVar(val, Format, 0, "For testing only")
-	flagSet.MarkHidden(Format)
+	return flagSet.MarkHidden(Format)
 }

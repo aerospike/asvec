@@ -83,7 +83,7 @@ asvec --help
 
 		return persistedErr
 	},
-	PersistentPostRun: func(cmd *cobra.Command, _ []string) {
+	PersistentPostRun: func(_ *cobra.Command, _ []string) {
 		code := errCode.Load()
 
 		if code != 0 {

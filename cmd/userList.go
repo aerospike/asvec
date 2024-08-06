@@ -11,8 +11,8 @@ import (
 )
 
 var userListFlags = &struct {
-	format      int
 	clientFlags flags.ClientFlags
+	format      int
 }{
 	clientFlags: *flags.NewClientFlags(),
 }
@@ -20,8 +20,12 @@ var userListFlags = &struct {
 func newUserListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 
-	flags.AddFormatTestFlag(flagSet, &userListFlags.format)
 	flagSet.AddFlagSet(userListFlags.clientFlags.NewClientFlagSet())
+
+	err := flags.AddFormatTestFlag(flagSet, &userListFlags.format)
+	if err != nil {
+		panic(err)
+	}
 
 	return flagSet
 }

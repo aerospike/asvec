@@ -26,7 +26,11 @@ var nodeListFlags = &struct {
 func newNodeListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.AddFlagSet(nodeListFlags.clientFlags.NewClientFlagSet())
-	flags.AddFormatTestFlag(flagSet, &nodeListFlags.format)
+
+	err := flags.AddFormatTestFlag(flagSet, &nodeListFlags.format)
+	if err != nil {
+		panic(err)
+	}
 
 	return flagSet
 }
@@ -69,7 +73,7 @@ asvec node ls
 
 			logger.Debug("received node states", slog.Any("nodeStates", nodeInfos))
 
-			isLB := isLoadBalancer(nodeListFlags.clientFlags.Seeds, nodeListFlags.clientFlags.Host)
+			isLB := isLoadBalancer(nodeListFlags.clientFlags.Seeds)
 
 			view.PrintNodeInfoList(nodeInfos, isLB, nodeListFlags.format)
 
@@ -77,7 +81,7 @@ asvec node ls
 			idsVisibleToClient := map[uint64]struct{}{}
 
 			for _, nodeState := range nodeInfos {
-				idsVisibleToClient[nodeState.NodeId.GetId()] = struct{}{}
+				idsVisibleToClient[nodeState.NodeID.GetId()] = struct{}{}
 			}
 
 			idsNotVisibleToClient := getNodesNotVisibleToClient(idsVisibleToAllNodes, idsVisibleToClient)
@@ -89,7 +93,8 @@ asvec node ls
 Asvec can't reach: %s
 Possible scenarios:
 1. You should use --host instead of --seeds to indicate you are connection through a load balancer.
-2. Asvec was able to connect to your seeds but the server(s) are returning unreachable endpoints. Did you forget --listener-name.
+2. Asvec was able to connect to your seeds but the server(s) are returning unreachable endpoints.
+   Did you forget --listener-name?
 `, strings.Join(idsNotVisibleToClient, ", "))
 				}
 			}
@@ -111,33 +116,35 @@ Possible scenarios:
 }
 
 func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*writers.NodeInfo {
-	nodeIds := adminClient.NodeIDs(ctx)
+	nodeIDs := adminClient.NodeIDs(ctx)
 
-	logger.Debug("received node ids", slog.Any("nodeIds", nodeIds))
+	logger.Debug("received node ids", slog.Any("nodeIds", nodeIDs))
 
-	if len(nodeIds) == 0 {
+	if len(nodeIDs) == 0 {
 		// Loadbalancer must be enabled. Passing nil to admin client
 		// causes it to fetch info from seed node
-		nodeIds = append(nodeIds, nil)
+		nodeIDs = append(nodeIDs, nil)
 	}
 
-	nodeInfos := make([]*writers.NodeInfo, len(nodeIds))
+	nodeInfos := make([]*writers.NodeInfo, len(nodeIDs))
 	wg := sync.WaitGroup{}
 
-	for i, nodeId := range nodeIds {
+	for i, nodeID := range nodeIDs {
 		wg.Add(1)
+
 		go func(i int, nodeId *protos.NodeId) {
 			defer wg.Done()
 
 			l := logger.With("node", nodeId.String())
 
 			if nodeId == nil {
-				nodeInfos[i] = &writers.NodeInfo{NodeId: &protos.NodeId{Id: 0}}
+				nodeInfos[i] = &writers.NodeInfo{NodeID: &protos.NodeId{Id: 0}}
 			} else {
-				nodeInfos[i] = &writers.NodeInfo{NodeId: nodeId}
+				nodeInfos[i] = &writers.NodeInfo{NodeID: nodeId}
 			}
 
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 
@@ -149,6 +156,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 					)
 
 					view.Errorf("Failed to get connected endpoint from node %s: %s", nodeId.String(), err)
+
 					return
 				}
 
@@ -158,6 +166,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			}()
 
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 
@@ -169,6 +178,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 					)
 
 					view.Errorf("Failed to get cluster endpoints from node %s: %s", nodeId.String(), err)
+
 					return
 				}
 
@@ -178,6 +188,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			}()
 
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 
@@ -189,6 +200,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 					)
 
 					view.Errorf("Failed to get clustering state from node %s: %s", nodeId.String(), err)
+
 					return
 				}
 
@@ -198,6 +210,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			}()
 
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 
@@ -209,6 +222,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 					)
 
 					view.Errorf("Failed to get about info from node %s: %s", nodeId.String(), err)
+
 					return
 				}
 
@@ -216,7 +230,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 
 				nodeInfos[i].About = about
 			}()
-		}(i, nodeId)
+		}(i, nodeID)
 	}
 
 	wg.Wait()
@@ -228,8 +242,8 @@ func getIDsVisibleToAllNodes(nodeInfos []*writers.NodeInfo) map[uint64]struct{} 
 	idsVisibleToAllNodes := map[uint64]struct{}{}
 
 	for _, nodeState := range nodeInfos {
-		for toId := range nodeState.Endpoints.GetEndpoints() {
-			idsVisibleToAllNodes[toId] = struct{}{}
+		for toID := range nodeState.Endpoints.GetEndpoints() {
+			idsVisibleToAllNodes[toID] = struct{}{}
 		}
 	}
 
@@ -240,21 +254,21 @@ func getIDsVisibleToEachNode(nodeInfos []*writers.NodeInfo) map[uint64]map[uint6
 	idsVisibleToIndividualNodes := map[uint64]map[uint64]struct{}{} // using map as set
 
 	for _, nodeState := range nodeInfos {
-		fromId := nodeState.NodeId.GetId()
+		fromID := nodeState.NodeID.GetId()
 
-		for toId := range nodeState.Endpoints.GetEndpoints() {
-			if _, ok := idsVisibleToIndividualNodes[fromId]; !ok {
-				idsVisibleToIndividualNodes[fromId] = map[uint64]struct{}{}
+		for toID := range nodeState.Endpoints.GetEndpoints() {
+			if _, ok := idsVisibleToIndividualNodes[fromID]; !ok {
+				idsVisibleToIndividualNodes[fromID] = map[uint64]struct{}{}
 			}
 
-			idsVisibleToIndividualNodes[fromId][toId] = struct{}{}
+			idsVisibleToIndividualNodes[fromID][toID] = struct{}{}
 		}
 	}
 
 	return idsVisibleToIndividualNodes
 }
 
-func getNodesNotVisibleToClient(idsVisibleToAllNodes map[uint64]struct{}, idsVisibleToClient map[uint64]struct{}) []string {
+func getNodesNotVisibleToClient(idsVisibleToAllNodes, idsVisibleToClient map[uint64]struct{}) []string {
 	nodesNotVisibleToClient := []string{}
 
 	for id := range idsVisibleToAllNodes {
@@ -266,17 +280,20 @@ func getNodesNotVisibleToClient(idsVisibleToAllNodes map[uint64]struct{}, idsVis
 	return nodesNotVisibleToClient
 }
 
-func getNodesNotVisibleToEachNode(idsVisibleToEachNode map[uint64]map[uint64]struct{}, idsVisibleToAllNodes map[uint64]struct{}) map[uint64][]string {
+func getNodesNotVisibleToEachNode(
+	idsVisibleToEachNode map[uint64]map[uint64]struct{},
+	idsVisibleToAllNodes map[uint64]struct{},
+) map[uint64][]string {
 	nodesNotVisibleToEachNode := map[uint64][]string{}
 
 	for id := range idsVisibleToAllNodes {
-		for fromId, visibleFromNode := range idsVisibleToEachNode {
+		for fromID, visibleFromNode := range idsVisibleToEachNode {
 			if _, ok := visibleFromNode[id]; !ok {
-				if _, ok := nodesNotVisibleToEachNode[fromId]; !ok {
-					nodesNotVisibleToEachNode[fromId] = []string{}
+				if _, ok := nodesNotVisibleToEachNode[fromID]; !ok {
+					nodesNotVisibleToEachNode[fromID] = []string{}
 				}
 
-				nodesNotVisibleToEachNode[fromId] = append(nodesNotVisibleToEachNode[fromId], strconv.FormatUint(id, 10))
+				nodesNotVisibleToEachNode[fromID] = append(nodesNotVisibleToEachNode[fromID], strconv.FormatUint(id, 10))
 			}
 		}
 	}

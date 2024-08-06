@@ -29,7 +29,7 @@ func passwordPrompt(prompt string) (string, error) {
 
 func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, error) {
 	hosts := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
-	isLoadBalancer := isLoadBalancer(clientFlags.Seeds, clientFlags.Host)
+	isLoadBalancer := isLoadBalancer(clientFlags.Seeds)
 
 	ctx, cancel := context.WithTimeout(context.Background(), clientFlags.Timeout)
 	defer cancel()
@@ -88,8 +88,8 @@ func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFla
 	return hosts
 }
 
-func isLoadBalancer(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) bool {
-	return len(seeds.Seeds) <= 0
+func isLoadBalancer(seeds *flags.SeedsSliceFlag) bool {
+	return len(seeds.Seeds) == 0
 }
 
 func nsAndSetString(namespace string, sets []string) string {

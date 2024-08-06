@@ -6,7 +6,6 @@ import (
 	"asvec/tests"
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"testing"
 
@@ -19,8 +18,6 @@ type MultiNodeCmdTestSuite struct {
 }
 
 func TestMultiNodeCmdSuite(t *testing.T) {
-	logger = logger.With(slog.Bool("test-logger", true)) // makes it easy to see which logger is which
-
 	avsSeed := "localhost"
 	avsPort := 10000
 	avsHostPort := avs.NewHostPort(avsSeed, avsPort)

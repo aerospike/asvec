@@ -273,7 +273,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 }
 
 func DockerComposeUp(composeFile string) error {
-	fmt.Println("Starting docker containers")
+	fmt.Println("Starting docker containers " + composeFile)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 

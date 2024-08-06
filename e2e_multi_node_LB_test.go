@@ -63,7 +63,7 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
     18446651800632497032: [172.20.0.5:5000]
 }"`,
 			`Warning: Not all nodes are visible to asvec. 
-Asvec can't reach: 18446651800632497032, 18446651800632431496, 18446651800632365960
+Asvec can't reach: 18446651800632365960, 18446651800632431496, 18446651800632497032
 Possible scenarios:
 1. You should use --host instead of --seeds to indicate you are connection through a load balancer.
 2. Asvec was able to connect to your seeds but the server(s) are returning unreachable endpoints.

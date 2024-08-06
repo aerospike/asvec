@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -276,6 +277,10 @@ func getNodesNotVisibleToClient(idsVisibleToAllNodes, idsVisibleToClient map[uin
 			nodesNotVisibleToClient = append(nodesNotVisibleToClient, strconv.FormatUint(id, 10))
 		}
 	}
+
+	sort.Slice(nodesNotVisibleToClient, func(i, j int) bool {
+		return nodesNotVisibleToClient[i] < nodesNotVisibleToClient[j]
+	})
 
 	return nodesNotVisibleToClient
 }

@@ -25,6 +25,8 @@ const (
 	Timeout                      = "timeout"
 	Verbose                      = "verbose"
 	Format                       = "format"
+	Yaml                         = "yaml"
+	InputFile                    = "file"
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"
 	CutoffTime                   = "cutoff-time"

@@ -212,6 +212,30 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswMergeParallelism(10).
 				Build(),
 		},
+		{
+			"test with yaml file",
+			"yaml-file-index",
+			"test",
+			fmt.Sprintf("index create -y --host %s --file tests/indexDef.yaml", suite.avsHostPort.String()),
+			tests.NewIndexDefinitionBuilder("yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
+				WithSet("testset").
+				WithHnswEf(101).
+				WithHnswEfConstruction(102).
+				WithHnswM(103).
+				WithHnswMaxMemQueueSize(10004).
+				WithHnswBatchingInterval(30001).
+				WithHnswBatchingMaxRecord(100001).
+				WithHnswCacheMaxEntries(1001).
+				WithHnswCacheExpiry(1002).
+				WithHnswHealerParallelism(7).
+				WithHnswHealerMaxScanRatePerNode(1).
+				WithHnswHealerMaxScanPageSize(2).
+				WithHnswHealerReindexPercent(3).
+				WithHnswHealerScheduleDelay(4).
+				WithHnswMergeParallelism(7).
+				WithStorageSet("name").
+				Build(),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -230,6 +254,143 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			}
 
 			suite.EqualExportedValues(tc.expected_index, actual)
+		})
+	}
+}
+
+func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
+	testCases := []struct {
+		name          string
+		indexDefs     []*protos.IndexDefinition
+		sedReplaceStr string
+		createFail    bool
+		checkContains []string
+	}{
+		{
+			"test with all indexes succeed",
+			[]*protos.IndexDefinition{
+				tests.NewIndexDefinitionBuilder(
+					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				tests.NewIndexDefinitionBuilder(
+					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			"s/exists/does-not-exist-yet/g",
+			false,
+			[]string{
+				"Successfully created index test.*.does-not-exist-yet",
+				"Successfully created index bar.barset.does-not-exist-yet",
+				"Successfully created all indexes from yaml",
+			},
+		},
+		{
+			"test with one index that fails",
+			[]*protos.IndexDefinition{
+				tests.NewIndexDefinitionBuilder(
+					"exists3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				tests.NewIndexDefinitionBuilder(
+					"exists4", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			"s/exists3/does-not-exist-yet2/g",
+			true,
+			[]string{
+				"Successfully created index test.*.does-not-exist-yet2",
+				"Failed to create index bar.barset.exists4",
+				"Some indexes failed to be created",
+			},
+		},
+		{
+			"test with no index successfully created",
+			[]*protos.IndexDefinition{
+				tests.NewIndexDefinitionBuilder(
+					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
+				).Build(),
+				tests.NewIndexDefinitionBuilder(
+					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
+				).WithSet("barset").Build(),
+			},
+			"s/COSINE/HAMMING/g", // Doing this rather than removing sed for this test case
+			true,
+			[]string{
+				"Failed to create index test.*.exists1",
+				"Failed to create index bar.barset.exists2",
+				"Unable to create any new indexes",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+
+			for _, index := range tc.indexDefs {
+				err := suite.avsClient.IndexCreateFromIndexDef(context.Background(), index)
+				if err != nil {
+					suite.FailNowf("unable to index create", "%v", err)
+				}
+
+				defer suite.avsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+			}
+
+			// Test "asvec index list --yaml | sed 's/exists1/does-not-exist-yet/g' | asvec index create"
+
+			listArgs := []string{"index", "list", "--yaml", "--host", suite.avsHostPort.String()}
+			listArgs = suite.addSuiteArgs(listArgs...)
+			listCmd := suite.getCmd(listArgs...)
+			listPipe, err := listCmd.StdoutPipe()
+
+			if err != nil {
+				suite.FailNowf("unable to create list pipe", "%v", err)
+			}
+
+			// We need to change the name to something that does not exist yet
+			sedCmd := exec.Command("sed", tc.sedReplaceStr)
+			sedPipe, err := sedCmd.StdoutPipe()
+
+			if err != nil {
+				suite.FailNowf("unable to create sed pipe", "%v", err)
+			}
+
+			sedCmd.Stdin = listPipe
+
+			createArgs := []string{"index", "create", "--host", suite.avsHostPort.String(), "--log-level", "debug"}
+			createArgs = suite.addSuiteArgs(createArgs...)
+			createCmd := suite.getCmd(createArgs...)
+			createCmd.Stdin = sedPipe
+
+			// Start list and sed commands so data can flow through the pipes
+			if err := listCmd.Start(); err != nil {
+				suite.FailNowf("unable to start list cmd", "%v", err)
+			}
+
+			if err := sedCmd.Start(); err != nil {
+				suite.FailNowf("unable to start sed cmd", "%v", err)
+			}
+
+			// Run create Cmd to completion
+			output, err := createCmd.CombinedOutput()
+			logger.Debug(string(output))
+
+			if tc.createFail && err == nil {
+				suite.FailNowf("expected create cmd to fail because at least one index failed to be created", "%v", err)
+			} else if !tc.createFail && err != nil {
+				suite.FailNowf("expected create cmd to succeed because all indexes were created", "%v", err)
+			}
+
+			// Cleanup list and sed commands
+			if err := listCmd.Wait(); err != nil {
+				suite.FailNowf("unable to wait for list cmd", "%v", err)
+			}
+
+			if err := sedCmd.Wait(); err != nil {
+				suite.FailNowf("unable to wait for sed cmd", "%v", err)
+			}
+
+			for _, str := range tc.checkContains {
+				suite.Contains(string(output), str)
+			}
 		})
 	}
 }
@@ -1006,6 +1167,16 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"use seeds and hosts together",
 			"index gc --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
 			"Error: only --seeds or --host allowed",
+		},
+		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
+			"error because no create index required args are provided",
+			fmt.Sprintf("index create --seeds %s", suite.avsHostPort.String()),
+			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
+		},
+		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
+			"error because some create index required args are not provided",
+			fmt.Sprintf("index create --seeds %s --dimension 10", suite.avsHostPort.String()),
+			"Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{
 			"use seeds and hosts together",

@@ -1,8 +1,11 @@
 name: Test
 on:
   push:
+    branches:
+      - '**'  # Run on every branch
+  pull_request:
     branches-ignore:
-      - main
+      - '**'  # Ignore all branches for pull requests
   workflow_call:
   
 jobs:

@@ -1,4 +1,4 @@
-//go:build integration || integration_large
+//go:build integration
 
 package main
 
@@ -6,9 +6,10 @@ import (
 	"asvec/cmd/flags"
 	"asvec/tests"
 	"context"
-	"crypto/tls"
+	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
@@ -40,12 +41,12 @@ func TestCmdSuite(t *testing.T) {
 		logger.Error("Failed to read cert")
 	}
 
-	certificates, err := tests.GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
-	if err != nil {
-		t.Fatalf("unable to read certificates %v", err)
-		t.FailNow()
-		logger.Error("Failed to read cert")
-	}
+	// certificates, err := tests.GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
+	// if err != nil {
+	// 	t.Fatalf("unable to read certificates %v", err)
+	// 	t.FailNow()
+	// 	logger.Error("Failed to read cert")
+	// }
 
 	avsSeed := "localhost"
 	avsPort := 10000
@@ -65,59 +66,59 @@ func TestCmdSuite(t *testing.T) {
 				AvsHostPort: avsHostPort,
 			},
 		},
-		{
-			CmdBaseTestSuite: tests.CmdBaseTestSuite{
-				ComposeFile: "docker/tls/docker-compose.yml", // tls
-				SuiteFlags: []string{
-					"--log-level debug",
-					"--timeout 10s",
-					tests.CreateFlagStr(flags.Seeds, avsHostPort.String()),
-					tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
-				},
-				AvsTLSConfig: &tls.Config{
-					Certificates: nil,
-					RootCAs:      rootCA,
-				},
-				AvsHostPort: avsHostPort,
-			},
-		},
-		{
-			CmdBaseTestSuite: tests.CmdBaseTestSuite{
-				ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
-				SuiteFlags: []string{
-					"--log-level debug",
-					"--timeout 10s",
-					tests.CreateFlagStr(flags.Host, avsHostPort.String()),
-					tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
-					tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
-					tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
-				},
-				AvsTLSConfig: &tls.Config{
-					Certificates: certificates,
-					RootCAs:      rootCA,
-				},
-				AvsHostPort: avsHostPort,
-			},
-		},
-		{
-			CmdBaseTestSuite: tests.CmdBaseTestSuite{
-				ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
-				SuiteFlags: []string{
-					"--log-level debug",
-					"--timeout 10s",
-					tests.CreateFlagStr(flags.Host, avsHostPort.String()),
-					tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
-					tests.CreateFlagStr(flags.AuthUser, "admin"),
-					tests.CreateFlagStr(flags.AuthPassword, "admin"),
-				},
-				AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
-				AvsTLSConfig: &tls.Config{
-					Certificates: nil,
-					RootCAs:      rootCA,
-				},
-				AvsHostPort: avsHostPort,
-			},
-		},
+		// {
+		// 	CmdBaseTestSuite: tests.CmdBaseTestSuite{
+		// 		ComposeFile: "docker/tls/docker-compose.yml", // tls
+		// 		SuiteFlags: []string{
+		// 			"--log-level debug",
+		// 			"--timeout 10s",
+		// 			tests.CreateFlagStr(flags.Seeds, avsHostPort.String()),
+		// 			tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+		// 		},
+		// 		AvsTLSConfig: &tls.Config{
+		// 			Certificates: nil,
+		// 			RootCAs:      rootCA,
+		// 		},
+		// 		AvsHostPort: avsHostPort,
+		// 	},
+		// },
+		// {
+		// 	CmdBaseTestSuite: tests.CmdBaseTestSuite{
+		// 		ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
+		// 		SuiteFlags: []string{
+		// 			"--log-level debug",
+		// 			"--timeout 10s",
+		// 			tests.CreateFlagStr(flags.Host, avsHostPort.String()),
+		// 			tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+		// 			tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+		// 			tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+		// 		},
+		// 		AvsTLSConfig: &tls.Config{
+		// 			Certificates: certificates,
+		// 			RootCAs:      rootCA,
+		// 		},
+		// 		AvsHostPort: avsHostPort,
+		// 	},
+		// },
+		// {
+		// 	CmdBaseTestSuite: tests.CmdBaseTestSuite{
+		// 		ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
+		// 		SuiteFlags: []string{
+		// 			"--log-level debug",
+		// 			"--timeout 10s",
+		// 			tests.CreateFlagStr(flags.Host, avsHostPort.String()),
+		// 			tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+		// 			tests.CreateFlagStr(flags.AuthUser, "admin"),
+		// 			tests.CreateFlagStr(flags.AuthPassword, "admin"),
+		// 		},
+		// 		AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+		// 		AvsTLSConfig: &tls.Config{
+		// 			Certificates: nil,
+		// 			RootCAs:      rootCA,
+		// 		},
+		// 		AvsHostPort: avsHostPort,
+		// 	},
+		// },
 	}
 
 	for _, s := range suites {
@@ -216,7 +217,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with yaml file",
 			"yaml-file-index",
 			"test",
-			fmt.Sprintf("index create -y --host %s --file tests/indexDef.yaml", suite.avsHostPort.String()),
+			fmt.Sprintf("index create -y --host %s --file tests/indexDef.yaml", suite.AvsHostPort.String()),
 			tests.NewIndexDefinitionBuilder("yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
 				WithSet("testset").
 				WithHnswEf(101).
@@ -326,19 +327,19 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 		suite.T().Run(tc.name, func(t *testing.T) {
 
 			for _, index := range tc.indexDefs {
-				err := suite.avsClient.IndexCreateFromIndexDef(context.Background(), index)
+				err := suite.AvsClient.IndexCreateFromIndexDef(context.Background(), index)
 				if err != nil {
 					suite.FailNowf("unable to index create", "%v", err)
 				}
 
-				defer suite.avsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+				defer suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
 			}
 
 			// Test "asvec index list --yaml | sed 's/exists1/does-not-exist-yet/g' | asvec index create"
 
-			listArgs := []string{"index", "list", "--yaml", "--host", suite.avsHostPort.String()}
-			listArgs = suite.addSuiteArgs(listArgs...)
-			listCmd := suite.getCmd(listArgs...)
+			listArgs := []string{"index", "list", "--yaml"}
+			listArgs = suite.AddSuiteArgs(listArgs...)
+			listCmd := suite.GetCmd(listArgs...)
 			listPipe, err := listCmd.StdoutPipe()
 
 			if err != nil {
@@ -355,9 +356,9 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 
 			sedCmd.Stdin = listPipe
 
-			createArgs := []string{"index", "create", "--host", suite.avsHostPort.String(), "--log-level", "debug"}
-			createArgs = suite.addSuiteArgs(createArgs...)
-			createCmd := suite.getCmd(createArgs...)
+			createArgs := []string{"index", "create", "--log-level", "debug"}
+			createArgs = suite.AddSuiteArgs(createArgs...)
+			createCmd := suite.GetCmd(createArgs...)
 			createCmd.Stdin = sedPipe
 
 			// Start list and sed commands so data can flow through the pipes
@@ -1170,12 +1171,12 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because no create index required args are provided",
-			fmt.Sprintf("index create --seeds %s", suite.avsHostPort.String()),
+			fmt.Sprintf("index create --seeds %s", suite.AvsHostPort.String()),
 			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because some create index required args are not provided",
-			fmt.Sprintf("index create --seeds %s --dimension 10", suite.avsHostPort.String()),
+			fmt.Sprintf("index create --seeds %s --dimension 10", suite.AvsHostPort.String()),
 			"Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{

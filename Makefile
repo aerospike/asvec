@@ -513,7 +513,7 @@ integration:
 .PHONY: integration-large
 integration-large:
 	mkdir -p $(COV_INTEGRATION_DIR) || true
-	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration-large -timeout 30m 
+	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration_large -timeout 30m 
 
 .PHONY: unit
 unit:

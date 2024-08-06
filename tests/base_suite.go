@@ -1,4 +1,4 @@
-//go:build unit || integration
+//go:build unit || integration || integration_large
 
 package tests
 
@@ -79,15 +79,30 @@ func (suite *CmdBaseTestSuite) TearDownSuite() {
 // All this does is append the suite flags to args because certain runs (e.g.
 // flag parse error tests) should not append this flags
 func (suite *CmdBaseTestSuite) RunSuiteCmd(asvecCmd ...string) (string, string, error) {
-	suiteFlags := strings.Split(strings.Join(suite.SuiteFlags, " "), " ")
-	asvecCmd = append(suiteFlags, asvecCmd...)
+	asvecCmd = suite.AddSuiteArgs(asvecCmd...)
 	return suite.RunCmd(asvecCmd...)
 }
 
 func (suite *CmdBaseTestSuite) RunCmd(asvecCmd ...string) (string, string, error) {
 	suite.Logger.Info("running command", slog.String("cmd", strings.Join(asvecCmd, " ")))
+	cmd := suite.GetCmd(asvecCmd...)
+	return suite.getCmdOutput(cmd)
+}
+
+func (suite *CmdBaseTestSuite) AddSuiteArgs(args ...string) []string {
+	suiteFlags := strings.Split(strings.Join(suite.SuiteFlags, " "), " ")
+	return append(suiteFlags, args...)
+}
+
+func (suite *CmdBaseTestSuite) GetCmd(asvecCmd ...string) *exec.Cmd {
 	cmd := exec.Command(suite.App, asvecCmd...)
 	cmd.Env = []string{"GOCOVERDIR=" + os.Getenv("COVERAGE_DIR")}
+
+	return cmd
+}
+
+func (suite *CmdBaseTestSuite) getCmdOutput(cmd *exec.Cmd) (string, string, error) {
+	suite.Logger.Info("running command", slog.String("cmd", strings.Join(cmd.Args, " ")))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.Stdout = stdout

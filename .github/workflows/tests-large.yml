@@ -25,6 +25,8 @@ jobs:
         echo "$FEATURES_CONF" > docker/tls/config/features.conf
         echo "$FEATURES_CONF" > docker/mtls/config/features.conf
         echo "$FEATURES_CONF" > docker/auth/config/features.conf
+        echo "$FEATURES_CONF" > docker/multi-node/config/features.conf
+        echo "$FEATURES_CONF" > docker/multi-node-LB/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
         docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}

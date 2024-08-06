@@ -1,8 +1,8 @@
 name: Test
 on:
-  push:
-    branches-ignore:
-      - main
+  pull_request:
+    branches:
+        - main
   workflow_call:
   
 jobs:
@@ -30,4 +30,10 @@ jobs:
         docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
     - name: Run tests
       run: |
-        make test
+        make coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        files: ./coverage/total.cov
+        verbose: false

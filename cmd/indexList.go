@@ -3,6 +3,7 @@ package cmd
 import (
 	"asvec/cmd/flags"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -10,18 +11,22 @@ import (
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v3"
 )
 
 var indexListFlags = &struct {
 	clientFlags flags.ClientFlags
 	verbose     bool
+	yaml        bool
 }{
 	clientFlags: *flags.NewClientFlags(),
 }
 
 func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.") //nolint:lll // For readability
+	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.")                                                    //nolint:lll // For readability
+	flagSet.BoolVar(&indexListFlags.yaml, flags.Yaml, false, "Output indexes in yaml format to later be used with \"asvec index create --file <index-def.yaml>") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
 
 	return flagSet
@@ -99,10 +104,38 @@ asvec index ls
 
 			logger.Debug("server index list", slog.String("response", indexList.String()))
 
-			view.PrintIndexes(indexList, indexStatusList, indexListFlags.verbose)
+			if indexListFlags.yaml {
+				out, err := protojson.Marshal(indexList)
+				if err != nil {
+					logger.Error("failed to marshal index list", slog.Any("error", err))
+					return err
+				}
 
-			if indexListFlags.verbose {
-				view.Print("Values ending with * can be dynamically configured using the 'asvec index update' command.")
+				logger.Debug("marshalled index list", slog.String("response", string(out)))
+
+				var intermediate map[string]interface{}
+				err = json.Unmarshal(out, &intermediate)
+				if err != nil {
+					logger.Error("failed to unmarshal JSON", slog.Any("error", err))
+					return err
+				}
+
+				// Marshal the intermediate map to YAML
+				yamlData, err := yaml.Marshal(intermediate)
+				if err != nil {
+					logger.Error("failed to marshal to YAML", slog.Any("error", err))
+					return err
+				}
+
+				logger.Debug("marshalled index list to YAML", slog.String("response", string(yamlData)))
+
+				view.Print(string(yamlData))
+			} else {
+				view.PrintIndexes(indexList, indexStatusList, indexListFlags.verbose)
+
+				if indexListFlags.verbose {
+					view.Print("Values ending with * can be dynamically configured using the 'asvec index update' command.")
+				}
 			}
 
 			return nil

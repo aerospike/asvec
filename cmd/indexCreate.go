@@ -2,21 +2,29 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"strings"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v3"
 )
 
 //nolint:govet // Padding not a concern for a CLI
 var indexCreateFlags = &struct {
 	clientFlags         flags.ClientFlags
 	yes                 bool
+	inputFile           string
 	namespace           string
 	sets                []string
 	indexName           string
@@ -50,7 +58,8 @@ var indexCreateFlags = &struct {
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                                                                                                                                                                                                                                //nolint:lll // For readability
+	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")
+	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, StdIn, "A yaml file containing IndexDefinitions created using \"asvec index list --yaml\"")                                                                                                                                                                                                //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")                                                                                                                                                                                                                                                  //nolint:lll // For readability
 	flagSet.StringSliceVarP(&indexCreateFlags.sets, flags.Sets, "s", nil, "The sets for the index.")                                                                                                                                                                                                                                                           //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, "i", "", "The name of the index.")                                                                                                                                                                                                                                                        //nolint:lll // For readability
@@ -80,6 +89,7 @@ var indexCreateRequiredFlags = []string{
 	flags.Dimension,
 	flags.DistanceMetric,
 }
+var stdinIndexDefinitions *protos.IndexDefinitionList
 
 // createIndexCmd represents the createIndex command
 func newIndexCreateCmd() *cobra.Command {
@@ -99,8 +109,77 @@ For example:
 asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 	--%s test
 			`, HelpTxtSetupEnv, flags.VectorField, flags.StorageNamespace),
-		PreRunE: func(_ *cobra.Command, _ []string) error {
-			return checkSeedsAndHost()
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			err := checkSeedsAndHost()
+			if err != nil {
+				return err
+			}
+
+			oneRequiredFlagsSet := false
+			configureRequiredFlags := true
+
+			for _, name := range indexCreateRequiredFlags {
+				if viper.IsSet(name) {
+					oneRequiredFlagsSet = true
+					break
+				}
+			}
+
+			if !oneRequiredFlagsSet {
+				ioReader := os.Stdin
+				if indexCreateFlags.inputFile != StdIn {
+					r, err := os.Open(indexCreateFlags.inputFile)
+					if err != nil {
+						return err
+					}
+
+					ioReader = r
+				}
+
+				reader := bufio.NewReader(ioReader)
+				if _, err := reader.Peek(1); err == nil {
+					data, err := reader.ReadString(io.SeekEnd)
+					if err != io.EOF {
+						logger.Error("failed to read index definitions", slog.Any("error", err))
+						return err
+					}
+
+					logger.Debug("read index definitions", slog.Any("data", data))
+
+					// Unmarshal YAML data
+					intermediate := map[string]interface{}{}
+					err = yaml.Unmarshal([]byte(data), &intermediate)
+					if err != nil {
+						logger.Error("failed to unmarshal index definitions to untyped map", slog.Any("error", err))
+						return err
+					}
+
+					jsonBytes, err := json.Marshal(intermediate)
+					if err != nil {
+						logger.Error("failed to marshal index definitions to json", slog.Any("error", err))
+						return err
+					}
+
+					logger.Debug("marshalled index definitions", slog.Any("data", string(jsonBytes)))
+
+					stdinIndexDefinitions = &protos.IndexDefinitionList{}
+
+					err = protojson.Unmarshal(jsonBytes, stdinIndexDefinitions)
+					if err != nil {
+						logger.Error("failed to unmarshal index definitions IndexDefinitionList", slog.Any("error", err))
+						return err
+					}
+
+					logger.Debug("parsed index definitions from stdin", slog.Any("indexes", stdinIndexDefinitions))
+					configureRequiredFlags = false
+				}
+			}
+
+			if configureRequiredFlags {
+				markFlagsRequired(cmd, indexCreateRequiredFlags)
+			}
+
+			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			debugFlags := indexCreateFlags.clientFlags.NewSLogAttr()
@@ -133,72 +212,140 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			}
 			defer adminClient.Close()
 
-			indexOpts := &avs.IndexCreateOpts{
-				Sets:   indexCreateFlags.sets,
-				Labels: indexCreateFlags.indexLabels,
-				Storage: &protos.IndexStorage{
-					Namespace: indexCreateFlags.storageNamespace.Val,
-					Set:       indexCreateFlags.storageSet.Val,
-				},
-				HnswParams: &protos.HnswParams{
-					M:               indexCreateFlags.hnswMaxEdges.Val,
-					Ef:              indexCreateFlags.hnswEf.Val,
-					EfConstruction:  indexCreateFlags.hnswConstructionEf.Val,
-					MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
-					BatchingParams: &protos.HnswBatchingParams{
-						MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
-						Interval:   indexCreateFlags.hnswBatch.Interval.Uint32(),
-					},
-					CachingParams: &protos.HnswCachingParams{
-						MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
-						Expiry:     indexCreateFlags.hnswCache.Expiry.Uint64(),
-					},
-					HealerParams: &protos.HnswHealerParams{
-						MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,
-						MaxScanPageSize:    indexCreateFlags.hnswHealer.MaxScanPageSize.Val,
-						ReindexPercent:     indexCreateFlags.hnswHealer.ReindexPercent.Val,
-						ScheduleDelay:      indexCreateFlags.hnswHealer.ScheduleDelay.Uint64(),
-						Parallelism:        indexCreateFlags.hnswHealer.Parallelism.Val,
-					},
-					MergeParams: &protos.HnswIndexMergeParams{
-						Parallelism: indexCreateFlags.hnswMerge.Parallelism.Val,
-					},
-				},
+			if stdinIndexDefinitions != nil {
+				return runCreateIndexFromDef(adminClient)
 			}
 
-			if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
-				"Are you sure you want to create the index %s.%s on field %s?",
-				nsAndSetString(
-					indexCreateFlags.namespace,
-					indexCreateFlags.sets,
-				),
-				indexCreateFlags.indexName,
-				indexCreateFlags.vectorField,
-			)) {
-				return nil
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
-			defer cancel()
-
-			err = adminClient.IndexCreate(
-				ctx,
-				indexCreateFlags.namespace,
-				indexCreateFlags.indexName,
-				indexCreateFlags.vectorField,
-				indexCreateFlags.dimensions,
-				protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[indexCreateFlags.distanceMetric.String()]),
-				indexOpts,
-			)
-			if err != nil {
-				logger.Error("unable to create index", slog.Any("error", err))
-				return err
-			}
-
-			view.Printf("Successfully created index %s.%s", indexCreateFlags.namespace, indexCreateFlags.indexName)
-			return nil
+			return runCreateIndexFromFlags(adminClient)
 		},
 	}
+}
+
+func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
+	if len(stdinIndexDefinitions.GetIndices()) == 0 {
+		view.Print("No indexes to create")
+		return nil
+	}
+
+	successful := 0
+
+	for _, indexDef := range stdinIndexDefinitions.GetIndices() {
+		ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
+
+		err := adminClient.IndexCreateFromIndexDef(ctx, indexDef)
+
+		cancel()
+
+		setFilter := []string{}
+
+		if indexDef.SetFilter != nil {
+			setFilter = append(setFilter, *indexDef.SetFilter)
+		}
+
+		if err != nil {
+			logger.Warn("failed to create index from yaml", slog.Any("error", err))
+			view.Printf("Failed to create index %s.%s from yaml: %s",
+				nsAndSetString(
+					indexDef.Id.Namespace,
+					setFilter,
+				),
+				indexDef.Id.Name, err)
+		} else {
+			view.Printf("Successfully created index %s.%s", nsAndSetString(
+				indexDef.Id.Namespace,
+				setFilter,
+			), indexDef.Id.Name)
+
+			successful++
+		}
+	}
+
+	if successful == 0 {
+		err := fmt.Errorf("unable to create any new indexes")
+		logger.Error(err.Error())
+		view.Print("Unable to create any new indexes")
+
+		return err
+	} else if successful < len(stdinIndexDefinitions.GetIndices()) {
+		err := fmt.Errorf("some indexes failed to create")
+		logger.Warn(err.Error())
+		view.Print("Some indexes failed to be created")
+
+		return err
+	}
+
+	view.Print("Successfully created all indexes from yaml")
+
+	return nil
+}
+
+func runCreateIndexFromFlags(adminClient *avs.AdminClient) error {
+	if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
+		"Are you sure you want to create the index %s.%s on field %s?",
+		nsAndSetString(
+			indexCreateFlags.namespace,
+			indexCreateFlags.sets,
+		),
+		indexCreateFlags.indexName,
+		indexCreateFlags.vectorField,
+	)) {
+		return nil
+	}
+
+	indexOpts := &avs.IndexCreateOpts{
+		Sets:   indexCreateFlags.sets,
+		Labels: indexCreateFlags.indexLabels,
+		Storage: &protos.IndexStorage{
+			Namespace: indexCreateFlags.storageNamespace.Val,
+			Set:       indexCreateFlags.storageSet.Val,
+		},
+		HnswParams: &protos.HnswParams{
+			M:               indexCreateFlags.hnswMaxEdges.Val,
+			Ef:              indexCreateFlags.hnswEf.Val,
+			EfConstruction:  indexCreateFlags.hnswConstructionEf.Val,
+			MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
+			BatchingParams: &protos.HnswBatchingParams{
+				MaxRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
+				Interval:   indexCreateFlags.hnswBatch.Interval.Uint32(),
+			},
+			CachingParams: &protos.HnswCachingParams{
+				MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
+				Expiry:     indexCreateFlags.hnswCache.Expiry.Uint64(),
+			},
+			HealerParams: &protos.HnswHealerParams{
+				MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,
+				MaxScanPageSize:    indexCreateFlags.hnswHealer.MaxScanPageSize.Val,
+				ReindexPercent:     indexCreateFlags.hnswHealer.ReindexPercent.Val,
+				ScheduleDelay:      indexCreateFlags.hnswHealer.ScheduleDelay.Uint64(),
+				Parallelism:        indexCreateFlags.hnswHealer.Parallelism.Val,
+			},
+			MergeParams: &protos.HnswIndexMergeParams{
+				Parallelism: indexCreateFlags.hnswMerge.Parallelism.Val,
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
+	defer cancel()
+
+	err := adminClient.IndexCreate(
+		ctx,
+		indexCreateFlags.namespace,
+		indexCreateFlags.indexName,
+		indexCreateFlags.vectorField,
+		indexCreateFlags.dimensions,
+		protos.VectorDistanceMetric(protos.VectorDistanceMetric_value[indexCreateFlags.distanceMetric.String()]),
+		indexOpts,
+	)
+
+	if err != nil {
+		logger.Error("unable to create index", slog.Any("error", err))
+		return err
+	}
+
+	view.Printf("Successfully created index %s.%s", indexCreateFlags.namespace, indexCreateFlags.indexName)
+
+	return nil
 }
 
 func init() {
@@ -207,12 +354,13 @@ func init() {
 
 	// TODO: Add custom template for usage to take into account terminal width
 	// Ex: https://github.com/sigstore/cosign/pull/3011/files
-
 	flagSet := newIndexCreateFlagSet()
 	createIndexCmd.Flags().AddFlagSet(flagSet)
+}
 
-	for _, flag := range indexCreateRequiredFlags {
-		err := createIndexCmd.MarkFlagRequired(flag)
+func markFlagsRequired(cmd *cobra.Command, flagNames []string) {
+	for _, flag := range flagNames {
+		err := cmd.MarkFlagRequired(flag)
 		if err != nil {
 			panic(err)
 		}

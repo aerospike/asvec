@@ -21,6 +21,8 @@ const (
 	IndexLabels                  = "index-labels"
 	Timeout                      = "timeout"
 	Verbose                      = "verbose"
+	Yaml                         = "yaml"
+	InputFile                    = "file"
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"
 	CutoffTime                   = "cutoff-time"

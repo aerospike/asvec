@@ -6,6 +6,7 @@ import (
 	"asvec/cmd/flags"
 	"asvec/tests"
 	"context"
+	"crypto/tls"
 	"log/slog"
 	"os"
 	"regexp"
@@ -64,59 +65,59 @@ func TestCmdSuite(t *testing.T) {
 				AvsHostPort: avsHostPort,
 			},
 		},
-		// {
-		// 	CmdBaseTestSuite: tests.CmdBaseTestSuite{
-		// 		ComposeFile: "docker/tls/docker-compose.yml", // tls
-		// 		SuiteFlags: []string{
-		// 			"--log-level debug",
-		// 			"--timeout 10s",
-		// 			tests.CreateFlagStr(flags.Seeds, avsHostPort.String()),
-		// 			tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
-		// 		},
-		// 		AvsTLSConfig: &tls.Config{
-		// 			Certificates: nil,
-		// 			RootCAs:      rootCA,
-		// 		},
-		// 		AvsHostPort: avsHostPort,
-		// 	},
-		// },
-		// {
-		// 	CmdBaseTestSuite: tests.CmdBaseTestSuite{
-		// 		ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
-		// 		SuiteFlags: []string{
-		// 			"--log-level debug",
-		// 			"--timeout 10s",
-		// 			tests.CreateFlagStr(flags.Host, avsHostPort.String()),
-		// 			tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
-		// 			tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
-		// 			tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
-		// 		},
-		// 		AvsTLSConfig: &tls.Config{
-		// 			Certificates: certificates,
-		// 			RootCAs:      rootCA,
-		// 		},
-		// 		AvsHostPort: avsHostPort,
-		// 	},
-		// },
-		// {
-		// 	CmdBaseTestSuite: tests.CmdBaseTestSuite{
-		// 		ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
-		// 		SuiteFlags: []string{
-		// 			"--log-level debug",
-		// 			"--timeout 10s",
-		// 			tests.CreateFlagStr(flags.Host, avsHostPort.String()),
-		// 			tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
-		// 			tests.CreateFlagStr(flags.AuthUser, "admin"),
-		// 			tests.CreateFlagStr(flags.AuthPassword, "admin"),
-		// 		},
-		// 		AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
-		// 		AvsTLSConfig: &tls.Config{
-		// 			Certificates: nil,
-		// 			RootCAs:      rootCA,
-		// 		},
-		// 		AvsHostPort: avsHostPort,
-		// 	},
-		// },
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
+				ComposeFile: "docker/tls/docker-compose.yml", // tls
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Seeds, avsHostPort.String()),
+					tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+				},
+				AvsTLSConfig: &tls.Config{
+					Certificates: nil,
+					RootCAs:      rootCA,
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
+				ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Host, avsHostPort.String()),
+					tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+					tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+					tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+				},
+				AvsTLSConfig: &tls.Config{
+					Certificates: certificates,
+					RootCAs:      rootCA,
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
+				ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Host, avsHostPort.String()),
+					tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+					tests.CreateFlagStr(flags.AuthUser, "admin"),
+					tests.CreateFlagStr(flags.AuthPassword, "admin"),
+				},
+				AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+				AvsTLSConfig: &tls.Config{
+					Certificates: nil,
+					RootCAs:      rootCA,
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
 	}
 
 	for _, s := range suites {

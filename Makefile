@@ -503,7 +503,7 @@ macos-pkg-notarize:
 test: integration unit
 
 .PHONY: test-large
-test: integration-large unit
+test-large: integration-large unit
 
 .PHONY: integration
 integration:

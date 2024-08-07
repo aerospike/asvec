@@ -19,6 +19,7 @@ import (
 
 type CmdBaseTestSuite struct {
 	suite.Suite
+	Name         string
 	App          string
 	ComposeFile  string
 	CoverFile    string
@@ -34,6 +35,7 @@ var wd, _ = os.Getwd()
 
 func (suite *CmdBaseTestSuite) SetupSuite() {
 	suite.Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	suite.Logger = suite.Logger.With("test", suite.Name)
 	suite.App = path.Join(wd, "app.test")
 	suite.CoverFile = path.Join(wd, "../coverage/cmd-coverage.cov")
 

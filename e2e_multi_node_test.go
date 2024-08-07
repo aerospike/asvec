@@ -27,7 +27,6 @@ func TestMultiNodeCmdSuite(t *testing.T) {
 		{
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				SuiteFlags: []string{
-					// "--log-level Error",
 					"--timeout 10s",
 				},
 				AvsHostPort: avsHostPort,

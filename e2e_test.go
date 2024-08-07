@@ -218,7 +218,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with yaml file",
 			"yaml-file-index",
 			"test",
-			fmt.Sprintf("index create -y --host %s --file tests/indexDef.yaml", suite.AvsHostPort.String()),
+			fmt.Sprintf("index create -y --file tests/indexDef.yaml"),
 			tests.NewIndexDefinitionBuilder("yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
 				WithSet("testset").
 				WithHnswEf(101).

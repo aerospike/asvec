@@ -9,7 +9,11 @@ cluster:
 # The AVS service listening ports, TLS and network interface.
 service:
   ports:
-    5000: {}
+    5000:
+      advertised-listeners:
+        default:
+          address: 3.3.3.3
+          port: 10000
 
 # Management API listening ports, TLS and network interface.
 manage:

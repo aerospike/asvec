@@ -58,12 +58,12 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
 			`Nodes
 ,Node,Endpoint,Cluster ID,Version,Visible Nodes
 1,Seed,localhost:10000,<cluster-id>,0.9.0,"{
-    18446651800632365960: [172.20.0.3:5000]
-    18446651800632431496: [172.20.0.4:5000]
-    18446651800632497032: [172.20.0.5:5000]
+    1103823447824: [1.1.1.1:10000]
+    2207646885648: [2.2.2.2:10000]
+    3311470323472: [3.3.3.3:10000]
 }"`,
 			`Warning: Not all nodes are visible to asvec. 
-Asvec can't reach: 18446651800632365960, 18446651800632431496, 18446651800632497032
+Asvec can't reach: 1103823447824, 2207646885648, 3311470323472
 Possible scenarios:
 1. You should use --host instead of --seeds to indicate you are connection through a load balancer.
 2. Asvec was able to connect to your seeds but the server(s) are returning unreachable endpoints.
@@ -77,15 +77,16 @@ Possible scenarios:
 			`Nodes
 ,Node,Endpoint,Cluster ID,Version,Visible Nodes
 1,LB,localhost:10000,<cluster-id>,0.9.0,"{
-    18446651800632365960: [172.20.0.3:5000]
-    18446651800632431496: [172.20.0.4:5000]
-    18446651800632497032: [172.20.0.5:5000]
+    1103823447824: [1.1.1.1:10000]
+    2207646885648: [2.2.2.2:10000]
+    3311470323472: [3.3.3.3:10000]
 }"`,
 			"",
 		},
 	}
 
 	for _, tc := range testCases {
+
 		suite.Run(tc.name, func() {
 			state, err := suite.AvsClient.ClusteringState(context.Background(), nil)
 			suite.Assert().NoError(err)

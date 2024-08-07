@@ -19,7 +19,7 @@ import (
 
 var nodeListFlags = &struct {
 	clientFlags flags.ClientFlags
-	format      int
+	format      int // For testing. Hidden
 }{
 	clientFlags: *flags.NewClientFlags(),
 }

@@ -19,7 +19,7 @@ import (
 var indexListFlags = &struct {
 	clientFlags flags.ClientFlags
 	verbose     bool
-	format      int
+	format      int // For testing. Hidden
 	yaml        bool
 }{
 	clientFlags: *flags.NewClientFlags(),

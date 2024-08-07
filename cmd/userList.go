@@ -12,7 +12,7 @@ import (
 
 var userListFlags = &struct {
 	clientFlags flags.ClientFlags
-	format      int
+	format      int // For testing. Hidden
 }{
 	clientFlags: *flags.NewClientFlags(),
 }

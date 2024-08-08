@@ -4,12 +4,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// clusterCmd represents the create command
-var clusterCmd = &cobra.Command{
+// nodeCmd represents the create command
+var nodeCmd = &cobra.Command{
 	Use:     "node",
 	Aliases: []string{"nodes"},
-	Short:   "A parent command viewing information about your cluster.",
-	Long: `A parent command viewing information about your cluster..
+	Short:   "A parent command for viewing information about your nodes.",
+	Long: `A parent command for viewing information about your nodes.
 	
 For example:
 
@@ -18,5 +18,5 @@ For example:
 }
 
 func init() {
-	rootCmd.AddCommand(clusterCmd)
+	rootCmd.AddCommand(nodeCmd)
 }

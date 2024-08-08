@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,12 +39,12 @@ func newNodeListFlagSet() *pflag.FlagSet {
 
 var nodeListRequiredFlags = []string{}
 
-// listClusterCmd represents the listCluster command
+// nodeListCmd creates a new cobra command for listing nodes.
 func newNodeListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "ls",
 		Aliases: []string{"list"},
-		Short:   "A command for listing nodes",
+		Short:   "A command for listing nodes.",
 		Long: fmt.Sprintf(`A command for listing useful information about AVS nodes.
 
 For example:
@@ -55,7 +56,7 @@ asvec node ls
 			return checkSeedsAndHost()
 		},
 		Run: func(_ *cobra.Command, _ []string) {
-			logger := logger.With("cmd", "listClusterCmd")
+			logger := logger.With("cmd", "listNodeCmd")
 			logger.Debug("parsed flags",
 				nodeListFlags.clientFlags.NewSLogAttr()...,
 			)
@@ -171,7 +172,11 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			go func() {
 				defer wg.Done()
 
-				endpoints, err := adminClient.ClusterEndpoints(ctx, nodeId, nil) // TODO add option listener name
+				endpoints, err := adminClient.ClusterEndpoints(
+					ctx,
+					nodeId,
+					nodeListFlags.clientFlags.ListenerName.Val, // TODO: May want to request more names.
+				)
 				if err != nil {
 					l.ErrorContext(ctx,
 						"failed to get cluster endpoints",
@@ -278,6 +283,8 @@ func getNodesNotVisibleToClient(idsVisibleToAllNodes, idsVisibleToClient map[uin
 		}
 	}
 
+	slices.Sort(nodesNotVisibleToClient)
+
 	sort.Slice(nodesNotVisibleToClient, func(i, j int) bool {
 		return nodesNotVisibleToClient[i] < nodesNotVisibleToClient[j]
 	})
@@ -309,7 +316,7 @@ func getNodesNotVisibleToEachNode(
 func init() {
 	nodeListCmd := newNodeListCmd()
 
-	clusterCmd.AddCommand(nodeListCmd)
+	nodeCmd.AddCommand(nodeListCmd)
 	nodeListCmd.Flags().AddFlagSet(newNodeListFlagSet())
 
 	for _, flag := range nodeListRequiredFlags {

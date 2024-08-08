@@ -9,16 +9,16 @@ import (
 )
 
 type RoleTableWriter struct {
-	table.Writer
+	table  table.Writer
 	logger *slog.Logger
 }
 
 func NewRoleTableWriter(writer io.Writer, logger *slog.Logger) *RoleTableWriter {
 	t := RoleTableWriter{NewDefaultWriter(writer), logger}
 
-	t.AppendHeader(table.Row{"Roles"}, rowConfigAutoMerge)
-	t.SetAutoIndex(true)
-	t.SortBy([]table.SortBy{
+	t.table.AppendHeader(table.Row{"Roles"}, rowConfigAutoMerge)
+	t.table.SetAutoIndex(true)
+	t.table.SortBy([]table.SortBy{
 		{Name: "Roles", Mode: table.Asc},
 		{Name: "User", Mode: table.Asc},
 	})
@@ -27,5 +27,13 @@ func NewRoleTableWriter(writer io.Writer, logger *slog.Logger) *RoleTableWriter 
 }
 
 func (itw *RoleTableWriter) AppendRoleRow(role *protos.Role) {
-	itw.AppendRow(table.Row{role.GetId()})
+	itw.table.AppendRow(table.Row{role.GetId()})
+}
+
+func (itw *RoleTableWriter) Render(renderFormat int) {
+	if renderFormat == RenderFormatCSV {
+		itw.table.RenderCSV()
+	} else {
+		itw.table.Render()
+	}
 }

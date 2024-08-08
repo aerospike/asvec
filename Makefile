@@ -502,10 +502,18 @@ macos-pkg-notarize:
 .PHONY: test
 test: integration unit
 
+.PHONY: test-large
+test-large: integration-large unit
+
 .PHONY: integration
 integration:
 	mkdir -p $(COV_INTEGRATION_DIR) || true
 	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m 
+
+.PHONY: integration-large
+integration-large:
+	mkdir -p $(COV_INTEGRATION_DIR) || true
+	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration_large -timeout 30m 
 
 .PHONY: unit
 unit:
@@ -513,10 +521,9 @@ unit:
 	go test -tags=unit -cover ./... -args -test.gocoverdir=$(COV_UNIT_DIR)
 
 .PHONY: coverage
-coverage: test
+coverage: test-large
 	go tool covdata textfmt -i="$(COV_INTEGRATION_DIR),$(COV_UNIT_DIR)" -o=$(COVERAGE_DIR)/total.cov
 	go tool cover -func=$(COVERAGE_DIR)/total.cov
-
 
 PHONY: view-coverage
 view-coverage: $(COVERAGE_DIR)/total.cov

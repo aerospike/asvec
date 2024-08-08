@@ -1,4 +1,4 @@
-//go:build integration
+//go:build integration || integration_large
 
 package main
 
@@ -7,13 +7,10 @@ import (
 	"asvec/tests"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"os/exec"
-	"path"
 	"regexp"
 	"strings"
 	"testing"
@@ -21,11 +18,9 @@ import (
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
-	"github.com/aerospike/tools-common-go/client"
 	"github.com/stretchr/testify/suite"
 )
 
-var wd, _ = os.Getwd()
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 var (
@@ -34,229 +29,108 @@ var (
 	barNamespace  = "bar"
 )
 
-func GetCACert(cert string) (*x509.CertPool, error) {
-	// read in file
-	certBytes, err := os.ReadFile(cert)
-	if err != nil {
-		log.Fatalf("unable to read cert file %v", err)
-		return nil, err
-	}
-
-	return client.LoadCACerts([][]byte{certBytes}), nil
-}
-
-func GetCertificates(certFile string, keyFile string) ([]tls.Certificate, error) {
-	cert, err := os.ReadFile(certFile)
-	if err != nil {
-		log.Fatalf("unable to read cert file %v", err)
-		return nil, err
-	}
-
-	key, err := os.ReadFile(keyFile)
-	if err != nil {
-		log.Fatalf("unable to read key file %v", err)
-		return nil, err
-	}
-
-	return client.LoadServerCertAndKey([]byte(cert), []byte(key), nil)
-}
-
 type CmdTestSuite struct {
-	suite.Suite
-	app          string
-	composeFile  string
-	suiteName    string
-	suiteFlags   []string
-	coverFile    string
-	avsIP        string
-	avsPort      int
-	avsHostPort  *avs.HostPort
-	avsTLSConfig *tls.Config
-	avsCreds     *avs.UserPassCredentials
-	avsClient    *avs.AdminClient
+	tests.CmdBaseTestSuite
 }
 
 func TestCmdSuite(t *testing.T) {
 	logger = logger.With(slog.Bool("test-logger", true)) // makes it easy to see which logger is which
-	rootCA, err := GetCACert("docker/tls/config/tls/ca.aerospike.com.crt")
+	rootCA, err := tests.GetCACert("docker/tls/config/tls/ca.aerospike.com.crt")
 	if err != nil {
 		t.Fatalf("unable to read root ca %v", err)
 		t.FailNow()
 		logger.Error("Failed to read cert")
 	}
 
-	certificates, err := GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
+	certificates, err := tests.GetCertificates("docker/mtls/config/tls/localhost.crt", "docker/mtls/config/tls/localhost.key")
 	if err != nil {
 		t.Fatalf("unable to read certificates %v", err)
 		t.FailNow()
 		logger.Error("Failed to read cert")
 	}
 
+	avsSeed := "localhost"
+	avsPort := 10000
+	avsHostPort := avs.NewHostPort(avsSeed, avsPort)
+
 	logger.Info("%v", slog.Any("cert", rootCA))
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/vanilla/docker-compose.yml", // vanilla
-		suiteFlags:  []string{"--log-level debug", "--timeout 10s"},
-		avsIP:       "localhost",
-	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/tls/docker-compose.yml", // tls
-		suiteFlags: []string{
-			"--log-level debug",
-			"--timeout 10s",
-			tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
-		},
-		avsTLSConfig: &tls.Config{
-			Certificates: nil,
-			RootCAs:      rootCA,
-		},
-		avsIP: "localhost",
-	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/mtls/docker-compose.yml", // mutual tls
-		suiteFlags: []string{
-			"--log-level debug",
-			"--timeout 10s",
-			tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
-			tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
-			tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
-		},
-		avsTLSConfig: &tls.Config{
-			Certificates: certificates,
-			RootCAs:      rootCA,
-		},
-		avsIP: "localhost",
-	})
-	suite.Run(t, &CmdTestSuite{
-		composeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
-		suiteFlags: []string{
-			"--log-level debug",
-			"--timeout 10s",
-			tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
-			tests.CreateFlagStr(flags.AuthUser, "admin"),
-			tests.CreateFlagStr(flags.AuthPassword, "admin"),
-		},
-		avsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
-		avsTLSConfig: &tls.Config{
-			Certificates: nil,
-			RootCAs:      rootCA,
-		},
-		avsIP: "localhost",
-	})
-}
+	suites := []*CmdTestSuite{
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 
-func (suite *CmdTestSuite) SetupSuite() {
-	suite.app = path.Join(wd, "app.test")
-	suite.coverFile = path.Join(wd, "../coverage/cmd-coverage.cov")
-	suite.avsPort = 10000
-	suite.avsHostPort = avs.NewHostPort(suite.avsIP, suite.avsPort)
-
-	err := docker_compose_up(suite.composeFile)
-
-	time.Sleep(time.Second * 10)
-
-	if err != nil {
-		suite.FailNowf("unable to start docker compose up", "%v", err)
+				ComposeFile: "docker/vanilla/docker-compose.yml", // vanilla
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Seeds, avsHostPort.String()),
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
+				ComposeFile: "docker/tls/docker-compose.yml", // tls
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Seeds, avsHostPort.String()),
+					tests.CreateFlagStr(flags.TLSCaFile, "docker/tls/config/tls/ca.aerospike.com.crt"),
+				},
+				AvsTLSConfig: &tls.Config{
+					Certificates: nil,
+					RootCAs:      rootCA,
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
+				ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Host, avsHostPort.String()),
+					tests.CreateFlagStr(flags.TLSCaFile, "docker/mtls/config/tls/ca.aerospike.com.crt"),
+					tests.CreateFlagStr(flags.TLSCertFile, "docker/mtls/config/tls/localhost.crt"),
+					tests.CreateFlagStr(flags.TLSKeyFile, "docker/mtls/config/tls/localhost.key"),
+				},
+				AvsTLSConfig: &tls.Config{
+					Certificates: certificates,
+					RootCAs:      rootCA,
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
+		{
+			CmdBaseTestSuite: tests.CmdBaseTestSuite{
+				ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
+				SuiteFlags: []string{
+					"--log-level debug",
+					"--timeout 10s",
+					tests.CreateFlagStr(flags.Host, avsHostPort.String()),
+					tests.CreateFlagStr(flags.TLSCaFile, "docker/auth/config/tls/ca.aerospike.com.crt"),
+					tests.CreateFlagStr(flags.AuthUser, "admin"),
+					tests.CreateFlagStr(flags.AuthPassword, "admin"),
+				},
+				AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+				AvsTLSConfig: &tls.Config{
+					Certificates: nil,
+					RootCAs:      rootCA,
+				},
+				AvsHostPort: avsHostPort,
+			},
+		},
 	}
 
-	goArgs := []string{"build", "-cover", "-coverpkg", "./...", "-o", suite.app}
-
-	// Compile test binary
-	compileCmd := exec.Command("go", goArgs...)
-	out, err := compileCmd.CombinedOutput()
-
-	if err != nil {
-		fmt.Printf("Couldn't compile test bin stdout/err: %v\n", string(out))
-	}
-
-	suite.Assert().NoError(err)
-
-	// Connect avs client
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-
-	for {
-		suite.avsClient, err = avs.NewAdminClient(
-			ctx,
-			avs.HostPortSlice{suite.avsHostPort},
-			nil,
-			true,
-			suite.avsCreds,
-			suite.avsTLSConfig,
-			logger,
-		)
-
-		if err != nil {
-			fmt.Printf("unable to create avs client %v", err)
-
-			if ctx.Err() != nil {
-				suite.FailNowf("unable to create avs client", "%v", err)
-			}
-
-			time.Sleep(time.Second)
-		} else {
-			break
-		}
-	}
-
-}
-
-func (suite *CmdTestSuite) TearDownSuite() {
-	err := os.Remove(suite.app)
-	suite.Assert().NoError(err)
-	time.Sleep(time.Second * 5)
-	suite.Assert().NoError(err)
-	suite.avsClient.Close()
-
-	err = docker_compose_down(suite.composeFile)
-	if err != nil {
-		fmt.Println("unable to stop docker compose down")
+	for _, s := range suites {
+		suite.Run(t, s)
 	}
 }
 
 func (suite *CmdTestSuite) SkipIfUserPassAuthDisabled() {
-	if suite.avsCreds == nil {
+	if suite.AvsCreds == nil {
 		suite.T().Skip("authentication is disabled. skipping test")
 	}
-}
-
-func (suite *CmdTestSuite) addSuiteArgs(args ...string) []string {
-	suiteFlags := strings.Split(strings.Join(suite.suiteFlags, " "), " ")
-	return append(suiteFlags, args...)
-}
-
-// All this does is append the suite flags to args because certain runs (e.g.
-// flag parse error tests) should not append this flags
-func (suite *CmdTestSuite) runSuiteCmd(asvecCmd ...string) ([]string, error) {
-	asvecCmd = suite.addSuiteArgs(asvecCmd...)
-	return suite.runCmd(asvecCmd...)
-}
-
-func (suite *CmdTestSuite) getCmdOutput(cmd *exec.Cmd) ([]string, error) {
-	logger.Info("running command", slog.String("cmd", strings.Join(cmd.Args, " ")))
-	stdout, err := cmd.Output()
-
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			return []string{string(ee.Stderr)}, err
-		}
-		return []string{string(stdout)}, err
-	}
-
-	lines := strings.Split(string(stdout), "\n")
-
-	return lines, nil
-}
-
-func (suite *CmdTestSuite) getCmd(asvecCmd ...string) *exec.Cmd {
-	cmd := exec.Command(suite.app, asvecCmd...)
-	cmd.Env = []string{"GOCOVERDIR=" + os.Getenv("COVERAGE_DIR")}
-
-	return cmd
-}
-
-func (suite *CmdTestSuite) runCmd(asvecCmd ...string) ([]string, error) {
-	cmd := suite.getCmd(asvecCmd...)
-	return suite.getCmdOutput(cmd)
 }
 
 func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
@@ -271,7 +145,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with labels",
 			"index0",
 			"test",
-			fmt.Sprintf("index create -y --host %s -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar", suite.avsHostPort.String()),
+			"index create -y -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar",
 			tests.NewIndexDefinitionBuilder("index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
 				WithLabels(map[string]string{"model": "all-MiniLM-L6-v2", "foo": "bar"}).
 				Build(),
@@ -280,7 +154,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with storage config",
 			"index1",
 			"test",
-			fmt.Sprintf("index create -y --host %s -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s", suite.avsHostPort.String()),
+			"index create -y -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
 			tests.NewIndexDefinitionBuilder("index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
 				WithStorageNamespace("bar").
 				WithStorageSet("testbar").
@@ -290,7 +164,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw params and seeds",
 			"index2",
 			"test",
-			fmt.Sprintf("index create -y --seeds %s -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-max-edges 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10", suite.avsHostPort.String()),
+			"index create -y -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-max-edges 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10",
 			tests.NewIndexDefinitionBuilder("index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
 				WithHnswM(10).
 				WithHnswEf(11).
@@ -302,7 +176,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw batch params",
 			"index3",
 			"test",
-			fmt.Sprintf("index create -y --host %s -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			"index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 100",
 			tests.NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
 				WithHnswBatchingMaxRecord(100).
 				WithHnswBatchingInterval(50000).
@@ -312,7 +186,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw cache params",
 			"index4",
 			"test",
-			fmt.Sprintf("index create -y --host %s -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s", suite.avsHostPort.String()),
+			"index create -y -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
 			tests.NewIndexDefinitionBuilder("index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
@@ -322,7 +196,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw healer params",
 			"index5",
 			"test",
-			fmt.Sprintf("index create -y --host %s -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10", suite.avsHostPort.String()),
+			"index create -y -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10",
 			tests.NewIndexDefinitionBuilder("index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
@@ -335,7 +209,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw merge params",
 			"index6",
 			"test",
-			fmt.Sprintf("index create -y --host %s -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-parallelism 10", suite.avsHostPort.String()),
+			"index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-parallelism 10",
 			tests.NewIndexDefinitionBuilder("index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
 				WithHnswMergeParallelism(10).
 				Build(),
@@ -344,7 +218,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with yaml file",
 			"yaml-file-index",
 			"test",
-			fmt.Sprintf("index create -y --host %s --file tests/indexDef.yaml", suite.avsHostPort.String()),
+			fmt.Sprintf("index create -y --file tests/indexDef.yaml"),
 			tests.NewIndexDefinitionBuilder("yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
 				WithSet("testset").
 				WithHnswEf(101).
@@ -368,14 +242,14 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 
 			if err != nil {
 				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 				suite.FailNow("unable to index create")
 			}
 
-			actual, err := suite.avsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+			actual, err := suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
 
 			if err != nil {
 				suite.FailNowf("unable to get index", "%v", err)
@@ -454,19 +328,19 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 		suite.T().Run(tc.name, func(t *testing.T) {
 
 			for _, index := range tc.indexDefs {
-				err := suite.avsClient.IndexCreateFromIndexDef(context.Background(), index)
+				err := suite.AvsClient.IndexCreateFromIndexDef(context.Background(), index)
 				if err != nil {
 					suite.FailNowf("unable to index create", "%v", err)
 				}
 
-				defer suite.avsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+				defer suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
 			}
 
 			// Test "asvec index list --yaml | sed 's/exists1/does-not-exist-yet/g' | asvec index create"
 
-			listArgs := []string{"index", "list", "--yaml", "--host", suite.avsHostPort.String()}
-			listArgs = suite.addSuiteArgs(listArgs...)
-			listCmd := suite.getCmd(listArgs...)
+			listArgs := []string{"index", "list", "--yaml"}
+			listArgs = suite.AddSuiteArgs(listArgs...)
+			listCmd := suite.GetCmd(listArgs...)
 			listPipe, err := listCmd.StdoutPipe()
 
 			if err != nil {
@@ -483,9 +357,9 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 
 			sedCmd.Stdin = listPipe
 
-			createArgs := []string{"index", "create", "--host", suite.avsHostPort.String(), "--log-level", "debug"}
-			createArgs = suite.addSuiteArgs(createArgs...)
-			createCmd := suite.getCmd(createArgs...)
+			createArgs := []string{"index", "create", "--log-level", "debug"}
+			createArgs = suite.AddSuiteArgs(createArgs...)
+			createCmd := suite.GetCmd(createArgs...)
 			createCmd.Stdin = sedPipe
 
 			// Start list and sed commands so data can flow through the pipes
@@ -524,7 +398,7 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
-	suite.avsClient.IndexCreate(context.Background(), "test", "successful-update", "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
+	suite.AvsClient.IndexCreate(context.Background(), "test", "successful-update", "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
 	ns := "test"
 	index := "successful-update"
 	builder := tests.NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
@@ -539,7 +413,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw params and seeds",
 			"successful-update",
 			ns,
-			fmt.Sprintf("index update -y --seeds %s -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10", suite.avsHostPort.String()),
+			"index update -y -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10",
 			builder.
 				WithLabels(map[string]string{"new-label": "foo"}).
 				WithHnswMaxMemQueueSize(10).
@@ -549,7 +423,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw batch params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y --host %s -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 100", suite.avsHostPort.String()),
+			"index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 100",
 			builder.
 				WithHnswBatchingMaxRecord(100).
 				WithHnswBatchingInterval(50000).
@@ -559,7 +433,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw cache params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y --host %s -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s", suite.avsHostPort.String()),
+			"index update -y -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
 			builder.
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
@@ -569,7 +443,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw healer params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10", suite.avsHostPort.String()),
+			"index update -y -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10",
 			builder.
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
@@ -582,7 +456,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw merge params",
 			"successful-update",
 			"test",
-			fmt.Sprintf("index update -y s --host %s -n test -i successful-update --hnsw-merge-parallelism 10", suite.avsHostPort.String()),
+			"index update -y -n test -i successful-update --hnsw-merge-parallelism 10",
 			builder.
 				WithHnswMergeParallelism(10).
 				Build(),
@@ -591,7 +465,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 
 			if err != nil {
 				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
@@ -600,7 +474,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 
 			time.Sleep(5 * time.Second)
 
-			actual, err := suite.avsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+			actual, err := suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
 
 			if err != nil {
 				suite.FailNowf("unable to get index", "%v", err)
@@ -613,15 +487,15 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestUpdateIndexDoesNotExist() {
-	lines, err := suite.runSuiteCmd(strings.Split(fmt.Sprintf("index update -y --host %s -n test -i DNE --hnsw-merge-parallelism 10", suite.avsHostPort.String()), " ")...)
+	_, lines, err := suite.RunSuiteCmd(strings.Split("index update -y -n test -i DNE --hnsw-merge-parallelism 10", " ")...)
 	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
-	suite.Assert().Contains(lines[0], "server error")
+	suite.Assert().Contains(lines, "server error")
 }
 
 func (suite *CmdTestSuite) TestSuccessfulGCIndexCmd() {
 	index := "successful-gc"
 	ns := "test"
-	suite.avsClient.IndexCreate(context.Background(), ns, index, "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
+	suite.AvsClient.IndexCreate(context.Background(), ns, index, "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
 	testCases := []struct {
 		name           string
 		indexName      string // index names must be unique for the suite
@@ -632,13 +506,13 @@ func (suite *CmdTestSuite) TestSuccessfulGCIndexCmd() {
 			"test with hnsw params and seeds",
 			"successful-gc",
 			ns,
-			fmt.Sprintf("index gc --host %s -n test -i successful-gc -c 10", suite.avsHostPort.String()),
+			"index gc -n test -i successful-gc -c 10",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 
 			if err != nil {
 				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
@@ -649,19 +523,19 @@ func (suite *CmdTestSuite) TestSuccessfulGCIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestGCIndexDoesNotExist() {
-	lines, err := suite.runSuiteCmd(strings.Split(fmt.Sprintf("index gc --host %s -n test -i DNE -c 10", suite.avsHostPort.String()), " ")...)
+	_, lines, err := suite.RunSuiteCmd(strings.Split("index gc -n test -i DNE -c 10", " ")...)
 	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
-	suite.Assert().Contains(lines[0], "server error")
+	suite.Assert().Contains(lines, "server error")
 }
 
 func (suite *CmdTestSuite) TestCreateIndexFailsAlreadyExistsCmd() {
-	lines, err := suite.runSuiteCmd(strings.Split(fmt.Sprintf("index create -y --host %s -n test -i exists -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s", suite.avsHostPort.String()), " ")...)
+	_, lines, err := suite.RunSuiteCmd(strings.Split("index create -y -n test -i exists -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar", " ")...)
 	suite.Assert().NoError(err, "index should have NOT existed on first call. error: %s, stdout/err: %s", err, lines)
 
-	lines, err = suite.runSuiteCmd(strings.Split(fmt.Sprintf("index create -y --host %s -n test -i exists -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s", suite.avsHostPort.String()), " ")...)
+	_, lines, err = suite.RunSuiteCmd(strings.Split("index create -y -n test -i exists -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar", " ")...)
 	suite.Assert().Error(err, "index should HAVE existed on first call. error: %s, stdout/err: %s", err, lines)
 
-	suite.Assert().Contains(lines[0], "AlreadyExists")
+	suite.Assert().Contains(lines, "AlreadyExists")
 }
 
 func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
@@ -677,7 +551,7 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 			"indexdrop1",
 			"test",
 			nil,
-			fmt.Sprintf("index drop -y --seeds %s -n test -i indexdrop1 s", suite.avsHostPort.String()),
+			"index drop -y -n test -i indexdrop1",
 		},
 		{
 			"test with set",
@@ -686,13 +560,13 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 			[]string{
 				"testset",
 			},
-			fmt.Sprintf("index drop -y --host %s -n test -s testset -i indexdrop2 s", suite.avsHostPort.String()),
+			"index drop -y -n test -s testset -i indexdrop2",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.avsClient.IndexCreate(
+			err := suite.AvsClient.IndexCreate(
 				context.Background(),
 				tc.indexNamespace,
 				tc.indexName,
@@ -708,14 +582,14 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 
 			time.Sleep(time.Second * 3)
 
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 
 			if err != nil {
 				suite.FailNow("unable to index drop")
 			}
 
-			_, err = suite.avsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+			_, err = suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
 
 			time.Sleep(time.Second * 3)
 
@@ -727,10 +601,10 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestDropIndexFailsDoesNotExistCmd() {
-	lines, err := suite.runSuiteCmd(strings.Split(fmt.Sprintf("index drop -y --seeds %s -n test -i DNE s", suite.avsHostPort.String()), " ")...)
+	_, lines, err := suite.RunSuiteCmd(strings.Split("index drop -y -n test -i DNE", " ")...)
 
 	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
-	suite.Assert().Contains(lines[0], "server error")
+	suite.Assert().Contains(lines, "server error")
 }
 
 func removeANSICodes(input string) string {
@@ -739,13 +613,13 @@ func removeANSICodes(input string) string {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
-	indexes, err := suite.avsClient.IndexList(context.Background())
+	indexes, err := suite.AvsClient.IndexList(context.Background())
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
 
 	for _, index := range indexes.GetIndices() {
-		err := suite.avsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+		err := suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
 		if err != nil {
 			suite.FailNow(err.Error())
 		}
@@ -764,7 +638,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 			},
-			fmt.Sprintf("index list -h %s", suite.avsHostPort.String()),
+			"index list --no-color",
 			`╭─────────────────────────────────────────────────────────────────────────╮
 │                                 Indexes                                 │
 ├───┬──────┬───────────┬────────┬────────────┬─────────────────┬──────────┤
@@ -784,7 +658,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			fmt.Sprintf("index list -h %s", suite.avsHostPort.String()),
+			"index list --no-color",
 			`╭───────────────────────────────────────────────────────────────────────────────────╮
 │                                      Indexes                                      │
 ├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┤
@@ -806,7 +680,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			fmt.Sprintf("index list -h %s --verbose", suite.avsHostPort.String()),
+			"index list --verbose --no-color",
 			`╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │                                                                                Indexes                                                                               │
 ├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┬──────────────┬───────────────────────┬───────────────────────────────────────────┤
@@ -863,7 +737,7 @@ Values ending with * can be dynamically configured using the 'asvec index update
 					setFilter = append(setFilter, *index.SetFilter)
 				}
 
-				err := suite.avsClient.IndexCreate(
+				err := suite.AvsClient.IndexCreate(
 					context.Background(),
 					index.Id.Namespace,
 					index.Id.Name,
@@ -881,17 +755,15 @@ Values ending with * can be dynamically configured using the 'asvec index update
 					suite.FailNowf("unable to create index", "%v", err)
 				}
 
-				defer suite.avsClient.IndexDrop(
+				defer suite.AvsClient.IndexDrop(
 					context.Background(),
 					index.Id.Namespace,
 					index.Id.Name,
 				)
 			}
 
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
-			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
-
-			actualTable := removeANSICodes(strings.Join(lines, "\n"))
+			actualTable, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, actualTable)
 
 			suite.Assert().Equal(tc.expectedTable, actualTable)
 
@@ -909,7 +781,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 	}{
 		{
 			"create user with comma sep roles",
-			fmt.Sprintf("users create --host %s s --name foo1 --new-password foo --roles admin,read-write", suite.avsHostPort.String()),
+			"users create --name foo1 --new-password foo --roles admin,read-write",
 			&protos.User{
 				Username: "foo1",
 				Roles: []string{
@@ -920,7 +792,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 		},
 		{
 			"create user with comma multiple roles",
-			fmt.Sprintf("users create --host %s s --name foo2 --new-password foo --roles admin --roles read-write", suite.avsHostPort.String()),
+			"users create --name foo2 --new-password foo --roles admin --roles read-write",
 			&protos.User{
 				Username: "foo2",
 				Roles: []string{
@@ -933,7 +805,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 
 			if err != nil {
@@ -942,7 +814,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 
 			time.Sleep(time.Second * 1)
 
-			actualUser, err := suite.avsClient.GetUser(context.Background(), tc.expectedUser.Username)
+			actualUser, err := suite.AvsClient.GetUser(context.Background(), tc.expectedUser.Username)
 			suite.Assert().NoError(err, "error: %s", err)
 
 			suite.Assert().EqualExportedValues(tc.expectedUser, actualUser)
@@ -961,16 +833,16 @@ func (suite *CmdTestSuite) TestFailUserCreateCmd() {
 	}{
 		{
 			"fail to create user with invalid role",
-			fmt.Sprintf("users create --host %s s --name foo1 --new-password foo --roles invalid", suite.avsHostPort.String()),
+			"users create --name foo1 --new-password foo --roles invalid",
 			"unknown roles [invalid]",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			_, lines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
-			suite.Assert().Contains(lines[0], tc.expectedErr)
+			suite.Assert().Contains(lines, tc.expectedErr)
 		})
 
 	}
@@ -987,23 +859,23 @@ func (suite *CmdTestSuite) TestSuccessfulUserDropCmd() {
 		{
 			"drop user",
 			"drop0",
-			fmt.Sprintf("users drop --host %s s --name drop0", suite.avsHostPort.String()),
+			"users drop --name drop0",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.avsClient.CreateUser(context.Background(), tc.user, tc.user, []string{"admin"})
+			err := suite.AvsClient.CreateUser(context.Background(), tc.user, tc.user, []string{"admin"})
 			suite.Assert().NoError(err, "we were not able to create the user before we try to drop it", err)
 
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 
 			if err != nil {
 				suite.FailNow("failed")
 			}
 
-			_, err = suite.avsClient.GetUser(context.Background(), tc.user)
+			_, err = suite.AvsClient.GetUser(context.Background(), tc.user)
 			suite.Assert().Error(err, "we should not have retrieved the dropped user")
 		})
 	}
@@ -1013,11 +885,11 @@ func (suite *CmdTestSuite) TestSuccessfulUserDropCmd() {
 //
 // func (suite *CmdTestSuite) TestFailedUserDropCmd() {
 
-// 	if suite.avsUser == nil {
+// 	if suite.AvsUser == nil {
 // 		suite.T().Skip("authentication is disabled. skipping test")
 // 	}
 
-// 	lines, err := suite.runCmd(strings.Split(fmt.Sprintf("users drop --host %s s --name DNE", suite.avsHostPort.String()), " ")...)
+// 	lines, err := suite.RunCmd(strings.Split("users drop --name DNE", " ")...)
 // 	suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
 // 	suite.Assert().Contains(lines[0], "server error")
 // }
@@ -1034,7 +906,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserGrantCmd() {
 		{
 			"grant user",
 			"grant0",
-			fmt.Sprintf("users grant --host %s s --name grant0 --roles read-write", suite.avsHostPort.String()),
+			"users grant --name grant0 --roles read-write",
 			&protos.User{
 				Username: "grant0",
 				Roles:    []string{"read-write", "admin"},
@@ -1044,17 +916,17 @@ func (suite *CmdTestSuite) TestSuccessfulUserGrantCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.avsClient.CreateUser(context.Background(), tc.user, "foo", []string{"admin"})
+			err := suite.AvsClient.CreateUser(context.Background(), tc.user, "foo", []string{"admin"})
 			suite.Assert().NoError(err, "we were not able to create the user before we try to grant it", err)
 
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 
 			if err != nil {
 				suite.FailNow("failed")
 			}
 
-			actualUser, err := suite.avsClient.GetUser(context.Background(), tc.user)
+			actualUser, err := suite.AvsClient.GetUser(context.Background(), tc.user)
 			suite.Assert().NoError(err, "error: %s", err)
 
 			suite.Assert().EqualExportedValues(tc.expectedUser, actualUser)
@@ -1074,7 +946,7 @@ func (suite *CmdTestSuite) TestSuccessfulUserRevokeCmd() {
 		{
 			"revoke user",
 			"revoke0",
-			fmt.Sprintf("users revoke --host %s s --name revoke0 --roles read-write", suite.avsHostPort.String()),
+			"users revoke --name revoke0 --roles read-write",
 			&protos.User{
 				Username: "revoke0",
 				Roles:    []string{"admin"},
@@ -1084,17 +956,17 @@ func (suite *CmdTestSuite) TestSuccessfulUserRevokeCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.avsClient.CreateUser(context.Background(), tc.user, "foo", []string{"admin", "read-write"})
+			err := suite.AvsClient.CreateUser(context.Background(), tc.user, "foo", []string{"admin", "read-write"})
 			suite.Assert().NoError(err, "we were not able to create the user before we try to revoke it", err)
 
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 
 			if err != nil {
 				suite.FailNow("failed")
 			}
 
-			actualUser, err := suite.avsClient.GetUser(context.Background(), tc.user)
+			actualUser, err := suite.AvsClient.GetUser(context.Background(), tc.user)
 			suite.Assert().NoError(err, "error: %s", err)
 
 			suite.Assert().EqualExportedValues(tc.expectedUser, actualUser)
@@ -1115,16 +987,16 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 			"change password",
 			"password0",
 			"foo",
-			fmt.Sprintf("users new-password --host %s s --name password0 --new-password foo", suite.avsHostPort.String()),
+			"users new-password --name password0 --new-password foo",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.avsClient.CreateUser(context.Background(), tc.user, "oldpass", []string{"admin"})
+			err := suite.AvsClient.CreateUser(context.Background(), tc.user, "oldpass", []string{"admin"})
 			suite.Assert().NoError(err, "we were not able to create the user before we try to change password", err)
 
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
 
 			if err != nil {
@@ -1137,11 +1009,11 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 			creds := avs.NewCredntialsFromUserPass(tc.user, tc.newPassword)
 			_, err = avs.NewAdminClient(
 				ctx,
-				avs.HostPortSlice{suite.avsHostPort},
+				avs.HostPortSlice{suite.AvsHostPort},
 				nil,
 				true,
 				creds,
-				suite.avsTLSConfig,
+				suite.AvsTLSConfig,
 				logger,
 			)
 			suite.Assert().NoError(err, "error: %s", err)
@@ -1159,7 +1031,7 @@ func (suite *CmdTestSuite) TestSuccessfulListUsersCmd() {
 	}{
 		{
 			"users list",
-			fmt.Sprintf("users list --seeds %s s", suite.avsHostPort.String()),
+			"users list --no-color",
 			`╭───────────────────────────────╮
 │             Users             │
 ├───┬───────┬───────────────────┤
@@ -1174,10 +1046,8 @@ Use 'role list' to view available roles
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
-			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
-
-			actualTable := removeANSICodes(strings.Join(lines, "\n"))
+			actualTable, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, actualTable)
 
 			suite.Assert().Equal(tc.expectedTable, actualTable)
 		})
@@ -1194,21 +1064,21 @@ func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidUser() {
 	}{
 		{
 			"fail to revoke user to invalid user",
-			fmt.Sprintf("users revoke --host %s s --name foo1 --roles admin", suite.avsHostPort.String()),
+			"users revoke --name foo1 --roles admin",
 			"failed to revoke user roles: server error: NotFound",
 		},
 		{
 			"fail to grant user to invalid user",
-			fmt.Sprintf("users grant --host %s s --name foo1 --roles admin", suite.avsHostPort.String()),
+			"users grant --name foo1 --roles admin",
 			"failed to grant user roles: server error: NotFound",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			_, lines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
-			suite.Assert().Contains(lines[0], tc.expectedErr)
+			suite.Assert().Contains(lines, tc.expectedErr)
 		})
 
 	}
@@ -1224,21 +1094,21 @@ func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidRoles() {
 	}{
 		{
 			"fail to grant user with invalid role",
-			fmt.Sprintf("users grant --host %s s --name foo1 --roles invalid", suite.avsHostPort.String()),
+			"users grant --name foo1 --roles invalid",
 			"unknown roles [invalid]",
 		},
 		{
 			"fail to revoke user with invalid role",
-			fmt.Sprintf("users revoke --host %s s --name foo1 --roles invalid", suite.avsHostPort.String()),
+			"users revoke --name foo1 --roles invalid",
 			"unknown roles [invalid]",
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
+			_, lines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
-			suite.Assert().Contains(lines[0], tc.expectedErr)
+			suite.Assert().Contains(lines, tc.expectedErr)
 		})
 
 	}
@@ -1254,7 +1124,7 @@ func (suite *CmdTestSuite) TestSuccessfulListRolesCmd() {
 	}{
 		{
 			"roles list",
-			fmt.Sprintf("role list --seeds %s s", suite.avsHostPort.String()),
+			"role list",
 			`╭───┬────────────╮
 │   │ ROLES      │
 ├───┼────────────┤
@@ -1267,11 +1137,8 @@ func (suite *CmdTestSuite) TestSuccessfulListRolesCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runSuiteCmd(strings.Split(tc.cmd, " ")...)
-			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
-
-			actualTable := removeANSICodes(strings.Join(lines, "\n"))
-
+			actualTable, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, actualTable)
 			suite.Assert().Equal(tc.expectedTable, actualTable)
 		})
 	}
@@ -1285,37 +1152,67 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 	}{
 		{
 			"use seeds and hosts together",
-			fmt.Sprintf("index create -y --seeds %s --host 1.1.1.1:3001 -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s", suite.avsHostPort.String()),
+			"index create -y --seeds 2.2.2.2:3000 --host 1.1.1.1:3001 -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			"index list --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			"index drop -y --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			"index gc --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
 			"Error: only --seeds or --host allowed",
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because no create index required args are provided",
-			fmt.Sprintf("index create --seeds %s", suite.avsHostPort.String()),
+			fmt.Sprintf("index create --seeds %s", suite.AvsHostPort.String()),
 			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because some create index required args are not provided",
-			fmt.Sprintf("index create --seeds %s --dimension 10", suite.avsHostPort.String()),
+			fmt.Sprintf("index create --seeds %s --dimension 10", suite.AvsHostPort.String()),
 			"Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{
 			"use seeds and hosts together",
-			fmt.Sprintf("index list --seeds %s --host 1.1.1.1:3001", suite.avsHostPort.String()),
+			"user create --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 --name foo --roles admin",
 			"Error: only --seeds or --host allowed",
 		},
 		{
 			"use seeds and hosts together",
-			fmt.Sprintf("index drop -y --seeds %s --host 1.1.1.1:3001 -n test -i index1", suite.avsHostPort.String()),
+			"user drop --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 --name foo",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			"user ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			"roles ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use seeds and hosts together",
+			"nodes ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
 			"Error: only --seeds or --host allowed",
 		},
 		{
 			"test with bad dimension",
-			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d -1 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar s",
+			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d -1 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
 			"Error: invalid argument \"-1\" for \"-d, --dimension\"",
 		},
 		{
 			"test with bad distance metric",
-			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m BAD --vector-field vector1 --storage-namespace bar --storage-set testbar s",
+			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m BAD --vector-field vector1 --storage-namespace bar --storage-set testbar",
 			"Error: invalid argument \"BAD\" for \"-m, --distance-metric\"",
 		},
 		{
@@ -1423,47 +1320,10 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, err := suite.runCmd(strings.Split(tc.cmd, " ")...)
+			_, lines, err := suite.RunCmd(strings.Split(tc.cmd, " ")...)
 
 			suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
-			suite.Assert().Contains(lines[0], tc.expectedErrStr)
+			suite.Assert().Contains(lines, tc.expectedErrStr)
 		})
 	}
-}
-
-func docker_compose_up(composeFile string) error {
-	fmt.Println("Starting docker containers")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "docker", "-lDEBUG", "compose", fmt.Sprintf("-f%s", composeFile), "up", "-d")
-	output, err := cmd.CombinedOutput()
-
-	fmt.Printf("docker compose up output: %s\n", string(output))
-
-	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			return err
-		}
-		return err
-	}
-
-	return nil
-}
-
-func docker_compose_down(composeFile string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "docker", "compose", fmt.Sprintf("-f%s", composeFile), "down")
-	_, err := cmd.Output()
-
-	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			return err
-		}
-		return err
-	}
-
-	return nil
 }

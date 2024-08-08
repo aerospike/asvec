@@ -10,27 +10,35 @@ import (
 )
 
 type UserTableWriter struct {
-	table.Writer
+	table  table.Writer
 	logger *slog.Logger
 }
 
 func NewUserTableWriter(writer io.Writer, logger *slog.Logger) *UserTableWriter {
 	t := UserTableWriter{NewDefaultWriter(writer), logger}
 
-	t.AppendHeader(table.Row{"User", "Roles"}, rowConfigAutoMerge)
+	t.table.AppendHeader(table.Row{"User", "Roles"}, rowConfigAutoMerge)
 
-	t.SetTitle("Users")
-	t.SetAutoIndex(true)
-	t.SortBy([]table.SortBy{
+	t.table.SetTitle("Users")
+	t.table.SetAutoIndex(true)
+	t.table.SortBy([]table.SortBy{
 		{Name: "Roles", Mode: table.Asc},
 		{Name: "User", Mode: table.Asc},
 	})
 
-	t.Style().Options.SeparateRows = true
+	t.table.Style().Options.SeparateRows = true
 
 	return &t
 }
 
 func (itw *UserTableWriter) AppendUserRow(user *protos.User) {
-	itw.AppendRow(table.Row{user.GetUsername(), strings.Join(user.GetRoles(), ", ")})
+	itw.table.AppendRow(table.Row{user.GetUsername(), strings.Join(user.GetRoles(), ", ")})
+}
+
+func (itw *UserTableWriter) Render(renderFormat int) {
+	if renderFormat == RenderFormatCSV {
+		itw.table.RenderCSV()
+	} else {
+		itw.table.Render()
+	}
 }

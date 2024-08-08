@@ -1,11 +1,8 @@
-name: Test
+name: Large Tests
 on:
-  push:
-    branches:
-      - '**'  # Run on every branch
   pull_request:
-    branches-ignore:
-      - '**'  # Ignore all branches for pull requests
+    branches:
+        - "**"
   workflow_call:
   
 jobs:
@@ -28,9 +25,17 @@ jobs:
         echo "$FEATURES_CONF" > docker/tls/config/features.conf
         echo "$FEATURES_CONF" > docker/mtls/config/features.conf
         echo "$FEATURES_CONF" > docker/auth/config/features.conf
+        echo "$FEATURES_CONF" > docker/multi-node/config/features.conf
+        echo "$FEATURES_CONF" > docker/multi-node-LB/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
         docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
     - name: Run tests
       run: |
-        make test
+        make coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        files: ./coverage/total.cov
+        verbose: false

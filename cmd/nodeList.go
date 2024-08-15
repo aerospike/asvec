@@ -61,17 +61,17 @@ asvec node ls
 				nodeListFlags.clientFlags.NewSLogAttr()...,
 			)
 
-			adminClient, err := createClientFromFlags(&nodeListFlags.clientFlags)
+			client, err := createClientFromFlags(&nodeListFlags.clientFlags)
 			if err != nil {
 				view.Error(err.Error())
 				return
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), nodeListFlags.clientFlags.Timeout)
 			defer cancel()
 
-			nodeInfos := getAllNodesInfo(ctx, adminClient)
+			nodeInfos := getAllNodesInfo(ctx, client)
 
 			logger.Debug("received node states", slog.Any("nodeStates", nodeInfos))
 
@@ -117,8 +117,8 @@ Possible scenarios:
 	}
 }
 
-func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*writers.NodeInfo {
-	nodeIDs := adminClient.NodeIDs(ctx)
+func getAllNodesInfo(ctx context.Context, client *avs.Client) []*writers.NodeInfo {
+	nodeIDs := client.NodeIDs(ctx)
 
 	logger.Debug("received node ids", slog.Any("nodeIds", nodeIDs))
 
@@ -150,7 +150,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			go func() {
 				defer wg.Done()
 
-				connectedEndpoint, err := adminClient.ConnectedNodeEndpoint(ctx, nodeId)
+				connectedEndpoint, err := client.ConnectedNodeEndpoint(ctx, nodeId)
 				if err != nil {
 					l.ErrorContext(ctx,
 						"failed to get connected endpoint",
@@ -172,7 +172,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			go func() {
 				defer wg.Done()
 
-				endpoints, err := adminClient.ClusterEndpoints(
+				endpoints, err := client.ClusterEndpoints(
 					ctx,
 					nodeId,
 					nodeListFlags.clientFlags.ListenerName.Val, // TODO: May want to request more names.
@@ -198,7 +198,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			go func() {
 				defer wg.Done()
 
-				state, err := adminClient.ClusteringState(ctx, nodeId)
+				state, err := client.ClusteringState(ctx, nodeId)
 				if err != nil {
 					l.ErrorContext(ctx,
 						"failed to get clustering state",
@@ -220,7 +220,7 @@ func getAllNodesInfo(ctx context.Context, adminClient *avs.AdminClient) []*write
 			go func() {
 				defer wg.Done()
 
-				about, err := adminClient.About(ctx, nodeId)
+				about, err := client.About(ctx, nodeId)
 				if err != nil {
 					l.ErrorContext(ctx,
 						"failed to get about info",

@@ -60,11 +60,11 @@ asvec user create --%s foo --%s read-write
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userCreateFlags.clientFlags)
+			client, err := createClientFromFlags(&userCreateFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			if userCreateFlags.newPassword == "" {
 				userCreateFlags.newPassword, err = passwordPrompt("New User Password: ")
@@ -77,7 +77,7 @@ asvec user create --%s foo --%s read-write
 			ctx, cancel := context.WithTimeout(context.Background(), userCreateFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.CreateUser(
+			err = client.CreateUser(
 				ctx,
 				userCreateFlags.newUsername,
 				userCreateFlags.newPassword,

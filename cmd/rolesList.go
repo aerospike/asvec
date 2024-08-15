@@ -53,16 +53,16 @@ asvec role ls
 				rolesListFlags.clientFlags.NewSLogAttr()...,
 			)
 
-			adminClient, err := createClientFromFlags(&rolesListFlags.clientFlags)
+			client, err := createClientFromFlags(&rolesListFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), rolesListFlags.clientFlags.Timeout)
 			defer cancel()
 
-			userList, err := adminClient.ListRoles(ctx)
+			userList, err := client.ListRoles(ctx)
 			if err != nil {
 				logger.Error("failed to list roles", slog.Any("error", err))
 				return err

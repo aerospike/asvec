@@ -64,16 +64,16 @@ asvec index gc -i myindex -n test -c 1720744696
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&indexGCFlags.clientFlags)
+			client, err := createClientFromFlags(&indexGCFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), indexGCFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.GcInvalidVertices(
+			err = client.GcInvalidVertices(
 				ctx,
 				indexGCFlags.namespace,
 				indexGCFlags.indexName,

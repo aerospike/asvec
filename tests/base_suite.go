@@ -26,7 +26,7 @@ type CmdBaseTestSuite struct {
 	AvsHostPort  *avs.HostPort
 	AvsTLSConfig *tls.Config
 	AvsCreds     *avs.UserPassCredentials
-	AvsClient    *avs.AdminClient
+	AvsClient    *avs.Client
 	SuiteFlags   []string
 	Logger       *slog.Logger
 }
@@ -59,7 +59,7 @@ func (suite *CmdBaseTestSuite) SetupSuite() {
 
 	suite.Assert().NoError(err)
 
-	suite.AvsClient, err = GetAdminClient(suite.AvsHostPort, suite.AvsCreds, suite.AvsTLSConfig, suite.Logger)
+	suite.AvsClient, err = GetClient(suite.AvsHostPort, suite.AvsCreds, suite.AvsTLSConfig, suite.Logger)
 	if err != nil {
 		suite.FailNowf("unable to create admin client", "%v", err)
 	}

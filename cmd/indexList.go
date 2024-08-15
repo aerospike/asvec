@@ -65,16 +65,16 @@ asvec index ls
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&indexListFlags.clientFlags)
+			client, err := createClientFromFlags(&indexListFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), indexListFlags.clientFlags.Timeout)
 			defer cancel()
 
-			indexList, err := adminClient.IndexList(ctx)
+			indexList, err := client.IndexList(ctx)
 			if err != nil {
 				logger.Error("failed to list indexes", slog.Any("error", err))
 				return err
@@ -92,7 +92,7 @@ asvec index ls
 				wg.Add(1)
 				go func(i int, index *protos.IndexDefinition) {
 					defer wg.Done()
-					indexStatus, err := adminClient.IndexGetStatus(ctx, index.Id.Namespace, index.Id.Name)
+					indexStatus, err := client.IndexGetStatus(ctx, index.Id.Namespace, index.Id.Name)
 					if err != nil {
 						logger.ErrorContext(ctx,
 							"failed to get index status",

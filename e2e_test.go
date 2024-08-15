@@ -112,7 +112,7 @@ func TestCmdSuite(t *testing.T) {
 					tests.CreateFlagStr(flags.AuthUser, "admin"),
 					tests.CreateFlagStr(flags.AuthPassword, "admin"),
 				},
-				AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+				AvsCreds: avs.NewCredentialsFromUserPass("admin", "admin"),
 				AvsTLSConfig: &tls.Config{
 					Certificates: nil,
 					RootCAs:      rootCA,
@@ -1006,8 +1006,8 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
 
-			creds := avs.NewCredntialsFromUserPass(tc.user, tc.newPassword)
-			_, err = avs.NewAdminClient(
+			creds := avs.NewCredentialsFromUserPass(tc.user, tc.newPassword)
+			_, err = avs.NewClient(
 				ctx,
 				avs.HostPortSlice{suite.AvsHostPort},
 				nil,

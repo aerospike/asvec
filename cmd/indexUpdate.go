@@ -88,11 +88,11 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&indexUpdateFlags.clientFlags)
+			client, err := createClientFromFlags(&indexUpdateFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			var batchingParams *protos.HnswBatchingParams
 			if indexUpdateFlags.hnswBatch.MaxRecords.Val != nil || indexUpdateFlags.hnswBatch.Interval.Uint32() != nil {
@@ -124,7 +124,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.IndexUpdate(
+			err = client.IndexUpdate(
 				ctx,
 				indexUpdateFlags.namespace,
 				indexUpdateFlags.indexName,

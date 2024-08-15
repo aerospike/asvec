@@ -52,16 +52,16 @@ asvec user ls
 				userListFlags.clientFlags.NewSLogAttr()...,
 			)
 
-			adminClient, err := createClientFromFlags(&userListFlags.clientFlags)
+			client, err := createClientFromFlags(&userListFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), userListFlags.clientFlags.Timeout)
 			defer cancel()
 
-			userList, err := adminClient.ListUsers(ctx)
+			userList, err := client.ListUsers(ctx)
 			if err != nil {
 				logger.Error("failed to list users", slog.Any("error", err))
 				return err

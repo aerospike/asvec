@@ -206,22 +206,22 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&indexCreateFlags.clientFlags)
+			client, err := createClientFromFlags(&indexCreateFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			if stdinIndexDefinitions != nil {
-				return runCreateIndexFromDef(adminClient)
+				return runCreateIndexFromDef(client)
 			}
 
-			return runCreateIndexFromFlags(adminClient)
+			return runCreateIndexFromFlags(client)
 		},
 	}
 }
 
-func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
+func runCreateIndexFromDef(client *avs.Client) error {
 	if len(stdinIndexDefinitions.GetIndices()) == 0 {
 		view.Print("No indexes to create")
 		return nil
@@ -232,7 +232,7 @@ func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
 	for _, indexDef := range stdinIndexDefinitions.GetIndices() {
 		ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
 
-		err := adminClient.IndexCreateFromIndexDef(ctx, indexDef)
+		err := client.IndexCreateFromIndexDef(ctx, indexDef)
 
 		cancel()
 
@@ -279,7 +279,7 @@ func runCreateIndexFromDef(adminClient *avs.AdminClient) error {
 	return nil
 }
 
-func runCreateIndexFromFlags(adminClient *avs.AdminClient) error {
+func runCreateIndexFromFlags(client *avs.Client) error {
 	if !indexCreateFlags.yes && !confirm(fmt.Sprintf(
 		"Are you sure you want to create the index %s.%s on field %s?",
 		nsAndSetString(
@@ -328,7 +328,7 @@ func runCreateIndexFromFlags(adminClient *avs.AdminClient) error {
 	ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)
 	defer cancel()
 
-	err := adminClient.IndexCreate(
+	err := client.IndexCreate(
 		ctx,
 		indexCreateFlags.namespace,
 		indexCreateFlags.indexName,

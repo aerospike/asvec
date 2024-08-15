@@ -310,23 +310,23 @@ func DockerComposeDown(composeFile string) error {
 	return nil
 }
 
-func GetAdminClient(
+func GetClient(
 	avsHostPort *avs.HostPort,
 	avsCreds *avs.UserPassCredentials,
 	avsTLSConfig *tls.Config,
 	logger *slog.Logger,
-) (*avs.AdminClient, error) {
+) (*avs.Client, error) {
 	// Connect avs client
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*50)
 	defer cancel()
 
 	var (
-		avsClient *avs.AdminClient
+		avsClient *avs.Client
 		err       error
 	)
 
 	for {
-		avsClient, err = avs.NewAdminClient(
+		avsClient, err = avs.NewClient(
 			ctx,
 			avs.HostPortSlice{avsHostPort},
 			nil,

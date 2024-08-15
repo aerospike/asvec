@@ -63,11 +63,11 @@ asvec index drop -i myindex -n test
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&indexDropFlags.clientFlags)
+			client, err := createClientFromFlags(&indexDropFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			if !indexDropFlags.yes && !confirm(fmt.Sprintf(
 				"Are you sure you want to drop the index %s on field %s?",
@@ -83,7 +83,7 @@ asvec index drop -i myindex -n test
 			ctx, cancel := context.WithTimeout(context.Background(), indexDropFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.IndexDrop(ctx, indexDropFlags.namespace, indexDropFlags.indexName)
+			err = client.IndexDrop(ctx, indexDropFlags.namespace, indexDropFlags.indexName)
 			if err != nil {
 				logger.Error("unable to drop index", slog.Any("error", err))
 				return err

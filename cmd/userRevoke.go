@@ -57,16 +57,16 @@ asvec user revoke --%s foo --%s admin
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userRevokeFlags.clientFlags)
+			client, err := createClientFromFlags(&userRevokeFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), userRevokeFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.RevokeRoles(
+			err = client.RevokeRoles(
 				ctx,
 				userRevokeFlags.revokeUser,
 				userRevokeFlags.roles,

@@ -25,7 +25,7 @@ service:
       tls-id: service-tls
       advertised-listeners:
         default:
-          address: 127.0.0.1
+          address: localhost
           port: 10000
 
 # Management API listening ports, TLS and network interface.

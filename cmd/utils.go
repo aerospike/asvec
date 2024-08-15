@@ -27,7 +27,7 @@ func passwordPrompt(prompt string) (string, error) {
 	return string(bytePassword), nil
 }
 
-func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, error) {
+func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.Client, error) {
 	hosts := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
 	isLoadBalancer := isLoadBalancer(clientFlags.Seeds)
 
@@ -59,10 +59,10 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 
 	var creds *avs.UserPassCredentials
 	if clientFlags.AuthCredentials.User.Val != nil {
-		creds = avs.NewCredntialsFromUserPass(*clientFlags.AuthCredentials.User.Val, *password)
+		creds = avs.NewCredentialsFromUserPass(*clientFlags.AuthCredentials.User.Val, *password)
 	}
 
-	adminClient, err := avs.NewAdminClient(
+	client, err := avs.NewClient(
 		ctx, hosts, clientFlags.ListenerName.Val, isLoadBalancer, creds, tlsConfig, logger,
 	)
 	if err != nil {
@@ -70,7 +70,7 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 		return nil, err
 	}
 
-	return adminClient, nil
+	return client, nil
 }
 func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) avs.HostPortSlice {
 	hosts := avs.HostPortSlice{}

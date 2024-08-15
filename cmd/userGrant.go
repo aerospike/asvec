@@ -57,16 +57,16 @@ asvec user grant --%s foo --%s admin
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userGrantFlags.clientFlags)
+			client, err := createClientFromFlags(&userGrantFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), userGrantFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.GrantRoles(
+			err = client.GrantRoles(
 				ctx,
 				userGrantFlags.grantUser,
 				userGrantFlags.roles,

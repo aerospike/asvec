@@ -52,16 +52,16 @@ asvec user drop --%s foo
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userDropFlags.clientFlags)
+			client, err := createClientFromFlags(&userDropFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), userDropFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.DropUser(
+			err = client.DropUser(
 				ctx,
 				userDropFlags.dropUser,
 			)

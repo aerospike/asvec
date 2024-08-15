@@ -56,11 +56,11 @@ asvec user new-password --%s foo
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userNewPassFlags.clientFlags)
+			client, err := createClientFromFlags(&userNewPassFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			if userNewPassFlags.password == "" {
 				userNewPassFlags.password, err = passwordPrompt("New Password: ")
@@ -73,7 +73,7 @@ asvec user new-password --%s foo
 			ctx, cancel := context.WithTimeout(context.Background(), userNewPassFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.UpdateCredentials(
+			err = client.UpdateCredentials(
 				ctx,
 				userNewPassFlags.username,
 				userNewPassFlags.password,

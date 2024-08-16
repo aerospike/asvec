@@ -11,10 +11,10 @@ import (
 )
 
 var userListFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	format      int // For testing. Hidden
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newUserListFlagSet() *pflag.FlagSet {
@@ -39,6 +39,10 @@ func newUserListCmd() *cobra.Command {
 		Aliases: []string{"list"},
 		Short:   "A command for listing users",
 		Long: fmt.Sprintf(`A command for listing useful information about AVS users.
+For more information on managing users, refer to: 
+https://aerospike.com/docs/vector/operate/user-management
+
+
 For example:
 
 %s
@@ -52,7 +56,7 @@ asvec user ls
 				userListFlags.clientFlags.NewSLogAttr()...,
 			)
 
-			client, err := createClientFromFlags(&userListFlags.clientFlags)
+			client, err := createClientFromFlags(userListFlags.clientFlags)
 			if err != nil {
 				return err
 			}

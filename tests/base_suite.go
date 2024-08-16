@@ -104,7 +104,7 @@ func (suite *CmdBaseTestSuite) GetCmd(asvecCmd ...string) *exec.Cmd {
 }
 
 func (suite *CmdBaseTestSuite) getCmdOutput(cmd *exec.Cmd) (string, string, error) {
-	suite.Logger.Info("running command", slog.String("cmd", strings.Join(cmd.Args, " ")))
+	suite.Logger.Info("running command", slog.String("args", strings.Join(cmd.Args, " ")))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.Stdout = stdout

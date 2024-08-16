@@ -17,19 +17,18 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var indexListFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	verbose     bool
 	format      int // For testing. Hidden
 	yaml        bool
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newIndexListFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.BoolVarP(&indexListFlags.verbose, flags.Verbose, "v", false, "Print detailed index information.")                                                    //nolint:lll // For readability
 	flagSet.BoolVar(&indexListFlags.yaml, flags.Yaml, false, "Output indexes in yaml format to later be used with \"asvec index create --file <index-def.yaml>") //nolint:lll // For readability
-	flagSet.AddFlagSet(indexListFlags.clientFlags.NewClientFlagSet())
 
 	err := flags.AddFormatTestFlag(flagSet, &indexListFlags.format)
 	if err != nil {
@@ -65,7 +64,7 @@ asvec index ls
 				)...,
 			)
 
-			client, err := createClientFromFlags(&indexListFlags.clientFlags)
+			client, err := createClientFromFlags(indexListFlags.clientFlags)
 			if err != nil {
 				return err
 			}

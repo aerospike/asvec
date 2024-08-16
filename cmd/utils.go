@@ -76,11 +76,11 @@ func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFla
 	hosts := avs.HostPortSlice{}
 
 	if len(seeds.Seeds) > 0 {
-		logger.Debug("seeds is set")
+		logger.Debug(fmt.Sprintf("--%s is set, load-balancer will be DISABLED and tending WILL occur", flags.Seeds))
 
 		hosts = append(hosts, seeds.Seeds...)
 	} else {
-		logger.Debug("hosts is set")
+		logger.Debug(fmt.Sprintf("--%s is set, load-balancer will be ENABLED and tending WILL NOT occur", flags.Host))
 
 		hosts = append(hosts, &host.HostPort)
 	}

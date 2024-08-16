@@ -10,6 +10,8 @@ var userCmd = &cobra.Command{
 	Aliases: []string{"users"},
 	Short:   "A parent command for viewing and configuring users.",
 	Long: `A parent command for listing, creating, dropping, and granting roles to users. 
+For more information on managing users, refer to: 
+https://aerospike.com/docs/vector/operate/user-management
 
 For example:
 

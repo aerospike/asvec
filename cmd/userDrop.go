@@ -12,15 +12,14 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var userDropFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	dropUser    string
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newUserDropFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.AddFlagSet(userDropFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userDropFlags.dropUser, flags.Name, "", "The name of the user to drop.") //nolint:lll // For readability
 
 	return flagSet
@@ -34,7 +33,8 @@ func newUserDropCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "drop",
 		Short: "A command for dropping users",
-		Long: fmt.Sprintf(`A command for dropping users.
+		Long: fmt.Sprintf(`A command for dropping users. For more information on managing users, refer to: 
+https://aerospike.com/docs/vector/operate/user-management
 
 For example:
 
@@ -52,7 +52,7 @@ asvec user drop --%s foo
 				)...,
 			)
 
-			client, err := createClientFromFlags(&userDropFlags.clientFlags)
+			client, err := createClientFromFlags(userDropFlags.clientFlags)
 			if err != nil {
 				return err
 			}

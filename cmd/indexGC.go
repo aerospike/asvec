@@ -12,20 +12,19 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var indexGCFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	namespace   string
 	indexName   string
 	cutoffTime  flags.UnixTimestampFlag
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newIndexGCFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.StringVarP(&indexGCFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.") //nolint:lll // For readability
-	flagSet.StringVarP(&indexGCFlags.indexName, flags.IndexName, "i", "", "The name of the index.")       //nolint:lll // For readability
-	flagSet.VarP(&indexGCFlags.cutoffTime, flags.CutoffTime, "c", "The cutoff time for gc.")              //nolint:lll // For readability
-	flagSet.AddFlagSet(indexGCFlags.clientFlags.NewClientFlagSet())
+	flagSet.StringVarP(&indexGCFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.") //nolint:lll // For readability
+	flagSet.StringVarP(&indexGCFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")       //nolint:lll // For readability
+	flagSet.VarP(&indexGCFlags.cutoffTime, flags.CutoffTime, "c", "The cutoff time for gc.")                               //nolint:lll // For readability
 
 	return flagSet
 }
@@ -64,7 +63,7 @@ asvec index gc -i myindex -n test -c 1720744696
 				)...,
 			)
 
-			client, err := createClientFromFlags(&indexGCFlags.clientFlags)
+			client, err := createClientFromFlags(indexGCFlags.clientFlags)
 			if err != nil {
 				return err
 			}

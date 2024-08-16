@@ -19,6 +19,9 @@ const (
 	Yes                          = "yes"
 	IndexName                    = "index-name"
 	VectorField                  = "vector-field"
+	Fields                       = "fields"
+	MaxResults                   = "max-results"
+	MaxDataKeys                  = "max-keys"
 	Dimension                    = "dimension"
 	DistanceMetric               = "distance-metric"
 	IndexLabels                  = "index-labels"
@@ -30,9 +33,9 @@ const (
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"
 	CutoffTime                   = "cutoff-time"
-	MaxEdges                     = "hnsw-max-edges"
-	ConstructionEf               = "hnsw-ef-construction"
-	Ef                           = "hnsw-ef"
+	HnswMaxEdges                 = "hnsw-max-edges"
+	HnswConstructionEf           = "hnsw-ef-construction"
+	HnswEf                       = "hnsw-ef"
 	HnswMaxMemQueueSize          = "hnsw-max-mem-queue-size"
 	BatchMaxRecords              = "hnsw-batch-max-records"
 	BatchInterval                = "hnsw-batch-interval"
@@ -50,6 +53,10 @@ const (
 	TLSCertFile                  = "tls-certfile"
 	TLSKeyFile                   = "tls-keyfile"
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
+
+	// TODO  Replace short flag constants with variables
+	NamespaceShort = "n"
+	IndexNameShort = "i"
 )
 
 func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) error {

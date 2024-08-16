@@ -49,7 +49,7 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 	return &t
 }
 
-func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, status *protos.IndexStatusResponse) {
+func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, status *protos.IndexStatusResponse, format int) {
 	row := table.Row{index.Id.Name, index.Id.Namespace, index.SetFilter, index.Field,
 		index.Dimensions, index.VectorDistanceMetric, status.GetUnmergedRecordCount()}
 
@@ -60,7 +60,7 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 		tStorage.AppendRow(table.Row{"Namespace", index.Storage.GetNamespace()})
 		tStorage.AppendRow(table.Row{"Set", index.Storage.GetSet()})
 
-		row = append(row, tStorage.Render())
+		row = append(row, renderTable(tStorage, format))
 
 		switch v := index.Params.(type) {
 		case *protos.IndexDefinition_HnswParams:
@@ -83,7 +83,7 @@ func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, statu
 				{"Merge Parallelism*", v.HnswParams.MergeParams.GetParallelism()},
 			})
 
-			row = append(row, tHNSW.Render())
+			row = append(row, renderTable(tHNSW, format))
 		default:
 			itw.logger.Warn("the server returned unrecognized index type params. recognized index param types are: HNSW")
 		}

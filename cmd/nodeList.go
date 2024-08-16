@@ -19,10 +19,10 @@ import (
 )
 
 var nodeListFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	format      int // For testing. Hidden
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newNodeListFlagSet() *pflag.FlagSet {
@@ -61,7 +61,7 @@ asvec node ls
 				nodeListFlags.clientFlags.NewSLogAttr()...,
 			)
 
-			client, err := createClientFromFlags(&nodeListFlags.clientFlags)
+			client, err := createClientFromFlags(nodeListFlags.clientFlags)
 			if err != nil {
 				view.Error(err.Error())
 				return

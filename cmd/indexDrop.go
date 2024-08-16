@@ -12,22 +12,19 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var indexDropFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	yes         bool
 	namespace   string
-	sets        []string
 	indexName   string
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newIndexDropFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexDropFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.") //nolint:lll // For readability
-	flagSet.StringVarP(&indexDropFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")   //nolint:lll // For readability
-	flagSet.StringSliceVarP(&indexDropFlags.sets, flags.Sets, "s", nil, "The sets for the index.")            //nolint:lll // For readability
-	flagSet.StringVarP(&indexDropFlags.indexName, flags.IndexName, "i", "", "The name of the index.")         //nolint:lll // For readability
-	flagSet.AddFlagSet(indexDropFlags.clientFlags.NewClientFlagSet())
+	flagSet.BoolVarP(&indexDropFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                //nolint:lll // For readability
+	flagSet.StringVarP(&indexDropFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.") //nolint:lll // For readability
+	flagSet.StringVarP(&indexDropFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")       //nolint:lll // For readability
 
 	return flagSet
 }
@@ -43,7 +40,8 @@ func newIndexDropCommand() *cobra.Command {
 		Use:   "drop",
 		Short: "A command for dropping indexes",
 		Long: fmt.Sprintf(`A command for dropping indexes. Deleting an index will free up 
-storage but will also disable vector search on your data.
+storage but will also disable vector search on your data. For guidance on 
+managing indexes, refer to: https://aerospike.com/docs/vector/operate/index-management
 
 For example:
 
@@ -58,23 +56,19 @@ asvec index drop -i myindex -n test
 				append(indexDropFlags.clientFlags.NewSLogAttr(),
 					slog.Bool(flags.Yes, indexDropFlags.yes),
 					slog.String(flags.Namespace, indexDropFlags.namespace),
-					slog.Any(flags.Sets, indexDropFlags.sets),
 					slog.String(flags.IndexName, indexDropFlags.indexName),
 				)...,
 			)
 
-			client, err := createClientFromFlags(&indexDropFlags.clientFlags)
+			client, err := createClientFromFlags(indexDropFlags.clientFlags)
 			if err != nil {
 				return err
 			}
 			defer client.Close()
 
 			if !indexDropFlags.yes && !confirm(fmt.Sprintf(
-				"Are you sure you want to drop the index %s on field %s?",
-				nsAndSetString(
-					indexCreateFlags.namespace,
-					indexCreateFlags.sets,
-				),
+				"Are you sure you want to drop the %s index on field %s?",
+				indexCreateFlags.namespace,
 				indexCreateFlags.vectorField,
 			)) {
 				return nil

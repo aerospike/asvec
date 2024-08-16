@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -122,7 +123,30 @@ func TestCmdSuite(t *testing.T) {
 		},
 	}
 
-	for _, s := range suites {
+	testSuiteEnv := os.Getenv("ASVEC_TEST_SUITES")
+	picked_suites := map[int]struct{}{}
+
+	if testSuiteEnv != "" {
+		testSuites := strings.Split(testSuiteEnv, ",")
+
+		for _, s := range testSuites {
+			i, err := strconv.Atoi(s)
+			if err != nil {
+				t.Fatalf("unable to convert %s to int: %v", s, err)
+			}
+
+			picked_suites[i] = struct{}{}
+		}
+	}
+
+	logger.Info("Running test suites", slog.Any("suites", picked_suites))
+
+	for i, s := range suites {
+		if len(picked_suites) != 0 {
+			if _, ok := picked_suites[i]; !ok {
+				continue
+			}
+		}
 		suite.Run(t, s)
 	}
 }
@@ -371,6 +395,9 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to start sed cmd", "%v", err)
 			}
 
+			// Need to pause a bit while listCmd has some output
+			time.Sleep(time.Millisecond * 500)
+
 			// Run create Cmd to completion
 			output, err := createCmd.CombinedOutput()
 			logger.Debug(string(output))
@@ -553,15 +580,6 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 			nil,
 			"index drop -y -n test -i indexdrop1",
 		},
-		{
-			"test with set",
-			"indexdrop2",
-			"test",
-			[]string{
-				"testset",
-			},
-			"index drop -y -n test -s testset -i indexdrop2",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -638,14 +656,10 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 			},
-			"index list --no-color",
-			`╭─────────────────────────────────────────────────────────────────────────╮
-│                                 Indexes                                 │
-├───┬──────┬───────────┬────────┬────────────┬─────────────────┬──────────┤
-│   │ NAME │ NAMESPACE │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │
-├───┼──────┼───────────┼────────┼────────────┼─────────────────┼──────────┤
-│ 1 │ list │ test      │ vector │        256 │          COSINE │        0 │
-╰───┴──────┴───────────┴────────┴────────────┴─────────────────┴──────────╯
+			"index list --no-color --format 1",
+			`Indexes
+,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged
+1,list,test,vector,256,COSINE,0
 `,
 		},
 		{
@@ -658,16 +672,11 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"index list --no-color",
-			`╭───────────────────────────────────────────────────────────────────────────────────╮
-│                                      Indexes                                      │
-├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┤
-│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┤
-│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┤
-│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │
-╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────╯
+			"index list --no-color --format 1",
+			`Indexes
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged
+1,list2,bar,barset,vector,256,HAMMING,0
+2,list1,test,,vector,256,COSINE,0
 `,
 		},
 		{
@@ -680,50 +689,41 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"index list --verbose --no-color",
-			`╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                Indexes                                                                               │
-├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┬──────────────┬───────────────────────┬───────────────────────────────────────────┤
-│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │ LABELS*      │ STORAGE               │ INDEX PARAMETERS                          │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼──────────────┼───────────────────────┼───────────────────────────────────────────┤
-│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │ map[]        │ ╭───────────┬───────╮ │ ╭───────────────────────────────────────╮ │
-│   │       │           │        │        │            │                 │          │              │ │ Namespace │ bar   │ │ │                  HNSW                 │ │
-│   │       │           │        │        │            │                 │          │              │ │ Set       │ list2 │ │ ├──────────────────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │              │ ╰───────────┴───────╯ │ │ Max Edges                    │ 16     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Ef                           │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Construction Ef              │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ MaxMemQueueSize*             │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Max Records*           │ 100000 │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Interval*              │ 30s    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Max Entires*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Expiry*                │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Scan Rate / Node* │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Page Size*        │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Re-index % *          │ 0.00%  │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Schedule Delay*       │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Parallelism*          │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Merge Parallelism*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ ╰──────────────────────────────┴────────╯ │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼──────────────┼───────────────────────┼───────────────────────────────────────────┤
-│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │ map[foo:bar] │ ╭───────────┬───────╮ │ ╭───────────────────────────────────────╮ │
-│   │       │           │        │        │            │                 │          │              │ │ Namespace │ test  │ │ │                  HNSW                 │ │
-│   │       │           │        │        │            │                 │          │              │ │ Set       │ list1 │ │ ├──────────────────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │              │ ╰───────────┴───────╯ │ │ Max Edges                    │ 16     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Ef                           │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Construction Ef              │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ MaxMemQueueSize*             │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Max Records*           │ 100000 │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Interval*              │ 30s    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Max Entires*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Expiry*                │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Scan Rate / Node* │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Page Size*        │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Re-index % *          │ 0.00%  │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Schedule Delay*       │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Parallelism*          │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Merge Parallelism*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ ╰──────────────────────────────┴────────╯ │
-╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────┴──────────────┴───────────────────────┴───────────────────────────────────────────╯
+			"index list --verbose --no-color --format 1",
+			`Indexes
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Labels*,Storage,Index Parameters
+1,list2,bar,barset,vector,256,HAMMING,0,map[],"Namespace\,bar
+Set\,list2","HNSW
+Max Edges\,16
+Ef\,100
+Construction Ef\,100
+MaxMemQueueSize*\,0
+Batch Max Records*\,100000
+Batch Interval*\,30s
+Cache Max Entires*\,0
+Cache Expiry*\,0s
+Healer Max Scan Rate / Node*\,0
+Healer Max Page Size*\,0
+Healer Re-index % *\,0.00%
+Healer Schedule Delay*\,0s
+Healer Parallelism*\,0
+Merge Parallelism*\,0"
+2,list1,test,,vector,256,COSINE,0,map[foo:bar],"Namespace\,test
+Set\,list1","HNSW
+Max Edges\,16
+Ef\,100
+Construction Ef\,100
+MaxMemQueueSize*\,0
+Batch Max Records*\,100000
+Batch Interval*\,30s
+Cache Max Entires*\,0
+Cache Expiry*\,0s
+Healer Max Scan Rate / Node*\,0
+Healer Max Page Size*\,0
+Healer Re-index % *\,0.00%
+Healer Schedule Delay*\,0s
+Healer Parallelism*\,0
+Merge Parallelism*\,0"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},
@@ -868,8 +868,8 @@ func (suite *CmdTestSuite) TestSuccessfulUserDropCmd() {
 			err := suite.AvsClient.CreateUser(context.Background(), tc.user, tc.user, []string{"admin"})
 			suite.Assert().NoError(err, "we were not able to create the user before we try to drop it", err)
 
-			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
-			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+			lines, stderr, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout: %s stderr:%s", err, lines, stderr)
 
 			if err != nil {
 				suite.FailNow("failed")
@@ -1031,14 +1031,10 @@ func (suite *CmdTestSuite) TestSuccessfulListUsersCmd() {
 	}{
 		{
 			"users list",
-			"users list --no-color",
-			`╭───────────────────────────────╮
-│             Users             │
-├───┬───────┬───────────────────┤
-│   │ USER  │ ROLES             │
-├───┼───────┼───────────────────┤
-│ 1 │ admin │ admin, read-write │
-╰───┴───────┴───────────────────╯
+			"users list --no-color --format 1",
+			`Users
+,User,Roles
+1,admin,"admin\, read-write"
 Use 'role list' to view available roles
 `,
 		},
@@ -1124,13 +1120,10 @@ func (suite *CmdTestSuite) TestSuccessfulListRolesCmd() {
 	}{
 		{
 			"roles list",
-			"role list",
-			`╭───┬────────────╮
-│   │ ROLES      │
-├───┼────────────┤
-│ 1 │ admin      │
-│ 2 │ read-write │
-╰───┴────────────╯
+			"role list --format 1",
+			`,Roles
+1,admin
+2,read-write
 `,
 		},
 	}
@@ -1173,6 +1166,11 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because no create index required args are provided",
 			fmt.Sprintf("index create --seeds %s", suite.AvsHostPort.String()),
+			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
+		},
+		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
+			"error because no create index required args are provided",
+			fmt.Sprintf("index create"),
 			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not

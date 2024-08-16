@@ -9,6 +9,7 @@ import (
 
 	tableColor "github.com/jedib0t/go-pretty/v6/text"
 
+	"github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
 )
 
@@ -102,7 +103,7 @@ func (v *View) PrintIndexes(
 			continue
 		}
 
-		t.AppendIndexRow(index, indexStatusList[i])
+		t.AppendIndexRow(index, indexStatusList[i], format)
 	}
 
 	t.Render(format)
@@ -145,6 +146,20 @@ func (v *View) PrintNodeInfoList(nodeInfos []*writers.NodeInfo, isLB bool, forma
 
 	for _, node := range nodeInfos {
 		t.AppendNodeRow(node)
+	}
+
+	t.Render(format)
+}
+
+func (v *View) getNeighborTableWriter() *writers.NeighborTableWriter {
+	return writers.NewNeighborTableWriter(v.out, v.logger)
+}
+
+func (v *View) PrintQueryResults(neighbors []*avs.Neighbor, format int, maxDataKeys int) {
+	t := v.getNeighborTableWriter()
+
+	for _, n := range neighbors {
+		t.AppendNeighborRow(n, maxDataKeys, format)
 	}
 
 	t.Render(format)

@@ -136,8 +136,8 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					ioReader = r
 				}
 
-				reader := bufio.NewReader(ioReader)
-				if _, err := reader.Peek(1); err == nil {
+				if s, err := ioReader.Stat(); err == nil && s.Size() != 0 {
+					reader := bufio.NewReader(ioReader)
 					data, err := reader.ReadString(io.SeekEnd)
 					if err != io.EOF {
 						logger.Error("failed to read index definitions", slog.Any("error", err))

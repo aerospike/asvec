@@ -9,11 +9,6 @@ import (
 	avs "github.com/aerospike/avs-client-go"
 )
 
-const (
-	DefaultIPv4 = "127.0.0.1"
-	DefaultPort = 5000
-)
-
 func parseHostPort(v string) (*avs.HostPort, error) {
 	host := &avs.HostPort{}
 	ipv6HostPattern := `^\[(?P<host>.*)\]`

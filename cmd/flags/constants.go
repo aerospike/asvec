@@ -19,6 +19,7 @@ const (
 	Yes                          = "yes"
 	IndexName                    = "index-name"
 	VectorField                  = "vector-field"
+	Vector                       = "vector"
 	Fields                       = "fields"
 	MaxResults                   = "max-results"
 	MaxDataKeys                  = "max-keys"
@@ -57,6 +58,10 @@ const (
 	// TODO  Replace short flag constants with variables
 	NamespaceShort = "n"
 	IndexNameShort = "i"
+	VectorShort    = "v"
+
+	DefaultIPv4 = "127.0.0.1"
+	DefaultPort = 5000
 )
 
 func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) error {

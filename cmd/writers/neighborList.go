@@ -70,6 +70,14 @@ func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDat
 
 	tData := NewDefaultWriter(nil)
 	tData.AppendHeader(table.Row{"Key", "Value"})
+	tData.SetColumnConfigs(
+		[]table.ColumnConfig{
+			{
+				Name:        "Value",
+				Transformer: vectorFormat,
+			},
+		},
+	)
 	keys := make([]string, 0, len(neighbor.Record.Data))
 
 	for key := range neighbor.Record.Data {

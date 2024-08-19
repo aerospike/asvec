@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -16,6 +17,7 @@ var queryFlags = &struct {
 	clientFlags   *flags.ClientFlags
 	namespace     string
 	indexName     string
+	vector        *flags.VectorFlag
 	maxResults    uint32
 	maxDataKeys   uint
 	includeFields []string
@@ -23,6 +25,7 @@ var queryFlags = &struct {
 	format        int // For testing. Hidden
 }{
 	clientFlags: rootFlags.clientFlags,
+	vector:      flags.NewVectorFlag(),
 }
 
 const (
@@ -32,12 +35,13 @@ const (
 
 func newQueryFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.StringVarP(&queryFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index to query.")                                                                         //nolint:lll // For readability
-	flagSet.StringVarP(&queryFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index to query.")                                                                               //nolint:lll // For readability
-	flagSet.Uint32VarP(&queryFlags.maxResults, flags.MaxResults, "r", defaultMaxDataKeys, "The maximum number of records to return.")                                                                     //nolint:lll // For readability
-	flagSet.UintVarP(&queryFlags.maxDataKeys, flags.MaxDataKeys, "m", defaultMaxDataKeys, "The maximum number of records to return.")                                                                     //nolint:lll // For readability
-	flagSet.StringSliceVarP(&queryFlags.includeFields, flags.Fields, "f", nil, "Fields names in include when displaying record data.")                                                                    //nolint:lll // For readability
-	flagSet.Var(&queryFlags.hnswEf, flags.HnswEf, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times.") //nolint:lll // For readability
+	flagSet.StringVarP(&queryFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index to query.")                                                                                         //nolint:lll // For readability
+	flagSet.StringVarP(&queryFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index to query.")                                                                                               //nolint:lll // For readability
+	flagSet.VarP(queryFlags.vector, flags.Vector, flags.VectorShort, "The vector to use as a query. Values true/false and 1/0 will result in a binary vector. Values containing a decimal will result in a float vector") //nolint:lll // For readability
+	flagSet.Uint32VarP(&queryFlags.maxResults, flags.MaxResults, "r", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                     //nolint:lll // For readability
+	flagSet.UintVarP(&queryFlags.maxDataKeys, flags.MaxDataKeys, "m", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                     //nolint:lll // For readability
+	flagSet.StringSliceVarP(&queryFlags.includeFields, flags.Fields, "f", nil, "Fields names in include when displaying record data.")                                                                                    //nolint:lll // For readability
+	flagSet.Var(&queryFlags.hnswEf, flags.HnswEf, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times.")                 //nolint:lll // For readability
 
 	err := flags.AddFormatTestFlag(flagSet, &queryFlags.format)
 	if err != nil {
@@ -92,51 +96,48 @@ asvec query
 			ctx, cancel := context.WithTimeout(context.Background(), rootFlags.clientFlags.Timeout)
 			defer cancel()
 
-			index, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName)
-			if err != nil {
-				msg := "unable to get index definition"
-				logger.ErrorContext(ctx, msg, slog.Any("error", err))
-				return err
-			}
-
 			hnswSearchParams := &protos.HnswSearchParams{
 				Ef: queryFlags.hnswEf.Val,
 			}
 
-			queryFloat32 := make([]float32, index.Dimensions)
-			neighbors, err := client.VectorSearchFloat32(
-				ctx,
-				index.Id.Namespace,
-				index.Id.Name,
-				queryFloat32,
-				queryFlags.maxResults,
-				hnswSearchParams,
-				queryFlags.includeFields,
-				nil,
+			var (
+				neighbors []*avs.Neighbor
 			)
-			if err != nil {
-				msg := "failed to run vector search"
-				logger.WarnContext(ctx, msg, slog.Any("error", err))
-			}
 
-			if err != nil || len(neighbors) == 0 {
-				queryBool := make([]bool, index.Dimensions)
-				neighbors, err = client.VectorSearchBool(
-					ctx,
-					index.Id.Namespace,
-					index.Id.Name,
-					queryBool,
-					queryFlags.maxResults,
-					hnswSearchParams,
-					queryFlags.includeFields,
-					nil,
-				)
-
+			if queryFlags.vector.IsSet() {
+				if queryFlags.vector.FloatSlice != nil {
+					neighbors, err = client.VectorSearchFloat32(
+						ctx,
+						queryFlags.namespace,
+						queryFlags.indexName,
+						queryFlags.vector.FloatSlice,
+						queryFlags.maxResults,
+						hnswSearchParams,
+						queryFlags.includeFields,
+						nil,
+					)
+					if err != nil {
+						view.Errorf("Failed to run vector search: %s", err)
+					}
+				} else {
+					neighbors, err = client.VectorSearchBool(
+						ctx,
+						queryFlags.namespace,
+						queryFlags.indexName,
+						queryFlags.vector.BoolSlice,
+						queryFlags.maxResults,
+						hnswSearchParams,
+						queryFlags.includeFields,
+						nil,
+					)
+					if err != nil {
+						view.Errorf("Failed to run vector search: %s", err)
+					}
+				}
+			} else {
+				neighbors, err = trialAndErrorQuery(ctx, client, queryFlags.namespace, queryFlags.indexName, hnswSearchParams)
 				if err != nil {
-					msg := "failed to run vector search"
-					logger.WarnContext(ctx, msg, slog.Any("error", err))
-					view.Errorf("Unable to run vector query: %s", err)
-					return err
+					view.Errorf("Failed to run vector search: %s", err)
 				}
 			}
 
@@ -165,6 +166,63 @@ asvec query
 			return nil
 		},
 	}
+}
+
+func getVectorDimensions(ctx context.Context, client *avs.Client, namespace, indexName string) (uint32, error) {
+	index, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName)
+	if err != nil {
+		msg := "unable to get vector dimension to generate valid vector"
+		logger.ErrorContext(ctx, msg, slog.Any("error", err))
+		return 0, err
+	}
+
+	return index.Dimensions, nil
+}
+
+func trialAndErrorQuery(ctx context.Context, client *avs.Client, namespace, indexName string, hnswSearchParams *protos.HnswSearchParams) ([]*avs.Neighbor, error) {
+	dimension, err := getVectorDimensions(ctx, client, queryFlags.namespace, queryFlags.indexName)
+	if err != nil {
+		return nil, err
+	}
+
+	queryFloat32 := make([]float32, dimension)
+	neighbors, err := client.VectorSearchFloat32(
+		ctx,
+		queryFlags.namespace,
+		queryFlags.indexName,
+		queryFloat32,
+		queryFlags.maxResults,
+		hnswSearchParams,
+		queryFlags.includeFields,
+		nil,
+	)
+	if err != nil {
+		msg := "failed to run vector search"
+		logger.WarnContext(ctx, msg, slog.Any("error", err))
+	}
+
+	if err != nil || len(neighbors) == 0 {
+		queryBool := make([]bool, dimension)
+		neighbors, err = client.VectorSearchBool(
+			ctx,
+			queryFlags.namespace,
+			queryFlags.indexName,
+			queryBool,
+			queryFlags.maxResults,
+			hnswSearchParams,
+			queryFlags.includeFields,
+			nil,
+		)
+
+		if err != nil {
+			msg := "failed to run vector search"
+			logger.WarnContext(ctx, msg, slog.Any("error", err))
+			view.Errorf("Unable to run vector query: %s", err)
+			return nil, err
+		}
+	}
+
+	return neighbors, nil
 }
 
 func init() {

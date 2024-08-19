@@ -58,7 +58,7 @@ func NewNeighborTableWriter(writer io.Writer, logger *slog.Logger) *NeighborTabl
 	return &t
 }
 
-func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDataKeys int, renderFormat int) {
+func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDataKeys, renderFormat, maxDataValueColWidth int) {
 	row := table.Row{
 		neighbor.Namespace,
 		neighbor.Set,
@@ -75,6 +75,7 @@ func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDat
 			{
 				Name:        "Value",
 				Transformer: vectorFormat,
+				WidthMax:    maxDataValueColWidth,
 			},
 		},
 	)

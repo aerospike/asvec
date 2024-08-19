@@ -14,15 +14,16 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var queryFlags = &struct {
-	clientFlags   *flags.ClientFlags
-	namespace     string
-	indexName     string
-	vector        *flags.VectorFlag
-	maxResults    uint32
-	maxDataKeys   uint
-	includeFields []string
-	hnswEf        flags.Uint32OptionalFlag
-	format        int // For testing. Hidden
+	clientFlags     *flags.ClientFlags
+	namespace       string
+	indexName       string
+	vector          *flags.VectorFlag
+	maxResults      uint32
+	maxDataKeys     uint
+	maxDataColWidth uint
+	includeFields   []string
+	hnswEf          flags.Uint32OptionalFlag
+	format          int // For testing. Hidden
 }{
 	clientFlags: rootFlags.clientFlags,
 	vector:      flags.NewVectorFlag(),
@@ -40,6 +41,7 @@ func newQueryFlagSet() *pflag.FlagSet {
 	flagSet.VarP(queryFlags.vector, flags.Vector, flags.VectorShort, "The vector to use as a query. Values true/false and 1/0 will result in a binary vector. Values containing a decimal will result in a float vector") //nolint:lll // For readability
 	flagSet.Uint32VarP(&queryFlags.maxResults, flags.MaxResults, "r", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                     //nolint:lll // For readability
 	flagSet.UintVarP(&queryFlags.maxDataKeys, flags.MaxDataKeys, "m", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                     //nolint:lll // For readability
+	flagSet.UintVarP(&queryFlags.maxDataColWidth, flags.MaxDataColWidth, flags.MaxDataColWidthShort, 50, "The maximum column width for record data before wrapping. To display long values on a single line set to 0.")   //nolint:lll // For readability
 	flagSet.StringSliceVarP(&queryFlags.includeFields, flags.Fields, "f", nil, "Fields names in include when displaying record data.")                                                                                    //nolint:lll // For readability
 	flagSet.Var(&queryFlags.hnswEf, flags.HnswEf, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times.")                 //nolint:lll // For readability
 
@@ -62,11 +64,11 @@ func newQueryCmd() *cobra.Command {
 		Use:     "query",
 		Aliases: []string{"list"},
 		Short:   "A command for exploring your data",
-		Long: fmt.Sprintf(`A command for querying an index using a zero vector. 
-This command is primarily intended for verifying and displaying the structure of 
-your data, rather than providing robust query functionality. Several flags are 
-available to adjust the amount of information displayed. To control which fields 
-from a record are shown, use the --%s flag.
+		Long: fmt.Sprintf(`A command for querying an index. If no vector is provided 
+a zero vector is generated for you. This command is primarily intended for verifying 
+and displaying the structure of your data, rather than providing robust query 
+functionality. Several flags are available to adjust the amount of information 
+displayed. To control which fields from a record are shown, use the --%s flag.
 
 For example:
 
@@ -81,6 +83,7 @@ asvec query
 				append(rootFlags.clientFlags.NewSLogAttr(),
 					slog.String(flags.Namespace, queryFlags.namespace),
 					slog.String(flags.IndexName, queryFlags.indexName),
+					slog.Any(flags.Vector, queryFlags.vector),
 					slog.Any(flags.MaxResults, queryFlags.maxResults),
 					slog.Any(flags.MaxDataKeys, queryFlags.maxDataKeys),
 					slog.Any(flags.Fields, queryFlags.includeFields),
@@ -135,9 +138,10 @@ asvec query
 					}
 				}
 			} else {
-				neighbors, err = trialAndErrorQuery(ctx, client, queryFlags.namespace, queryFlags.indexName, hnswSearchParams)
+				neighbors, err = trialAndErrorQuery(ctx, client, hnswSearchParams)
 				if err != nil {
 					view.Errorf("Failed to run vector search: %s", err)
+					return nil
 				}
 			}
 
@@ -153,7 +157,7 @@ asvec query
 				queryFlags.maxDataKeys = 0
 			}
 
-			view.PrintQueryResults(neighbors, queryFlags.format, int(queryFlags.maxDataKeys))
+			view.PrintQueryResults(neighbors, queryFlags.format, int(queryFlags.maxDataKeys), int(queryFlags.maxDataColWidth))
 
 			if queryFlags.maxResults == defaultMaxResults {
 				view.Printf("To increase the number of records returned, use the --%s flag.", flags.MaxResults)
@@ -168,7 +172,7 @@ asvec query
 	}
 }
 
-func getVectorDimensions(ctx context.Context, client *avs.Client, namespace, indexName string) (uint32, error) {
+func getVectorDimensions(ctx context.Context, client *avs.Client) (uint32, error) {
 	index, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName)
 	if err != nil {
 		msg := "unable to get vector dimension to generate valid vector"
@@ -179,8 +183,8 @@ func getVectorDimensions(ctx context.Context, client *avs.Client, namespace, ind
 	return index.Dimensions, nil
 }
 
-func trialAndErrorQuery(ctx context.Context, client *avs.Client, namespace, indexName string, hnswSearchParams *protos.HnswSearchParams) ([]*avs.Neighbor, error) {
-	dimension, err := getVectorDimensions(ctx, client, queryFlags.namespace, queryFlags.indexName)
+func trialAndErrorQuery(ctx context.Context, client *avs.Client, hnswSearchParams *protos.HnswSearchParams) ([]*avs.Neighbor, error) {
+	dimension, err := getVectorDimensions(ctx, client)
 	if err != nil {
 		return nil, err
 	}

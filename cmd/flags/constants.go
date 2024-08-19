@@ -23,6 +23,7 @@ const (
 	Fields                       = "fields"
 	MaxResults                   = "max-results"
 	MaxDataKeys                  = "max-keys"
+	MaxDataColWidth              = "max-width"
 	Dimension                    = "dimension"
 	DistanceMetric               = "distance-metric"
 	IndexLabels                  = "index-labels"
@@ -56,9 +57,10 @@ const (
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
 
 	// TODO  Replace short flag constants with variables
-	NamespaceShort = "n"
-	IndexNameShort = "i"
-	VectorShort    = "v"
+	NamespaceShort       = "n"
+	IndexNameShort       = "i"
+	VectorShort          = "v"
+	MaxDataColWidthShort = "w"
 
 	DefaultIPv4 = "127.0.0.1"
 	DefaultPort = 5000

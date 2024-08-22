@@ -398,7 +398,7 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			}
 
 			// Need to pause a bit while listCmd has some output
-			time.Sleep(time.Millisecond * 500)
+			time.Sleep(time.Second * 1)
 
 			// Run create Cmd to completion
 			output, err := createCmd.CombinedOutput()

@@ -631,17 +631,7 @@ func removeANSICodes(input string) string {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
-	indexes, err := suite.AvsClient.IndexList(context.Background())
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-
-	for _, index := range indexes.GetIndices() {
-		err := suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
-		if err != nil {
-			suite.FailNow(err.Error())
-		}
-	}
+	suite.CleanUpIndexes(context.Background())
 
 	testCases := []struct {
 		name          string
@@ -1044,6 +1034,204 @@ Use 'role list' to view available roles
 		suite.Run(tc.name, func() {
 			actualTable, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, actualTable)
+
+			suite.Assert().Equal(tc.expectedTable, actualTable)
+		})
+	}
+}
+
+func getVectorFloat32(length int, last float32) []float32 {
+	vector := make([]float32, length)
+	for i := 0; i < length-1; i++ {
+		vector[i] = 0.0
+	}
+
+	vector[length-1] = last
+
+	return vector
+}
+
+func getVectorBool(length int, last int) []bool {
+	vector := make([]bool, length)
+	for i := 0; i < last; i++ {
+		vector[i] = true
+	}
+
+	return vector
+}
+
+func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
+	suite.CleanUpIndexes(context.Background())
+
+	type testRecord struct {
+		key  any
+		data map[string]any
+	}
+
+	testRecords := []testRecord{
+		{
+			key: "a",
+			data: map[string]any{
+				"str":     "a",
+				"int":     1,
+				"float":   3.14,
+				"float32": getVectorFloat32(10, 0.0),
+				"map": map[any]any{
+					"foo": "bar",
+				},
+				"extra": "to not display",
+			},
+		},
+		{
+			key: "b",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 1.0),
+			},
+		},
+		{
+			key: "c",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 2.0),
+			},
+		},
+		{
+			key: "d",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 3.0),
+			},
+		},
+		{
+			key: "e",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 4.0),
+			},
+		},
+		{
+			key: "f",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 5.0),
+			},
+		},
+		{
+			key: "g",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 6.0),
+			},
+		},
+		{
+			key: "h",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 7.0),
+			},
+		},
+		{
+			key: "i",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 8.0),
+			},
+		},
+		{
+			key: "j",
+			data: map[string]any{
+				"float32": getVectorFloat32(10, 9.0),
+			},
+		},
+	}
+
+	testCases := []struct {
+		name          string
+		index         *protos.IndexDefinition
+		records       []testRecord
+		cmd           string
+		expectedTable string
+	}{
+		{
+			name: "run query with zero vector",
+			index: tests.NewIndexDefinitionBuilder(
+				"query-single-index-test", "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32",
+			).Build(),
+			records: testRecords,
+			cmd:     "query -i query-single-index-test -n test --max-results 3 --fields str,int,float,float32,map --no-color --format 1",
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,a,0,0,"Key\,Value
+float\,3.14
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+str\,a"
+2,test,b,1,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
+3,test,c,4,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+`,
+		},
+		{
+			name: "run query with custom vector",
+			index: tests.NewIndexDefinitionBuilder(
+				"query-single-index-test", "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32",
+			).Build(),
+			records: testRecords,
+			cmd:     "query -i query-single-index-test -n test --vector [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0]  --no-color --format 1",
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,b,0,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
+2,test,c,1,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+3,test,a,1,0,"Key\,Value
+extra\,to not display
+float\,3.14
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+...\,..."
+4,test,d,4,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+5,test,e,9,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+To increase the number of records returned, use the --max-results flag.
+To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			err := suite.AvsClient.IndexCreateFromIndexDef(
+				context.Background(),
+				tc.index,
+			)
+			if err != nil {
+				suite.FailNowf("unable to create index", "%v", err)
+			}
+
+			defer suite.AvsClient.IndexDrop(
+				context.Background(),
+				tc.index.Id.Namespace,
+				tc.index.Id.Name,
+			)
+
+			for _, record := range tc.records {
+				suite.AvsClient.Upsert(
+					context.Background(),
+					tc.index.Id.Namespace,
+					tc.index.SetFilter,
+					record.key,
+					record.data,
+					false,
+				)
+			}
+
+			suite.AvsClient.WaitForIndexCompletion(
+				context.Background(),
+				tc.index.Id.Namespace,
+				tc.index.Id.Name,
+				time.Second*12,
+			)
+
+			actualTable, stderr, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout: %s, stderr: %s", err, actualTable, stderr)
 
 			suite.Assert().Equal(tc.expectedTable, actualTable)
 		})

@@ -15,11 +15,12 @@ const (
 	NewPassword                  = "new-password"
 	Roles                        = "roles"
 	Namespace                    = "namespace"
-	Sets                         = "sets"
+	Set                          = "set"
 	Yes                          = "yes"
 	IndexName                    = "index-name"
 	VectorField                  = "vector-field"
 	Vector                       = "vector"
+	Key                          = "key"
 	Fields                       = "fields"
 	MaxResults                   = "max-results"
 	MaxDataKeys                  = "max-keys"
@@ -58,8 +59,10 @@ const (
 
 	// TODO  Replace short flag constants with variables
 	NamespaceShort       = "n"
+	SetShort             = "s"
 	IndexNameShort       = "i"
 	VectorShort          = "v"
+	KeyShort             = "k"
 	MaxDataColWidthShort = "w"
 
 	DefaultIPv4 = "127.0.0.1"

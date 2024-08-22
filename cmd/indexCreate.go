@@ -26,7 +26,7 @@ var indexCreateFlags = &struct {
 	yes                 bool
 	inputFile           string
 	namespace           string
-	sets                []string
+	set                 flags.StringOptionalFlag
 	indexName           string
 	vectorField         string
 	dimensions          uint32
@@ -44,6 +44,7 @@ var indexCreateFlags = &struct {
 	hnswMerge           flags.MergeFlags
 }{
 	clientFlags:         rootFlags.clientFlags,
+	set:                 flags.StringOptionalFlag{},
 	storageNamespace:    flags.StringOptionalFlag{},
 	storageSet:          flags.StringOptionalFlag{},
 	hnswMaxEdges:        flags.Uint32OptionalFlag{},
@@ -59,9 +60,11 @@ var indexCreateFlags = &struct {
 func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")
-	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, StdIn, "A yaml file containing IndexDefinitions created using \"asvec index list --yaml\"")                                                                                                                                                                                                    //nolint:lll // For readability
-	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                                                                                                                                                                                                                                     //nolint:lll // For readability
-	flagSet.StringSliceVarP(&indexCreateFlags.sets, flags.Sets, "s", nil, "The sets for the index.")                                                                                                                                                                                                                                                               //nolint:lll // For readability
+	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, StdIn, "A yaml file containing IndexDefinitions created using \"asvec index list --yaml\"") //nolint:lll // For readability
+	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                                  //nolint:lll // For readability
+	flagSet.VarP(&indexCreateFlags.set, flags.Set, flags.SetShort, "The sets for the index.")                                                                   //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")
+	flagSet.MarkHidden("sets")                                                                                                                                                                                                                                                                                                                                     // mitigate breaking change                                                                                                                                                                                                                                                                   //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                                                                                                                                                                                                                           //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.vectorField, flags.VectorField, "f", "", "The name of the vector field.")                                                                                                                                                                                                                                                 //nolint:lll // For readability
 	flagSet.Uint32VarP(&indexCreateFlags.dimensions, flags.Dimension, "d", 0, "The dimension of the vector field.")                                                                                                                                                                                                                                                //nolint:lll // For readability
@@ -190,7 +193,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 				append(debugFlags,
 					slog.Bool(flags.Yes, indexCreateFlags.yes),
 					slog.String(flags.Namespace, indexCreateFlags.namespace),
-					slog.Any(flags.Sets, indexCreateFlags.sets),
+					slog.Any(flags.Set, indexCreateFlags.set),
 					slog.String(flags.IndexName, indexCreateFlags.indexName),
 					slog.String(flags.VectorField, indexCreateFlags.vectorField),
 					slog.Uint64(flags.Dimension, uint64(indexCreateFlags.dimensions)),
@@ -235,24 +238,18 @@ func runCreateIndexFromDef(client *avs.Client) error {
 
 		cancel()
 
-		setFilter := []string{}
-
-		if indexDef.SetFilter != nil {
-			setFilter = append(setFilter, *indexDef.SetFilter)
-		}
-
 		if err != nil {
 			logger.Warn("failed to create index from yaml", slog.Any("error", err))
 			view.Printf("Failed to create index %s.%s from yaml: %s",
 				nsAndSetString(
 					indexDef.Id.Namespace,
-					setFilter,
+					indexDef.SetFilter,
 				),
 				indexDef.Id.Name, err)
 		} else {
 			view.Printf("Successfully created index %s.%s", nsAndSetString(
 				indexDef.Id.Namespace,
-				setFilter,
+				indexDef.SetFilter,
 			), indexDef.Id.Name)
 
 			successful++
@@ -283,7 +280,7 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 		"Are you sure you want to create the index %s.%s on field %s?",
 		nsAndSetString(
 			indexCreateFlags.namespace,
-			indexCreateFlags.sets,
+			indexCreateFlags.set.Val,
 		),
 		indexCreateFlags.indexName,
 		indexCreateFlags.vectorField,
@@ -291,8 +288,14 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 		return nil
 	}
 
+	sets := []string{}
+
+	if indexCreateFlags.set.Val != nil {
+		sets = append(sets, *indexCreateFlags.set.Val)
+	}
+
 	indexOpts := &avs.IndexCreateOpts{
-		Sets:   indexCreateFlags.sets,
+		Sets:   sets,
 		Labels: indexCreateFlags.indexLabels,
 		Storage: &protos.IndexStorage{
 			Namespace: indexCreateFlags.storageNamespace.Val,

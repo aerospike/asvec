@@ -12,6 +12,10 @@ type StringOptionalFlag struct {
 	Val *string
 }
 
+func NewStringOptionalFlag() StringOptionalFlag {
+	return StringOptionalFlag{}
+}
+
 func (f *StringOptionalFlag) Set(val string) error {
 	f.Val = &val
 	return nil

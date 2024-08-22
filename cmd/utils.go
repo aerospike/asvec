@@ -92,16 +92,13 @@ func isLoadBalancer(seeds *flags.SeedsSliceFlag) bool {
 	return len(seeds.Seeds) == 0
 }
 
-func nsAndSetString(namespace string, sets []string) string {
+func nsAndSetString(namespace string, sets *string) string {
 	var setStr string
 
-	switch len(sets) {
-	case 0:
+	if sets == nil {
 		setStr = "*"
-	case 1:
-		setStr = sets[0]
-	default:
-		setStr = fmt.Sprintf("%v", sets)
+	} else {
+		setStr = *sets
 	}
 
 	return fmt.Sprintf("%s.%s", namespace, setStr)

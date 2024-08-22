@@ -14,10 +14,6 @@ type VectorFlag struct {
 	BoolSlice  []bool
 }
 
-func NewVectorFlag() *VectorFlag {
-	return &VectorFlag{}
-}
-
 func (v *VectorFlag) Set(val string) error {
 	val = strings.Trim(val, "[]")
 	val = strings.ReplaceAll(val, " ", "")

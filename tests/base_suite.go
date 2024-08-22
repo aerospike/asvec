@@ -4,6 +4,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/slog"
@@ -75,6 +76,20 @@ func (suite *CmdBaseTestSuite) TearDownSuite() {
 	err = DockerComposeDown(suite.ComposeFile)
 	if err != nil {
 		fmt.Println("unable to stop docker compose down")
+	}
+}
+
+func (suite *CmdBaseTestSuite) CleanUpIndexes(ctx context.Context) {
+	indexes, err := suite.AvsClient.IndexList(ctx)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	for _, index := range indexes.GetIndices() {
+		err := suite.AvsClient.IndexDrop(ctx, index.Id.Namespace, index.Id.Name)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
 	}
 }
 

@@ -285,6 +285,8 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
+	suite.CleanUpIndexes(context.Background())
+
 	testCases := []struct {
 		name          string
 		indexDefs     []*protos.IndexDefinition
@@ -405,7 +407,7 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			if tc.createFail && err == nil {
 				suite.FailNowf("expected create cmd to fail because at least one index failed to be created", "%v", err)
 			} else if !tc.createFail && err != nil {
-				suite.FailNowf("expected create cmd to succeed because all indexes were created", "%v", err)
+				suite.FailNowf("expected create cmd to succeed because all indexes were created %s", err.Error())
 			}
 
 			// Cleanup list and sed commands
@@ -1068,9 +1070,11 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 		data map[string]any
 	}
 
+	key := "a"
+
 	testRecords := []testRecord{
 		{
-			key: "a",
+			key: key,
 			data: map[string]any{
 				"str":     "a",
 				"int":     1,
@@ -1177,21 +1181,49 @@ float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 ,Namespace,Key,Distance,Generation,Data
 1,test,b,0,0,"Key\,Value
 float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
-2,test,c,1,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
-3,test,a,1,0,"Key\,Value
+2,test,a,1,0,"Key\,Value
 extra\,to not display
 float\,3.14
 float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
 int\,1
 map\,map[foo:bar]
 ...\,..."
+3,test,c,1,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 4,test,d,4,0,"Key\,Value
 float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
 5,test,e,9,0,"Key\,Value
 float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
-To increase the number of records returned, use the --max-results flag.
-To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+		{
+			name: "run query with using key",
+			index: tests.NewIndexDefinitionBuilder(
+				"query-single-index-test", "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32",
+			).Build(),
+			records: testRecords,
+			cmd:     "query -i query-single-index-test -n test -k b --no-color --format 1",
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,a,1,0,"Key\,Value
+extra\,to not display
+float\,3.14
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+...\,..."
+2,test,c,1,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+3,test,d,4,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+4,test,e,9,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+5,test,f,16,0,"Key\,Value
+float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,5.0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
 `,
 		},
 	}
@@ -1236,6 +1268,64 @@ To choose which record keys are displayed, use the --fields flag. By default onl
 			suite.Assert().Equal(tc.expectedTable, actualTable)
 		})
 	}
+}
+
+func (suite *CmdTestSuite) TestFailedQueryCmd() {
+	namespace := "test"
+	indexName := "index"
+	suite.AvsClient.IndexCreate(
+		context.Background(),
+		namespace,
+		indexName,
+		"field",
+		10,
+		protos.VectorDistanceMetric_COSINE,
+		nil,
+	)
+
+	testCases := []struct {
+		name           string
+		cmd            string
+		expectedErrStr string
+	}{
+		{
+			"use seeds and hosts together",
+			"query --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i i",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use set without the key flag",
+			"query --namespace test -i index --set testset",
+			"Warning: The --set flag is only used when the --key flag is set.",
+		},
+		{
+			"try to query an index that does not exist",
+			"query --namespace test -i DNE",
+			"Error: Failed to get index definition: failed to get index: server error: NotFound, msg=index test:DNE not found",
+		},
+		{
+			"try to query a key that does not exist",
+			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			"Error: Failed to get vector using key: unable to get record: failed to get record: server error: NotFound",
+		},
+		{
+			"query a key without a set and check for prompt",
+			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			"Warning: The requested record was not found. If the record is in a set, use may also need to provide the --set flag.",
+		},
+
+		//Warning: The requested record was not found. If the record is in a set, use may also need to provide the --set flag.
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			_, lines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+
+			suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
+			suite.Assert().Contains(lines, tc.expectedErrStr)
+		})
+	}
+
 }
 
 func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidUser() {

@@ -32,26 +32,21 @@ func NewNeighborTableWriter(writer io.Writer, logger *slog.Logger) *NeighborTabl
 
 	t.table.SetTitle("Query Results")
 	t.table.SetAutoIndex(true)
-	// t.table.SortBy([]table.SortBy{
-	// 	{Name: "Namespace", Mode: table.Asc},
-	// 	{Name: "Set", Mode: table.Asc},
-	// 	{Name: "Key", Mode: table.Asc},
-	// })
+	t.table.SortBy([]table.SortBy{
+		{Name: "Distance", Mode: table.AscNumeric},
+		{Name: "Key", Mode: table.Asc},
+	})
 	t.table.SetColumnConfigs([]table.ColumnConfig{
 		{
-
-			// Number:      4,
 			Name:        "Expiration",
 			Transformer: removeNil,
 		},
 		{
 
-			// Number:      4,
 			Name:        "Set",
 			Transformer: removeNil,
 		},
 	})
-	// })
 
 	t.table.Style().Options.SeparateRows = true
 

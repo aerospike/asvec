@@ -76,7 +76,7 @@ For example:
 %s
 
 # Query using the zero vector displaying only fields name,age
-asvec query -i my-index -n my-namespace --fields name,age
+asvec query -i my-index -n my-namespace -f name,age
 
 # Query 10 vectors using an existing vector
 asvec query -i my-index -n my-namespace -s my-set -k my-key --max-results 10
@@ -196,15 +196,13 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 
 			view.PrintQueryResults(neighbors, queryFlags.format, int(queryFlags.maxDataKeys), int(queryFlags.maxDataColWidth))
 
-			if queryFlags.maxResults == defaultMaxResults {
-				view.Printf("To increase the number of records returned, use the --%s flag.", flags.MaxResults)
-			}
+			if !viper.IsSet(flags.MaxResults) {
+				view.Printf("Hint: To increase the number of records returned, use the --%s flag.", flags.MaxResults)
 
-			if queryFlags.maxDataKeys == defaultMaxDataKeys && queryFlags.includeFields == nil {
-				view.Printf("To choose which record keys are displayed, use the --%s flag. By default only %d are displayed.", flags.Fields, defaultMaxDataKeys)
+				if !viper.IsSet(flags.Fields) {
+					view.Printf("Hint: To choose which record keys are displayed, use the --%s flag. By default only %d are displayed.", flags.Fields, defaultMaxDataKeys)
+				}
 			}
-
-			return
 		},
 	}
 }
@@ -246,7 +244,6 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 		return nil, fmt.Errorf("%s: %w", msg, err)
 	}
 
-	queryFlags.maxResults += 1 // we will remove queried vector from results
 	var neighbors []*avs.Neighbor
 
 	switch v := queryVector.(type) {
@@ -256,7 +253,7 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 			queryFlags.namespace,
 			queryFlags.indexName,
 			v,
-			queryFlags.maxResults,
+			queryFlags.maxResults+1, // we will remove queried vector from results
 			hnswSearchParams,
 			queryFlags.includeFields,
 			nil,
@@ -268,7 +265,7 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 			queryFlags.namespace,
 			queryFlags.indexName,
 			v,
-			queryFlags.maxResults,
+			queryFlags.maxResults+1, // we will remove queried vector from results
 			hnswSearchParams,
 			queryFlags.includeFields,
 			nil,

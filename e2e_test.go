@@ -393,6 +393,9 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to start list cmd", "%v", err)
 			}
 
+			// Need to pause a bit while listCmd has some output
+			time.Sleep(time.Second * 1)
+
 			if err := sedCmd.Start(); err != nil {
 				suite.FailNowf("unable to start sed cmd", "%v", err)
 			}
@@ -407,7 +410,7 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			if tc.createFail && err == nil {
 				suite.FailNowf("expected create cmd to fail because at least one index failed to be created", "%v", err)
 			} else if !tc.createFail && err != nil {
-				suite.FailNowf("expected create cmd to succeed because all indexes were created %s", err.Error())
+				suite.FailNowf("expected create cmd to succeed because all indexes were created", "%v : %s", err.Error(), output)
 			}
 
 			// Cleanup list and sed commands

@@ -499,6 +499,9 @@ macos-pkg-notarize:
 ### make cleanall && make build-prerelease && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 ### make cleanall && make build-official && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 
+# set var fail fast to value of env var or to true by default
+FAIL_FAST ?= false
+
 .PHONY: test
 test: integration unit
 
@@ -508,7 +511,13 @@ test-large: integration-large unit
 .PHONY: integration
 integration:
 	mkdir -p $(COV_INTEGRATION_DIR) || true
-	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m 
+	if [ "$(FAIL_FAST)" = "true" ]; then \
+		COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -failfast -tags=integration -timeout 30m ; \
+	else \
+		COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m ; \
+	fi
+
+# COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m 
 
 .PHONY: integration-large
 integration-large:

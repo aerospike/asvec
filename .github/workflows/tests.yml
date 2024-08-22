@@ -33,4 +33,4 @@ jobs:
         docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
     - name: Run tests
       run: |
-        make test
+        FAIL_FAST=true make test

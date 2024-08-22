@@ -408,9 +408,9 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			logger.Debug(string(output))
 
 			if tc.createFail && err == nil {
-				suite.FailNowf("expected create cmd to fail because at least one index failed to be created", "%v", err)
+				suite.Failf("expected create cmd to fail because at least one index failed to be created", "%v", err)
 			} else if !tc.createFail && err != nil {
-				suite.FailNowf("expected create cmd to succeed because all indexes were created", "%v : %s", err.Error(), output)
+				suite.Failf("expected create cmd to succeed because all indexes were created", "%v : %s", err.Error(), output)
 			}
 
 			// Cleanup list and sed commands

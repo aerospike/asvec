@@ -5,9 +5,11 @@ package main
 import (
 	"asvec/cmd/flags"
 	"asvec/tests"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -381,12 +383,16 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to create sed pipe", "%v", err)
 			}
 
-			sedCmd.Stdin = listPipe
+			listPipeStdout := &bytes.Buffer{}
+			sedPipeStdout := &bytes.Buffer{}
+			sedCmd.Stdin = io.TeeReader(listPipe, listPipeStdout)
+			// sedCmd.Stdin = listPipe
 
 			createArgs := []string{"index", "create", "--log-level", "debug"}
 			createArgs = suite.AddSuiteArgs(createArgs...)
 			createCmd := suite.GetCmd(createArgs...)
-			createCmd.Stdin = sedPipe
+			createCmd.Stdin = io.TeeReader(sedPipe, sedPipeStdout)
+			// createCmd.Stdin = sedPipe
 
 			// Start list and sed commands so data can flow through the pipes
 			if err := listCmd.Start(); err != nil {
@@ -400,11 +406,6 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to start sed cmd", "%v", err)
 			}
 
-			// Cleanup list and sed commands
-			if err := listCmd.Wait(); err != nil {
-				suite.FailNowf("unable to wait for list cmd", "%v", err)
-			}
-
 			// Need to pause a bit while listCmd has some output
 			time.Sleep(time.Second * 1)
 
@@ -412,13 +413,26 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			output, err := createCmd.CombinedOutput()
 			logger.Debug(string(output))
 
+			// Cleanup list and sed commands
+			if err := listCmd.Wait(); err != nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
+				suite.FailNowf("unable to wait for list cmd", "%v", err)
+			}
+
 			if err := sedCmd.Wait(); err != nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
 				suite.FailNowf("unable to wait for sed cmd", "%v", err)
 			}
 
 			if tc.createFail && err == nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
 				suite.Failf("expected create cmd to fail because at least one index failed to be created", "%v", err)
 			} else if !tc.createFail && err != nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
 				suite.Failf("expected create cmd to succeed because all indexes were created", "%v : %s", err.Error(), output)
 			}
 

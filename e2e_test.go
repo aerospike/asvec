@@ -400,6 +400,11 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to start sed cmd", "%v", err)
 			}
 
+			// Cleanup list and sed commands
+			if err := listCmd.Wait(); err != nil {
+				suite.FailNowf("unable to wait for list cmd", "%v", err)
+			}
+
 			// Need to pause a bit while listCmd has some output
 			time.Sleep(time.Second * 1)
 
@@ -407,23 +412,18 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			output, err := createCmd.CombinedOutput()
 			logger.Debug(string(output))
 
+			if err := sedCmd.Wait(); err != nil {
+				suite.FailNowf("unable to wait for sed cmd", "%v", err)
+			}
+
 			if tc.createFail && err == nil {
 				suite.Failf("expected create cmd to fail because at least one index failed to be created", "%v", err)
 			} else if !tc.createFail && err != nil {
 				suite.Failf("expected create cmd to succeed because all indexes were created", "%v : %s", err.Error(), output)
 			}
 
-			// Cleanup list and sed commands
-			if err := listCmd.Wait(); err != nil {
-				suite.FailNowf("unable to wait for list cmd", "%v", err)
-			}
-
-			if err := sedCmd.Wait(); err != nil {
-				suite.FailNowf("unable to wait for sed cmd", "%v", err)
-			}
-
 			for _, str := range tc.checkContains {
-				suite.Contains(string(output), str)
+				suite.Assert().Contains(string(output), str)
 			}
 		})
 	}

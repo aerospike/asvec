@@ -531,8 +531,9 @@ unit:
 
 .PHONY: coverage
 coverage: test-large
-	go tool covdata textfmt -i="$(COV_INTEGRATION_DIR),$(COV_UNIT_DIR)" -o=$(COVERAGE_DIR)/total.cov
-	go tool cover -func=$(COVERAGE_DIR)/total.cov
+	go tool covdata textfmt -i="$(COV_INTEGRATION_DIR),$(COV_UNIT_DIR)" -o=$(COVERAGE_DIR)/tmp.cov
+	go tool cover -func=$(COVERAGE_DIR)/tmp.cov
+	grep -v 'tests/' $(COVERAGE_DIR)/tmp.cov > $(COVERAGE_DIR)/total.cov
 
 PHONY: view-coverage
 view-coverage: $(COVERAGE_DIR)/total.cov

@@ -309,8 +309,8 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			"s/exists/does-not-exist-yet/g",
 			false,
 			[]string{
-				"Successfully created index test.*.does-not-exist-yet",
-				"Successfully created index bar.barset.does-not-exist-yet",
+				"Successfully created index test.*.does-not-exist-yet1",
+				"Successfully created index bar.barset.does-not-exist-yet2",
 				"Successfully created all indexes from yaml",
 			},
 		},

@@ -130,12 +130,16 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			if !oneRequiredFlagsSet {
 				ioReader := os.Stdin
 				if indexCreateFlags.inputFile != StdIn {
+					logger.Info("reading input file")
 					r, err := os.Open(indexCreateFlags.inputFile)
 					if err != nil {
+						logger.Error("failed to open index definitions file", slog.Any("error", err))
 						return err
 					}
 
 					ioReader = r
+				} else {
+					logger.Debug("attempting to read index definitions from stdin")
 				}
 
 				if s, err := ioReader.Stat(); err == nil && s.Size() != 0 {
@@ -174,6 +178,8 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 
 					logger.Debug("parsed index definitions from stdin", slog.Any("indexes", stdinIndexDefinitions))
 					configureRequiredFlags = false
+				} else {
+					logger.Debug("no data available to read from stdin")
 				}
 			}
 

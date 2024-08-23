@@ -59,11 +59,9 @@ var indexCreateFlags = &struct {
 func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.BoolVarP(&indexCreateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")
-	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, StdIn, "A yaml file containing IndexDefinitions created using \"asvec index list --yaml\"") //nolint:lll // For readability
-	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                                  //nolint:lll // For readability
-	flagSet.VarP(&indexCreateFlags.set, flags.Set, flags.SetShort, "The sets for the index.")                                                                   //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")
-	flagSet.MarkHidden("sets")                                                                                                                                                                                                                                                                                                                                     // mitigate breaking change                                                                                                                                                                                                                                                                   //nolint:lll // For readability
+	flagSet.StringVar(&indexCreateFlags.inputFile, flags.InputFile, StdIn, "A yaml file containing IndexDefinitions created using \"asvec index list --yaml\"")                                                                                                                                                                                                    //nolint:lll // For readability
+	flagSet.StringVarP(&indexCreateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                                                                                                                                                                                                                                     //nolint:lll // For readability
+	flagSet.VarP(&indexCreateFlags.set, flags.Set, flags.SetShort, "The sets for the index.")                                                                                                                                                                                                                                                                      //nolint:lll // For readability                                                                                                                                                                                                                                                                 //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                                                                                                                                                                                                                           //nolint:lll // For readability
 	flagSet.StringVarP(&indexCreateFlags.vectorField, flags.VectorField, "f", "", "The name of the vector field.")                                                                                                                                                                                                                                                 //nolint:lll // For readability
 	flagSet.Uint32VarP(&indexCreateFlags.dimensions, flags.Dimension, "d", 0, "The dimension of the vector field.")                                                                                                                                                                                                                                                //nolint:lll // For readability
@@ -79,6 +77,13 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexCreateFlags.hnswCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
+
+	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")
+	err := flagSet.MarkHidden("sets")
+
+	if err != nil {
+		panic(err)
+	}
 
 	return flagSet
 }
@@ -128,8 +133,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 
 			if !oneRequiredFlagsSet {
 				var data []byte
-				// ioReader := os.Stdin
-				readInput := false
+
 				if indexCreateFlags.inputFile != StdIn {
 					logger.Info("reading input file")
 					r, err := os.Open(indexCreateFlags.inputFile)
@@ -139,38 +143,36 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					}
 
 					defer r.Close()
-					// ioReader = r
 
 					data, err = io.ReadAll(r)
 					if err != nil {
 						logger.Error("failed to read index definitions", slog.Any("error", err))
 						return err
 					}
-
-					readInput = true
 				} else {
-					logger.Debug("attempting to read index definitions from stdin")
+					logger.Debug("checking if index definitions are being piped to stdin")
+
 					stat, _ := os.Stdin.Stat()
 					if (stat.Mode() & os.ModeCharDevice) == 0 {
 						logger.Debug("stdin is from a pipe")
+
 						data, err = io.ReadAll(os.Stdin)
 						if err != nil {
 							logger.Error("failed to read index definitions from stdin", slog.Any("error", err))
 							return err
 						}
-
-						readInput = true
 					} else {
 						logger.Debug("no data is being piped to stdin")
 					}
 				}
 
-				if readInput {
+				if data != nil {
 					logger.Debug("read index definitions", slog.Any("data", data))
 
 					// Unmarshal YAML data
 					intermediate := map[string]interface{}{}
-					err = yaml.Unmarshal([]byte(data), &intermediate)
+					err = yaml.Unmarshal(data, &intermediate)
+
 					if err != nil {
 						logger.Error("failed to unmarshal index definitions to untyped map", slog.Any("error", err))
 						return err

@@ -32,8 +32,9 @@ var queryFlags = &struct {
 }
 
 const (
-	defaultMaxResults  = 5
-	defaultMaxDataKeys = 5
+	defaultMaxResults             = 5
+	defaultMaxDataKeys            = 5
+	failedToRunVectorSearchErrMsg = "failed to run vector search"
 )
 
 func newQueryFlagSet() *pflag.FlagSet {
@@ -200,14 +201,23 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 				view.Printf("Hint: To increase the number of records returned, use the --%s flag.", flags.MaxResults)
 
 				if !viper.IsSet(flags.Fields) {
-					view.Printf("Hint: To choose which record keys are displayed, use the --%s flag. By default only %d are displayed.", flags.Fields, defaultMaxDataKeys)
+					view.Printf(
+						"Hint: To choose which record keys are displayed, use the --%s flag. By default only %d are displayed.",
+						flags.Fields,
+						defaultMaxDataKeys,
+					)
 				}
 			}
 		},
 	}
 }
 
-func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.IndexDefinition, hnswSearchParams *protos.HnswSearchParams) ([]*avs.Neighbor, error) {
+func queryVectorByKey(
+	ctx context.Context,
+	client *avs.Client,
+	indexDef *protos.IndexDefinition,
+	hnswSearchParams *protos.HnswSearchParams,
+) ([]*avs.Neighbor, error) {
 	logger := logger.With(
 		slog.String("key", queryFlags.key),
 		slog.String("index", queryFlags.indexName),
@@ -229,7 +239,10 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 		logger.ErrorContext(ctx, msg, slog.Any("error", err))
 
 		if set == nil {
-			view.Warningf("The requested record was not found. If the record is in a set, use may also need to provide the --%s flag.", flags.Set)
+			view.Warningf(
+				"The requested record was not found. If the record is in a set, use may also need to provide the --%s flag.",
+				flags.Set,
+			)
 		}
 
 		return nil, fmt.Errorf("%s: %w", msg, err)
@@ -241,6 +254,7 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 	if !ok {
 		msg := "field not found in specified record"
 		logger.ErrorContext(ctx, msg, slog.String("field", indexDef.Field), slog.Any("data", record.Data))
+
 		return nil, fmt.Errorf("%s: %w", msg, err)
 	}
 
@@ -273,14 +287,15 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 	}
 
 	if err != nil {
-		msg := "failed to run vector search"
-		logger.ErrorContext(ctx, msg, slog.Any("error", err))
+		logger.ErrorContext(ctx, failedToRunVectorSearchErrMsg, slog.Any("error", err))
 		view.Errorf("Unable to run vector query: %s", err)
+
 		return nil, err
 	}
 
 	// Remove the queried vector from the results
 	newNeighbors := make([]*avs.Neighbor, 0, len(neighbors)-1)
+
 	for _, n := range neighbors {
 		if n.Key != queryFlags.key {
 			newNeighbors = append(newNeighbors, n)
@@ -292,7 +307,12 @@ func queryVectorByKey(ctx context.Context, client *avs.Client, indexDef *protos.
 	return neighbors, nil
 }
 
-func trialAndErrorQuery(ctx context.Context, client *avs.Client, dimension int, hnswSearchParams *protos.HnswSearchParams) ([]*avs.Neighbor, error) {
+func trialAndErrorQuery(
+	ctx context.Context,
+	client *avs.Client,
+	dimension int,
+	hnswSearchParams *protos.HnswSearchParams,
+) ([]*avs.Neighbor, error) {
 	logger := logger.With(
 		slog.String("index", queryFlags.indexName),
 		slog.String("namespace", queryFlags.namespace),
@@ -310,9 +330,9 @@ func trialAndErrorQuery(ctx context.Context, client *avs.Client, dimension int, 
 		queryFlags.includeFields,
 		nil,
 	)
+
 	if err != nil {
-		msg := "failed to run vector search"
-		logger.WarnContext(ctx, msg, slog.Any("error", err))
+		logger.WarnContext(ctx, failedToRunVectorSearchErrMsg, slog.Any("error", err))
 	}
 
 	if err != nil || len(neighbors) == 0 {
@@ -329,9 +349,9 @@ func trialAndErrorQuery(ctx context.Context, client *avs.Client, dimension int, 
 		)
 
 		if err != nil {
-			msg := "failed to run vector search"
-			logger.WarnContext(ctx, msg, slog.Any("error", err))
+			logger.WarnContext(ctx, failedToRunVectorSearchErrMsg, slog.Any("error", err))
 			view.Errorf("Unable to run vector query: %s", err)
+
 			return nil, err
 		}
 	}
@@ -353,5 +373,4 @@ func init() {
 	}
 
 	queryCmd.MarkFlagsMutuallyExclusive(flags.Vector, flags.Key)
-
 }

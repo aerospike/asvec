@@ -49,7 +49,11 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 	return &t
 }
 
-func (itw *IndexTableWriter) AppendIndexRow(index *protos.IndexDefinition, status *protos.IndexStatusResponse, format int) {
+func (itw *IndexTableWriter) AppendIndexRow(
+	index *protos.IndexDefinition,
+	status *protos.IndexStatusResponse,
+	format int,
+) {
 	row := table.Row{index.Id.Name, index.Id.Namespace, index.SetFilter, index.Field,
 		index.Dimensions, index.VectorDistanceMetric, status.GetUnmergedRecordCount()}
 

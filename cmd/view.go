@@ -155,7 +155,12 @@ func (v *View) getNeighborTableWriter() *writers.NeighborTableWriter {
 	return writers.NewNeighborTableWriter(v.out, v.logger)
 }
 
-func (v *View) PrintQueryResults(neighbors []*avs.Neighbor, format int, maxDataKeys, maxDataValueColWidth int) {
+func (v *View) PrintQueryResults(
+	neighbors []*avs.Neighbor,
+	format int,
+	maxDataKeys,
+	maxDataValueColWidth int,
+) {
 	t := v.getNeighborTableWriter()
 
 	for _, n := range neighbors {

@@ -9,7 +9,6 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 type NeighborTableWriter struct {
 	table  table.Writer
 	logger *slog.Logger
@@ -53,7 +52,12 @@ func NewNeighborTableWriter(writer io.Writer, logger *slog.Logger) *NeighborTabl
 	return &t
 }
 
-func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDataKeys, renderFormat, maxDataValueColWidth int) {
+func (itw *NeighborTableWriter) AppendNeighborRow(
+	neighbor *avs.Neighbor,
+	maxDataKeys,
+	renderFormat,
+	maxDataValueColWidth int,
+) {
 	row := table.Row{
 		neighbor.Namespace,
 		neighbor.Set,
@@ -74,6 +78,7 @@ func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDat
 			},
 		},
 	)
+
 	keys := make([]string, 0, len(neighbor.Record.Data))
 
 	for key := range neighbor.Record.Data {
@@ -88,6 +93,7 @@ func (itw *NeighborTableWriter) AppendNeighborRow(neighbor *avs.Neighbor, maxDat
 
 			break
 		}
+
 		tData.AppendRow(table.Row{key, neighbor.Record.Data[key]})
 	}
 

@@ -53,10 +53,10 @@ func formatEndpoints(nodeID uint64, nodeEndpoints map[uint64]*protos.ServerEndpo
 	return strings.Join(nodeToEndpointsStr, "\n")
 }
 
-func renderTable(table table.Writer, format int) string {
+func renderTable(t table.Writer, format int) string {
 	if format == 0 {
-		return table.Render()
-	} else {
-		return table.RenderCSV()
+		return t.Render()
 	}
+
+	return t.RenderCSV()
 }

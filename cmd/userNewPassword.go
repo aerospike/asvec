@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 var userNewPassFlags = &struct {
 	clientFlags *flags.ClientFlags
 	username    string

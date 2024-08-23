@@ -21,9 +21,9 @@ var view = NewView(os.Stdout, os.Stderr, logger)
 var Version = "development" // Overwritten at build time by ld_flags
 
 var rootFlags = &struct {
+	clientFlags *flags.ClientFlags
 	logLevel    flags.LogLevelFlag
 	noColor     bool
-	clientFlags *flags.ClientFlags
 }{
 	clientFlags: flags.NewClientFlags(),
 }

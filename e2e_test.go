@@ -399,6 +399,8 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to start list cmd", "%v", err)
 			}
 
+			logger.Debug("started list command", slog.String("cmd", listCmd.String()))
+
 			// Need to pause a bit while listCmd has some output
 			time.Sleep(time.Second * 1)
 
@@ -406,10 +408,13 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to start sed cmd", "%v", err)
 			}
 
+			logger.Debug("started sed command", slog.String("cmd", sedCmd.String()))
+
 			// Need to pause a bit while listCmd has some output
 			time.Sleep(time.Second * 1)
 
 			// Run create Cmd to completion
+			logger.Debug("running create command", slog.String("cmd", createCmd.String()))
 			output, err := createCmd.CombinedOutput()
 			logger.Debug(string(output))
 

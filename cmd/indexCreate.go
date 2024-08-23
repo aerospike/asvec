@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -128,7 +127,9 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 			}
 
 			if !oneRequiredFlagsSet {
-				ioReader := os.Stdin
+				var data []byte
+				// ioReader := os.Stdin
+				readInput := false
 				if indexCreateFlags.inputFile != StdIn {
 					logger.Info("reading input file")
 					r, err := os.Open(indexCreateFlags.inputFile)
@@ -137,19 +138,34 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 						return err
 					}
 
-					ioReader = r
-				} else {
-					logger.Debug("attempting to read index definitions from stdin")
-				}
+					defer r.Close()
+					// ioReader = r
 
-				if s, err := ioReader.Stat(); err == nil && s.Size() != 0 {
-					reader := bufio.NewReader(ioReader)
-					data, err := reader.ReadString(io.SeekEnd)
-					if err != io.EOF {
+					data, err = io.ReadAll(r)
+					if err != nil {
 						logger.Error("failed to read index definitions", slog.Any("error", err))
 						return err
 					}
 
+					readInput = true
+				} else {
+					logger.Debug("attempting to read index definitions from stdin")
+					stat, _ := os.Stdin.Stat()
+					if (stat.Mode() & os.ModeCharDevice) == 0 {
+						logger.Debug("stdin is from a pipe")
+						data, err = io.ReadAll(os.Stdin)
+						if err != nil {
+							logger.Error("failed to read index definitions from stdin", slog.Any("error", err))
+							return err
+						}
+
+						readInput = true
+					} else {
+						logger.Debug("no data is being piped to stdin")
+					}
+				}
+
+				if readInput {
 					logger.Debug("read index definitions", slog.Any("data", data))
 
 					// Unmarshal YAML data
@@ -178,8 +194,6 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 
 					logger.Debug("parsed index definitions from stdin", slog.Any("indexes", stdinIndexDefinitions))
 					configureRequiredFlags = false
-				} else {
-					logger.Debug("no data available to read from stdin")
 				}
 			}
 

@@ -1086,22 +1086,39 @@ func getVectorBool(length int, last int) []bool {
 
 func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 	suite.CleanUpIndexes(context.Background())
+	strIndexName := "query-str-index"
+	intIndexName := "query-int-index"
+	indexes := []*protos.IndexDefinition{
+		tests.NewIndexDefinitionBuilder(
+			strIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-str",
+		).Build(),
+		tests.NewIndexDefinitionBuilder(
+			intIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-int",
+		).Build(),
+	}
+
+	for _, index := range indexes {
+		err := suite.AvsClient.IndexCreateFromIndexDef(context.Background(), index)
+		if err != nil {
+			suite.FailNowf("unable to index create", "%v", err)
+		}
+
+		defer suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+	}
 
 	type testRecord struct {
 		key  any
 		data map[string]any
 	}
 
-	key := "a"
-
-	testRecords := []testRecord{
+	records := []testRecord{
 		{
-			key: key,
+			key: "a",
 			data: map[string]any{
-				"str":     "a",
-				"int":     1,
-				"float":   3.14,
-				"float32": getVectorFloat32(10, 0.0),
+				"str":         "a",
+				"int":         1,
+				"float":       3.14,
+				"float32-str": getVectorFloat32(10, 0.0),
 				"map": map[any]any{
 					"foo": "bar",
 				},
@@ -1111,58 +1128,139 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 		{
 			key: "b",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 1.0),
+				"float32-str": getVectorFloat32(10, 1.0),
 			},
 		},
 		{
 			key: "c",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 2.0),
+				"float32-str": getVectorFloat32(10, 2.0),
 			},
 		},
 		{
 			key: "d",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 3.0),
+				"float32-str": getVectorFloat32(10, 3.0),
 			},
 		},
 		{
 			key: "e",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 4.0),
+				"float32-str": getVectorFloat32(10, 4.0),
 			},
 		},
 		{
 			key: "f",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 5.0),
+				"float32-str": getVectorFloat32(10, 5.0),
 			},
 		},
 		{
 			key: "g",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 6.0),
+				"float32-str": getVectorFloat32(10, 6.0),
 			},
 		},
 		{
 			key: "h",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 7.0),
+				"float32-str": getVectorFloat32(10, 7.0),
 			},
 		},
 		{
 			key: "i",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 8.0),
+				"float32-str": getVectorFloat32(10, 8.0),
 			},
 		},
 		{
 			key: "j",
 			data: map[string]any{
-				"float32": getVectorFloat32(10, 9.0),
+				"float32-str": getVectorFloat32(10, 9.0),
+			},
+		},
+		{
+			key: 0,
+			data: map[string]any{
+				"str":         "a",
+				"int":         1,
+				"float":       3.14,
+				"float32-int": getVectorFloat32(10, 0.0),
+				"map": map[any]any{
+					"foo": "bar",
+				},
+				"extra": "to not display",
+			},
+		},
+		{
+			key: 1,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 1.0),
+			},
+		},
+		{
+			key: 2,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 2.0),
+			},
+		},
+		{
+			key: 3,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 3.0),
+			},
+		},
+		{
+			key: 4,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 4.0),
+			},
+		},
+		{
+			key: 5,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 5.0),
+			},
+		},
+		{
+			key: 6,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 6.0),
+			},
+		},
+		{
+			key: 7,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 7.0),
+			},
+		},
+		{
+			key: 8,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 8.0),
+			},
+		},
+		{
+			key: 9,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 9.0),
 			},
 		},
 	}
+
+	for _, record := range records {
+		suite.AvsClient.Upsert(
+			context.Background(),
+			"test",
+			nil,
+			record.key,
+			record.data,
+			false,
+		)
+	}
+
+	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", strIndexName, 12*time.Second)
+	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", intIndexName, 12*time.Second)
 
 	testCases := []struct {
 		name          string
@@ -1172,78 +1270,94 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 		expectedTable string
 	}{
 		{
-			name: "run query with zero vector",
-			index: tests.NewIndexDefinitionBuilder(
-				"query-single-index-test", "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32",
-			).Build(),
-			records: testRecords,
-			cmd:     "query -i query-single-index-test -n test --max-results 3 --fields str,int,float,float32,map --no-color --format 1",
+			name:    "run query with zero vector",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test --max-results 3 --fields str,int,float,float32-str,map --no-color --format 1", strIndexName),
 			expectedTable: `Query Results
 ,Namespace,Key,Distance,Generation,Data
 1,test,a,0,0,"Key\,Value
 float\,3.14
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
 int\,1
 map\,map[foo:bar]
 str\,a"
 2,test,b,1,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
 3,test,c,4,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 `,
 		},
 		{
-			name: "run query with custom vector",
-			index: tests.NewIndexDefinitionBuilder(
-				"query-single-index-test", "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32",
-			).Build(),
-			records: testRecords,
-			cmd:     "query -i query-single-index-test -n test --vector [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0]  --no-color --format 1",
+			name:    "run query with custom vector",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test --vector [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0]  --no-color --format 1", strIndexName),
 			expectedTable: `Query Results
 ,Namespace,Key,Distance,Generation,Data
 1,test,b,0,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
 2,test,a,1,0,"Key\,Value
 extra\,to not display
 float\,3.14
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
 int\,1
 map\,map[foo:bar]
 ...\,..."
 3,test,c,1,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 4,test,d,4,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
 5,test,e,9,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
 Hint: To increase the number of records returned, use the --max-results flag.
 Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
 `,
 		},
 		{
-			name: "run query with using key",
-			index: tests.NewIndexDefinitionBuilder(
-				"query-single-index-test", "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32",
-			).Build(),
-			records: testRecords,
-			cmd:     "query -i query-single-index-test -n test -k b --no-color --format 1",
+			name:    "run query with using str key",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test -k b --no-color --format 1", strIndexName),
 			expectedTable: `Query Results
 ,Namespace,Key,Distance,Generation,Data
 1,test,a,1,0,"Key\,Value
 extra\,to not display
 float\,3.14
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
 int\,1
 map\,map[foo:bar]
 ...\,..."
 2,test,c,1,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 3,test,d,4,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
 4,test,e,9,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
 5,test,f,16,0,"Key\,Value
-float32\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,5.0]\""
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,5.0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+		{
+			name:    "run query with using int key",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test -t 1 --no-color --format 1", intIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,0,1,0,"Key\,Value
+extra\,to not display
+float\,3.14
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+...\,..."
+2,test,2,1,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+3,test,3,4,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+4,test,4,9,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+5,test,5,16,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,5.0]\""
 Hint: To increase the number of records returned, use the --max-results flag.
 Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
 `,
@@ -1252,38 +1366,6 @@ Hint: To choose which record keys are displayed, use the --fields flag. By defau
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			err := suite.AvsClient.IndexCreateFromIndexDef(
-				context.Background(),
-				tc.index,
-			)
-			if err != nil {
-				suite.FailNowf("unable to create index", "%v", err)
-			}
-
-			defer suite.AvsClient.IndexDrop(
-				context.Background(),
-				tc.index.Id.Namespace,
-				tc.index.Id.Name,
-			)
-
-			for _, record := range tc.records {
-				suite.AvsClient.Upsert(
-					context.Background(),
-					tc.index.Id.Namespace,
-					tc.index.SetFilter,
-					record.key,
-					record.data,
-					false,
-				)
-			}
-
-			suite.AvsClient.WaitForIndexCompletion(
-				context.Background(),
-				tc.index.Id.Namespace,
-				tc.index.Id.Name,
-				time.Second*12,
-			)
-
 			actualTable, stderr, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 			suite.Assert().NoError(err, "error: %s, stdout: %s, stderr: %s", err, actualTable, stderr)
 
@@ -1333,10 +1415,15 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 		{
 			"query a key without a set and check for prompt",
 			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
-			"Warning: The requested record was not found. If the record is in a set, use may also need to provide the --set flag.",
+			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+		},
+		{
+			"query a key without a set and check for prompt",
+			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
+			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
 		},
 
-		//Warning: The requested record was not found. If the record is in a set, use may also need to provide the --set flag.
+		//Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.
 	}
 
 	for _, tc := range testCases {

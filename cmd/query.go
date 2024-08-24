@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"
@@ -19,7 +20,8 @@ var queryFlags = &struct {
 	namespace       string
 	set             flags.StringOptionalFlag
 	indexName       string
-	key             string
+	keyString       flags.StringOptionalFlag
+	keyInt          flags.IntOptionalFlag
 	vector          flags.VectorFlag
 	maxResults      uint32
 	maxDataKeys     uint
@@ -40,9 +42,10 @@ const (
 func newQueryFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.StringVarP(&queryFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index to query.")                                                                                          //nolint:lll // For readability
-	flagSet.VarP(&queryFlags.set, flags.Set, flags.SetShort, fmt.Sprintf("When a --%s query is done you may also need to provide a set so the appropriate record retrieved.", flags.Key))                                  //nolint:lll // For readability
+	flagSet.VarP(&queryFlags.set, flags.Set, flags.SetShort, fmt.Sprintf("When a --%s query is done you may also need to provide a set so the appropriate record retrieved.", flags.KeyString))                            //nolint:lll // For readability
 	flagSet.StringVarP(&queryFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index to query.")                                                                                                //nolint:lll // For readability
-	flagSet.StringVarP(&queryFlags.key, flags.Key, flags.KeyShort, "", "Optionally use the the vector from the given key to perform a query.")                                                                             //nolint:lll // For readability
+	flagSet.VarP(&queryFlags.keyString, flags.KeyString, flags.KeyStrShort, "Optionally use the the vector from the given string key to perform a query.")                                                                 //nolint:lll // For readability
+	flagSet.VarP(&queryFlags.keyInt, flags.KeyInt, flags.KeyIntShort, "Optionally use the vector from the given integer key to perform a query.")                                                                          //nolint:lll // For readability
 	flagSet.VarP(&queryFlags.vector, flags.Vector, flags.VectorShort, "The vector to use as a query. Values true/false and 1/0 will result in a binary vector. Values containing a decimal will result in a float vector") //nolint:lll // For readability
 	flagSet.Uint32VarP(&queryFlags.maxResults, flags.MaxResults, "r", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                      //nolint:lll // For readability
 	flagSet.UintVarP(&queryFlags.maxDataKeys, flags.MaxDataKeys, "m", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                      //nolint:lll // For readability
@@ -87,8 +90,8 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 
 		`, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flags.Set) && !viper.IsSet(flags.Key) {
-				view.Warningf("The --%s flag is only used when the --%s flag is set.", flags.Set, flags.Key)
+			if viper.IsSet(flags.Set) && !viper.IsSet(flags.KeyString) {
+				view.Warningf("The --%s flag is only used when the --%s flag is set.", flags.Set, flags.KeyString)
 			}
 
 			return checkSeedsAndHost()
@@ -99,7 +102,8 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 					slog.String(flags.Namespace, queryFlags.namespace),
 					slog.Any(flags.Set, queryFlags.set.Val),
 					slog.String(flags.IndexName, queryFlags.indexName),
-					slog.String(flags.Key, queryFlags.key),
+					slog.Any(flags.KeyString, queryFlags.keyString.Val),
+					slog.Any(flags.KeyInt, queryFlags.keyInt.Val),
 					slog.Any(flags.Vector, queryFlags.vector),
 					slog.Any(flags.MaxResults, queryFlags.maxResults),
 					slog.Any(flags.MaxDataKeys, queryFlags.maxDataKeys),
@@ -164,7 +168,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 					return
 				}
 
-				if queryFlags.key != "" {
+				if queryFlags.keyString.Val != nil || queryFlags.keyInt.Val != nil {
 					neighbors, err = queryVectorByKey(ctx, client, indexDef, hnswSearchParams)
 					if err != nil {
 						logger.ErrorContext(ctx, "unable to get vector using provided key", slog.Any("error", err))
@@ -219,7 +223,8 @@ func queryVectorByKey(
 	hnswSearchParams *protos.HnswSearchParams,
 ) ([]*avs.Neighbor, error) {
 	logger := logger.With(
-		slog.String("key", queryFlags.key),
+		slog.String("key-str", queryFlags.keyString.String()),
+		slog.String("key-int", queryFlags.keyInt.String()),
 		slog.String("index", queryFlags.indexName),
 		slog.String("namespace", queryFlags.namespace),
 		slog.String("field", indexDef.Field),
@@ -233,14 +238,25 @@ func queryVectorByKey(
 		set = indexDef.SetFilter
 	}
 
-	record, err := client.Get(ctx, queryFlags.namespace, set, queryFlags.key, []string{indexDef.Field}, nil)
+	var key any
+
+	if queryFlags.keyString.Val != nil {
+		key = *queryFlags.keyString.Val
+	} else if queryFlags.keyInt.Val != nil {
+		key = *queryFlags.keyInt.Val
+	} else {
+		logger.ErrorContext(ctx, "no key provided")
+		return nil, fmt.Errorf("no key provided, this should not happen")
+	}
+
+	record, err := client.Get(ctx, queryFlags.namespace, set, key, []string{indexDef.Field}, nil)
 	if err != nil {
 		msg := "unable to get record"
 		logger.ErrorContext(ctx, msg, slog.Any("error", err))
 
 		if set == nil {
 			view.Warningf(
-				"The requested record was not found. If the record is in a set, use may also need to provide the --%s flag.",
+				"The requested record was not found. If the record is in a set, you may also need to provide the --%s flag.",
 				flags.Set,
 			)
 		}
@@ -297,7 +313,7 @@ func queryVectorByKey(
 	newNeighbors := make([]*avs.Neighbor, 0, len(neighbors)-1)
 
 	for _, n := range neighbors {
-		if n.Key != queryFlags.key {
+		if !reflect.DeepEqual(n.Key, key) {
 			newNeighbors = append(newNeighbors, n)
 		}
 	}
@@ -372,5 +388,5 @@ func init() {
 		}
 	}
 
-	queryCmd.MarkFlagsMutuallyExclusive(flags.Vector, flags.Key)
+	queryCmd.MarkFlagsMutuallyExclusive(flags.Vector, flags.KeyString)
 }

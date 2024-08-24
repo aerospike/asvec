@@ -80,6 +80,29 @@ func (f *Uint64OptionalFlag) String() string {
 	return optionalEmptyString
 }
 
+type IntOptionalFlag struct {
+	Val *int64
+}
+
+func (f *IntOptionalFlag) Set(val string) error {
+	v, err := strconv.ParseInt(val, 0, 64)
+	f.Val = &v
+
+	return err
+}
+
+func (f *IntOptionalFlag) Type() string {
+	return "int"
+}
+
+func (f *IntOptionalFlag) String() string {
+	if f.Val != nil {
+		return strconv.FormatInt(*f.Val, 10)
+	}
+
+	return optionalEmptyString
+}
+
 type Float32OptionalFlag struct {
 	Val *float32
 }

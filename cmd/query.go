@@ -91,7 +91,12 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 		`, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flags.Set) && !viper.IsSet(flags.KeyString) {
-				view.Warningf("The --%s flag is only used when the --%s flag is set.", flags.Set, flags.KeyString)
+				view.Warningf(
+					"The --%s flag is only used when the --%s or --%s flag is set.",
+					flags.Set,
+					flags.KeyString,
+					flags.KeyInt,
+				)
 			}
 
 			return checkSeedsAndHost()
@@ -240,11 +245,12 @@ func queryVectorByKey(
 
 	var key any
 
-	if queryFlags.keyString.Val != nil {
+	switch {
+	case queryFlags.keyString.Val != nil:
 		key = *queryFlags.keyString.Val
-	} else if queryFlags.keyInt.Val != nil {
+	case queryFlags.keyInt.Val != nil:
 		key = *queryFlags.keyInt.Val
-	} else {
+	default:
 		logger.ErrorContext(ctx, "no key provided")
 		return nil, fmt.Errorf("no key provided, this should not happen")
 	}

@@ -1400,7 +1400,7 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 		{
 			"use set without the key flag",
 			"query --namespace test -i index --set testset",
-			"Warning: The --set flag is only used when the --key flag is set.",
+			"Warning: The --set flag is only used when the --key-str or --key-int flag is set.",
 		},
 		{
 			"try to query an index that does not exist",
@@ -1419,11 +1419,14 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 		},
 		{
 			"query a key without a set and check for prompt",
-			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
+			fmt.Sprintf("query --namespace %s -i %s -t 1234", namespace, indexName),
 			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
 		},
-
-		//Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.
+		{
+			"query using an invalid int key",
+			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
+			"Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
+		},
 	}
 
 	for _, tc := range testCases {

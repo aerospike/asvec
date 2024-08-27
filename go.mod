@@ -5,7 +5,7 @@ go 1.22.5
 // replace github.com/aerospike/avs-client-go => ../avs-client-go
 
 require (
-	github.com/aerospike/avs-client-go v0.0.0-20240824002832-084554ed5b09
+	github.com/aerospike/avs-client-go v0.0.0-20240827160142-b7ab11d122ca
 	github.com/aerospike/tools-common-go v0.0.0-20240701164814-36eec593d9c6
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/spf13/cobra v1.8.1

@@ -27,7 +27,7 @@ var removeNil = text.Transformer(func(val interface{}) string {
 	}
 })
 
-func removeFollowingZeros(s string) string {
+func RemoveTrailingZeros(s string) string {
 	lastNoneZeroIdx := len(s) - 1
 
 	for ; s[lastNoneZeroIdx] == '0'; lastNoneZeroIdx-- {
@@ -46,7 +46,9 @@ var vectorFormat = text.Transformer(func(val interface{}) string {
 		ss := make([]string, len(v))
 
 		for i, f := range v {
-			ss[i] = removeFollowingZeros(fmt.Sprintf("%f", f))
+			// Can't use strconv.FormatFloat(f, 'f', -1, 32). It will turn 1.0
+			// into 1. We need 1.0 incase the user copies it to do another query.
+			ss[i] = RemoveTrailingZeros(fmt.Sprintf("%f", f))
 		}
 
 		return fmt.Sprintf("[%s]", strings.Join(ss, ","))

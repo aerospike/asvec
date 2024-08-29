@@ -1,19 +1,21 @@
 package flags
 
 import (
+	"asvec/cmd/writers"
 	"fmt"
 	"strconv"
 	"strings"
 )
 
-// A cobra PFlag to parse and display help info for the host[:port]
-// input option.  It implements the pflag Value and SliceValue interfaces to
-// enable automatic parsing by cobra.
+// A cobra PFlag to parse and store a vector of floats or booleans.
 type VectorFlag struct {
 	FloatSlice []float32
 	BoolSlice  []bool
 }
 
+// NewVectorFlag returns a new VectorFlag. It parses either a bool or float
+// array into the appropriate type. Boolean vectors look like [true,false,0,1].
+// Anything else is parsed as a float [1.0,1,2,3,4.123]
 func (v *VectorFlag) Set(val string) error {
 	val = strings.Trim(val, "[]")
 	val = strings.ReplaceAll(val, " ", "")
@@ -29,7 +31,7 @@ func (v *VectorFlag) Set(val string) error {
 	lastIdx := 0
 
 	for i, s := range ss {
-		// Will fail with 1.0 or 0.0
+		// Will fail with 1.0 or 0.0 but pass on true,false,0,1,t,f
 		tempBool, err := strconv.ParseBool(s)
 		if err != nil {
 			// Try to parse as float
@@ -66,11 +68,23 @@ func (v *VectorFlag) Type() string {
 }
 
 func (v *VectorFlag) String() string {
+	vals := make([]string, max(len(v.BoolSlice), len(v.FloatSlice)))
+
 	if v.BoolSlice != nil {
-		return fmt.Sprintf("%v", v.BoolSlice)
+		for i, b := range v.BoolSlice {
+			if b {
+				vals[i] = "1"
+			} else {
+				vals[i] = "0"
+			}
+		}
+	} else {
+		for i, f := range v.FloatSlice {
+			vals[i] = writers.RemoveTrailingZeros(fmt.Sprintf("%f", f))
+		}
 	}
 
-	return fmt.Sprintf("%v", v.FloatSlice)
+	return fmt.Sprintf("[%s]", strings.Join(vals, ","))
 }
 
 func (v *VectorFlag) IsSet() bool {

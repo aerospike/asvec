@@ -1427,6 +1427,21 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
 			"Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
 		},
+		{
+			"query using key-int and key-str together",
+			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --key-int 1", namespace, indexName),
+			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int key-str] were all set",
+		},
+		{
+			"query using key-str and vector together",
+			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --vector [0,1,1,1]", namespace, indexName),
+			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-str vector] were all set",
+		},
+		{
+			"query using key-str and vector together",
+			fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
+			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
+		},
 	}
 
 	for _, tc := range testCases {

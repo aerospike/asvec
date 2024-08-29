@@ -42,15 +42,15 @@ const (
 func newQueryFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.StringVarP(&queryFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index to query.")                                                                                          //nolint:lll // For readability
-	flagSet.VarP(&queryFlags.set, flags.Set, flags.SetShort, fmt.Sprintf("When a --%s query is done you may also need to provide a set so the appropriate record retrieved.", flags.KeyString))                            //nolint:lll // For readability
+	flagSet.VarP(&queryFlags.set, flags.Set, flags.SetShort, fmt.Sprintf("When a --%s query is done you may also need to provide a set so the appropriate record is retrieved.", flags.KeyString))                         //nolint:lll // For readability
 	flagSet.StringVarP(&queryFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index to query.")                                                                                                //nolint:lll // For readability
-	flagSet.VarP(&queryFlags.keyString, flags.KeyString, flags.KeyStrShort, "Optionally use the the vector from the given string key to perform a query.")                                                                 //nolint:lll // For readability
+	flagSet.VarP(&queryFlags.keyString, flags.KeyString, flags.KeyStrShort, "Optionally use the vector from the given string key to perform a query.")                                                                     //nolint:lll // For readability
 	flagSet.VarP(&queryFlags.keyInt, flags.KeyInt, flags.KeyIntShort, "Optionally use the vector from the given integer key to perform a query.")                                                                          //nolint:lll // For readability
 	flagSet.VarP(&queryFlags.vector, flags.Vector, flags.VectorShort, "The vector to use as a query. Values true/false and 1/0 will result in a binary vector. Values containing a decimal will result in a float vector") //nolint:lll // For readability
-	flagSet.Uint32VarP(&queryFlags.maxResults, flags.MaxResults, "r", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                      //nolint:lll // For readability
-	flagSet.UintVarP(&queryFlags.maxDataKeys, flags.MaxDataKeys, "m", defaultMaxDataKeys, "The maximum number of records to return.")                                                                                      //nolint:lll // For readability
+	flagSet.Uint32VarP(&queryFlags.maxResults, flags.MaxResults, "r", defaultMaxResults, "The maximum number of records to return.")                                                                                       //nolint:lll // For readability
+	flagSet.UintVarP(&queryFlags.maxDataKeys, flags.MaxDataKeys, "m", defaultMaxDataKeys, "The maximum number of record data keys to display before truncating.")                                                          //nolint:lll // For readability
 	flagSet.UintVarP(&queryFlags.maxDataColWidth, flags.MaxDataColWidth, flags.MaxDataColWidthShort, 50, "The maximum column width for record data before wrapping. To display long values on a single line set to 0.")    //nolint:lll // For readability
-	flagSet.StringSliceVarP(&queryFlags.includeFields, flags.Fields, "f", nil, "Fields names in include when displaying record data.")                                                                                     //nolint:lll // For readability
+	flagSet.StringSliceVarP(&queryFlags.includeFields, flags.Fields, "f", nil, "Fields names to include when displaying record data.")                                                                                     //nolint:lll // For readability
 	flagSet.Var(&queryFlags.hnswEf, flags.HnswEf, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times.")                  //nolint:lll // For readability
 
 	err := flags.AddFormatTestFlag(flagSet, &queryFlags.format)
@@ -66,7 +66,7 @@ var queryRequiredFlags = []string{
 	flags.IndexName,
 }
 
-// listIndexCmd represents the listIndex command
+// queryCmd represents the query command
 func newQueryCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "query",
@@ -85,12 +85,15 @@ asvec query -i my-index -n my-namespace -f name,age
 # Query 10 vectors using an existing vector
 asvec query -i my-index -n my-namespace -s my-set -k my-key --max-results 10
 
-# Query using your own vector and change the displayed DATA column width to 100 characters.
-asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 100
+# Query using your own float vector and change the displayed DATA column width to 100 characters.
+asvec query -i my-index -n my-namespace -v "[0.5,0.1,0.3,0.4,1.0]" --max-width 100
+
+# Query using your own bool vector and change the number of DATA rows displayed to 10.
+asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 
 		`, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if viper.IsSet(flags.Set) && !viper.IsSet(flags.KeyString) {
+			if viper.IsSet(flags.Set) && !(viper.IsSet(flags.KeyString) || viper.IsSet(flags.KeyInt)) {
 				view.Warningf(
 					"The --%s flag is only used when the --%s or --%s flag is set.",
 					flags.Set,
@@ -134,29 +137,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 			)
 
 			if queryFlags.vector.IsSet() {
-				if queryFlags.vector.FloatSlice != nil {
-					neighbors, err = client.VectorSearchFloat32(
-						ctx,
-						queryFlags.namespace,
-						queryFlags.indexName,
-						queryFlags.vector.FloatSlice,
-						queryFlags.maxResults,
-						hnswSearchParams,
-						queryFlags.includeFields,
-						nil,
-					)
-				} else {
-					neighbors, err = client.VectorSearchBool(
-						ctx,
-						queryFlags.namespace,
-						queryFlags.indexName,
-						queryFlags.vector.BoolSlice,
-						queryFlags.maxResults,
-						hnswSearchParams,
-						queryFlags.includeFields,
-						nil,
-					)
-				}
+				neighbors, err = queryVectorByVector(ctx, client, hnswSearchParams)
 
 				if err != nil {
 					logger.ErrorContext(ctx, "unable to get vector using provided vector", slog.Any("error", err))
@@ -219,6 +200,36 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-width 1
 			}
 		},
 	}
+}
+
+func queryVectorByVector(
+	ctx context.Context,
+	client *avs.Client,
+	hnswSearchParams *protos.HnswSearchParams,
+) ([]*avs.Neighbor, error) {
+	if queryFlags.vector.FloatSlice != nil {
+		return client.VectorSearchFloat32(
+			ctx,
+			queryFlags.namespace,
+			queryFlags.indexName,
+			queryFlags.vector.FloatSlice,
+			queryFlags.maxResults,
+			hnswSearchParams,
+			queryFlags.includeFields,
+			nil,
+		)
+	}
+
+	return client.VectorSearchBool(
+		ctx,
+		queryFlags.namespace,
+		queryFlags.indexName,
+		queryFlags.vector.BoolSlice,
+		queryFlags.maxResults,
+		hnswSearchParams,
+		queryFlags.includeFields,
+		nil,
+	)
 }
 
 func queryVectorByKey(
@@ -371,7 +382,7 @@ func trialAndErrorQuery(
 		)
 
 		if err != nil {
-			logger.WarnContext(ctx, failedToRunVectorSearchErrMsg, slog.Any("error", err))
+			logger.ErrorContext(ctx, failedToRunVectorSearchErrMsg, slog.Any("error", err))
 			view.Errorf("Unable to run vector query: %s", err)
 
 			return nil, err
@@ -394,5 +405,5 @@ func init() {
 		}
 	}
 
-	queryCmd.MarkFlagsMutuallyExclusive(flags.Vector, flags.KeyString)
+	queryCmd.MarkFlagsMutuallyExclusive(flags.Vector, flags.KeyString, flags.KeyInt)
 }

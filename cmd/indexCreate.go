@@ -78,6 +78,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
 
+	// For backwards compatibility
 	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")
 	err := flagSet.MarkHidden("sets")
 
@@ -150,7 +151,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 						return err
 					}
 				} else {
-					logger.Debug("checking if index definitions are being piped to stdin")
+					logger.Debug("checking if index definitions are being piped from stdin")
 
 					stat, _ := os.Stdin.Stat()
 					if (stat.Mode() & os.ModeCharDevice) == 0 {
@@ -162,7 +163,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 							return err
 						}
 					} else {
-						logger.Debug("no data is being piped to stdin")
+						logger.Debug("no data is being piped from stdin")
 					}
 				}
 

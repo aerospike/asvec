@@ -2,7 +2,7 @@ module asvec
 
 go 1.22.5
 
-replace github.com/aerospike/avs-client-go => ../avs-client-go
+// replace github.com/aerospike/avs-client-go => ../avs-client-go
 
 require (
 	github.com/aerospike/avs-client-go v0.0.0-20240829195926-fe3d122cb3df

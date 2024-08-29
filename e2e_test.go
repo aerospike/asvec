@@ -709,10 +709,16 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			[]*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
-				).WithLabels(map[string]string{"foo": "bar"}).Build(),
+				).WithLabels(map[string]string{"foo": "bar"}).
+					WithHnswMergeIndexParallelism(80).
+					WithHnswMergeReIndexParallelism(26).
+					Build(),
 				tests.NewIndexDefinitionBuilder(
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
-				).WithSet("barset").Build(),
+				).WithSet("barset").
+					WithHnswMergeIndexParallelism(80).
+					WithHnswMergeReIndexParallelism(26).
+					Build(),
 			},
 			"index list --verbose --no-color --format 1",
 			`Indexes
@@ -732,8 +738,8 @@ Healer Max Page Size*\,10000
 Healer Re-index % *\,10.00%
 Healer Schedule*\,0 0/15 * ? * * *
 Healer Parallelism*\,1
-Merge Index Parallelism*\,160
-Merge Re-Index Parallelism*\,53"
+Merge Index Parallelism*\,80
+Merge Re-Index Parallelism*\,26"
 2,list1,test,,vector,256,COSINE,0,map[foo:bar],"Namespace\,test
 Set\,list1","HNSW
 Max Edges\,16
@@ -749,8 +755,8 @@ Healer Max Page Size*\,10000
 Healer Re-index % *\,10.00%
 Healer Schedule*\,0 0/15 * ? * * *
 Healer Parallelism*\,1
-Merge Index Parallelism*\,160
-Merge Re-Index Parallelism*\,53"
+Merge Index Parallelism*\,80
+Merge Re-Index Parallelism*\,26"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},

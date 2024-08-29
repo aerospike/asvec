@@ -59,8 +59,9 @@ type IndexDefinitionBuilder struct {
 	hnswHealerMaxScanRatePerSecond *uint32
 	hnswHealerParallelism          *uint32
 	HnswHealerReindexPercent       *float32
-	HnswHealerScheduleDelay        *uint64
-	hnswMergeParallelism           *uint32
+	HnswHealerSchedule             *string
+	hnswMergeIndexParallelism      *uint32
+	hnswMergeReIndexParallelism    *uint32
 }
 
 func NewIndexDefinitionBuilder(
@@ -159,13 +160,18 @@ func (idb *IndexDefinitionBuilder) WithHnswHealerReindexPercent(reindexPercent f
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswHealerScheduleDelay(scheduleDelay uint64) *IndexDefinitionBuilder {
-	idb.HnswHealerScheduleDelay = &scheduleDelay
+func (idb *IndexDefinitionBuilder) WithHnswHealerSchedule(schedule string) *IndexDefinitionBuilder {
+	idb.HnswHealerSchedule = &schedule
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswMergeParallelism(mergeParallelism uint32) *IndexDefinitionBuilder {
-	idb.hnswMergeParallelism = &mergeParallelism
+func (idb *IndexDefinitionBuilder) WithHnswMergeIndexParallelism(mergeParallelism uint32) *IndexDefinitionBuilder {
+	idb.hnswMergeIndexParallelism = &mergeParallelism
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswMergeReIndexParallelism(mergeParallelism uint32) *IndexDefinitionBuilder {
+	idb.hnswMergeReIndexParallelism = &mergeParallelism
 	return idb
 }
 
@@ -261,12 +267,16 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.ReindexPercent = idb.HnswHealerReindexPercent
 	}
 
-	if idb.HnswHealerScheduleDelay != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.ScheduleDelay = idb.HnswHealerScheduleDelay
+	if idb.HnswHealerSchedule != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.HealerParams.Schedule = idb.HnswHealerSchedule
 	}
 
-	if idb.hnswMergeParallelism != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MergeParams.Parallelism = idb.hnswMergeParallelism
+	if idb.hnswMergeIndexParallelism != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MergeParams.IndexParallelism = idb.hnswMergeIndexParallelism
+	}
+
+	if idb.hnswMergeReIndexParallelism != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MergeParams.ReIndexParallelism = idb.hnswMergeReIndexParallelism
 	}
 
 	return indexDef
@@ -351,7 +361,7 @@ func GetClient(
 
 	// Wait for cluster to be ready
 	for {
-		_, err := avsClient.IndexList(ctx)
+		_, err := avsClient.IndexList(ctx, false)
 		if err == nil {
 			break
 		}
@@ -393,4 +403,15 @@ func GetCertificates(certFile string, keyFile string) ([]tls.Certificate, error)
 	}
 
 	return client.LoadServerCertAndKey([]byte(cert), []byte(key), nil)
+}
+
+var quoted = false
+
+// Used with strings.FieldsFunc. Obviously not thread save.
+func SplitQuotedString(r rune) bool {
+	if r == '"' {
+		quoted = !quoted
+	}
+
+	return (r == ' ' && !quoted) || r == '"'
 }

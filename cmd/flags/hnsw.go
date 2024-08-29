@@ -64,7 +64,7 @@ type HealerFlags struct {
 	MaxScanRatePerNode Uint32OptionalFlag
 	MaxScanPageSize    Uint32OptionalFlag
 	ReindexPercent     Float32OptionalFlag
-	ScheduleDelay      DurationOptionalFlag
+	Schedule           StringOptionalFlag
 	Parallelism        Uint32OptionalFlag
 }
 
@@ -73,18 +73,18 @@ func NewHnswHealerFlags() *HealerFlags {
 		MaxScanRatePerNode: Uint32OptionalFlag{},
 		MaxScanPageSize:    Uint32OptionalFlag{},
 		ReindexPercent:     Float32OptionalFlag{},
-		ScheduleDelay:      DurationOptionalFlag{},
+		Schedule:           StringOptionalFlag{},
 		Parallelism:        Uint32OptionalFlag{},
 	}
 }
 
 func (cf *HealerFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxScanRatePerNode, HnswHealerMaxScanRatePerNode, "Maximum allowed record scan rate per AVS node.")                                                  //nolint:lll // For readability
-	flagSet.Var(&cf.MaxScanPageSize, HnswHealerMaxScanPageSize, "Maximum number of records in a single scanned page.")                                                   //nolint:lll // For readability
-	flagSet.Var(&cf.ReindexPercent, HnswHealerReindexPercent, "Percentage of good records randomly selected for reindexing in a healer cycle.")                          //nolint:lll // For readability
-	flagSet.Var(&cf.ScheduleDelay, HnswHealerScheduleDelay, "The time delay between the termination of a healer run and the commencement of the next one for an index.") //nolint:lll // For readability
-	flagSet.Var(&cf.Parallelism, HnswHealerParallelism, "Maximum number of records to heal in parallel.")                                                                //nolint:lll // For readability
+	flagSet.Var(&cf.MaxScanRatePerNode, HnswHealerMaxScanRatePerNode, "Maximum allowed record scan rate per AVS node.")                         //nolint:lll // For readability
+	flagSet.Var(&cf.MaxScanPageSize, HnswHealerMaxScanPageSize, "Maximum number of records in a single scanned page.")                          //nolint:lll // For readability
+	flagSet.Var(&cf.ReindexPercent, HnswHealerReindexPercent, "Percentage of good records randomly selected for reindexing in a healer cycle.") //nolint:lll // For readability
+	flagSet.Var(&cf.Schedule, HnswHealerSchedule, "The quartz cron expression defining schedule at which the healer cycle is invoked.")         //nolint:lll // For readability
+	flagSet.Var(&cf.Parallelism, HnswHealerParallelism, "Maximum number of records to heal in parallel.")                                       //nolint:lll // For readability
 
 	return flagSet
 }
@@ -94,30 +94,31 @@ func (cf *HealerFlags) NewSLogAttr() []any {
 		slog.Any(HnswHealerMaxScanRatePerNode, cf.MaxScanRatePerNode.String()),
 		slog.Any(HnswHealerMaxScanPageSize, cf.MaxScanPageSize.String()),
 		slog.Any(HnswHealerReindexPercent, cf.ReindexPercent.String()),
-		slog.Any(HnswHealerScheduleDelay, cf.ScheduleDelay.String()),
+		slog.Any(HnswHealerSchedule, cf.Schedule.String()),
 		slog.Any(HnswHealerParallelism, cf.Parallelism.String()),
 	}
 }
 
 type MergeFlags struct {
-	Parallelism Uint32OptionalFlag
+	IndexParallelism   Uint32OptionalFlag
+	ReIndexParallelism Uint32OptionalFlag
 }
 
 func NewHnswMergeFlags() *MergeFlags {
-	return &MergeFlags{
-		Parallelism: Uint32OptionalFlag{},
-	}
+	return &MergeFlags{}
 }
 
 func (cf *MergeFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.Parallelism, HnswMergeParallelism, "The number of vectors merged in parallel from a batch index to main index.") //nolint:lll // For readability
+	flagSet.Var(&cf.IndexParallelism, HnswMergeParallelism, "The number of vectors merged in parallel from a batch index to main index.")                                  //nolint:lll // For readability
+	flagSet.Var(&cf.ReIndexParallelism, HnswMergeReIndexParallelism, "The number of vectors merged in parallel from a re-indexing record batch-index to the main index. ") //nolint:lll // For readability
 
 	return flagSet
 }
 
 func (cf *MergeFlags) NewSLogAttr() []any {
 	return []any{
-		slog.Any(HnswMergeParallelism, cf.Parallelism.Val),
+		slog.Any(HnswMergeParallelism, cf.IndexParallelism.Val),
+		slog.Any(HnswMergeReIndexParallelism, cf.ReIndexParallelism.Val),
 	}
 }

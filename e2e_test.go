@@ -190,7 +190,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw params and seeds",
 			"index2",
 			"test",
-			"index create -y -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-max-edges 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10",
+			"index create -y -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-m 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10",
 			tests.NewIndexDefinitionBuilder("index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
 				WithHnswM(10).
 				WithHnswEf(11).
@@ -202,9 +202,9 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw batch params",
 			"index3",
 			"test",
-			"index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 100",
+			"index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
 			tests.NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
-				WithHnswBatchingMaxRecord(100).
+				WithHnswBatchingMaxRecord(10001).
 				WithHnswBatchingInterval(50000).
 				Build(),
 		},
@@ -222,12 +222,12 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw healer params",
 			"index5",
 			"test",
-			"index create -y -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10",
+			"index create -y -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10",
 			tests.NewIndexDefinitionBuilder("index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
-				WithHnswHealerScheduleDelay(10000).
+				WithHnswHealerSchedule("0 0 0 ? * *").
 				WithHnswHealerParallelism(10).
 				Build(),
 		},
@@ -235,9 +235,9 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw merge params",
 			"index6",
 			"test",
-			"index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-parallelism 10",
+			"index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-index-parallelism 10",
 			tests.NewIndexDefinitionBuilder("index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
-				WithHnswMergeParallelism(10).
+				WithHnswMergeIndexParallelism(10).
 				Build(),
 		},
 		{
@@ -259,8 +259,9 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswHealerMaxScanRatePerNode(1).
 				WithHnswHealerMaxScanPageSize(2).
 				WithHnswHealerReindexPercent(3).
-				WithHnswHealerScheduleDelay(4).
-				WithHnswMergeParallelism(7).
+				WithHnswHealerSchedule("0 15 10 ? * 6L 2022-2025").
+				WithHnswMergeIndexParallelism(7).
+				WithHnswMergeReIndexParallelism(5).
 				WithStorageSet("name").
 				Build(),
 		},
@@ -268,10 +269,10 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			lines, stderr, err := suite.RunSuiteCmd(strings.FieldsFunc(tc.cmd, tests.SplitQuotedString)...)
 
 			if err != nil {
-				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+				suite.Assert().NoError(err, "error: %s, stdout: %s, stderr: %s", err, lines, stderr)
 				suite.FailNow("unable to index create")
 			}
 
@@ -449,10 +450,13 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
-	suite.AvsClient.IndexCreate(context.Background(), "test", "successful-update", "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
 	ns := "test"
 	index := "successful-update"
-	builder := tests.NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
+
+	newBuilder := func() *tests.IndexDefinitionBuilder {
+		return tests.NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
+	}
+
 	testCases := []struct {
 		name           string
 		indexName      string // index names must be unique for the suite
@@ -465,7 +469,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"successful-update",
 			ns,
 			"index update -y -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10",
-			builder.
+			newBuilder().
 				WithLabels(map[string]string{"new-label": "foo"}).
 				WithHnswMaxMemQueueSize(10).
 				Build(),
@@ -474,9 +478,9 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw batch params",
 			"successful-update",
 			"test",
-			"index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 100",
-			builder.
-				WithHnswBatchingMaxRecord(100).
+			"index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			newBuilder().
+				WithHnswBatchingMaxRecord(10001).
 				WithHnswBatchingInterval(50000).
 				Build(),
 		},
@@ -485,7 +489,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"successful-update",
 			"test",
 			"index update -y -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
-			builder.
+			newBuilder().
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
 				Build(),
@@ -494,12 +498,12 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw healer params",
 			"successful-update",
 			"test",
-			"index update -y -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule-delay 10s --hnsw-healer-parallelism 10",
-			builder.
+			"index update -y -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 30 11 ? * 6#2\" --hnsw-healer-parallelism 10",
+			newBuilder().
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
-				WithHnswHealerScheduleDelay(10000).
+				WithHnswHealerSchedule("0 30 11 ? * 6#2").
 				WithHnswHealerParallelism(10).
 				Build(),
 		},
@@ -507,19 +511,26 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw merge params",
 			"successful-update",
 			"test",
-			"index update -y -n test -i successful-update --hnsw-merge-parallelism 10",
-			builder.
-				WithHnswMergeParallelism(10).
+			"index update -y -n test -i successful-update --hnsw-merge-index-parallelism 10",
+			newBuilder().
+				WithHnswMergeIndexParallelism(10).
 				Build(),
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			err := suite.AvsClient.IndexCreate(context.Background(), ns, "successful-update", "field", uint32(256), protos.VectorDistanceMetric_COSINE, nil)
+			if err != nil {
+				suite.FailNowf("unable to index create", "%v", err)
+			}
+
+			defer suite.AvsClient.IndexDrop(context.Background(), ns, "successful-update")
+
+			lines, stderr, err := suite.RunSuiteCmd(strings.FieldsFunc(tc.cmd, tests.SplitQuotedString)...)
 
 			if err != nil {
-				suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+				suite.Assert().NoError(err, "error: %s, stdout: %s, stderr: %s", err, lines, stderr)
 				suite.FailNow("unable to index update")
 			}
 
@@ -538,7 +549,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestUpdateIndexDoesNotExist() {
-	_, lines, err := suite.RunSuiteCmd(strings.Split("index update -y -n test -i DNE --hnsw-merge-parallelism 10", " ")...)
+	_, lines, err := suite.RunSuiteCmd(strings.Split("index update -y -n test -i DNE --hnsw-merge-index-parallelism 10", " ")...)
 	suite.Assert().Error(err, "index should have NOT existed. stdout/err: %s", lines)
 	suite.Assert().Contains(lines, "server error")
 }
@@ -711,33 +722,35 @@ Set\,list2","HNSW
 Max Edges\,16
 Ef\,100
 Construction Ef\,100
-MaxMemQueueSize*\,0
+MaxMemQueueSize*\,1000000
 Batch Max Records*\,100000
 Batch Interval*\,30s
-Cache Max Entires*\,0
-Cache Expiry*\,0s
-Healer Max Scan Rate / Node*\,0
-Healer Max Page Size*\,0
-Healer Re-index % *\,0.00%
-Healer Schedule Delay*\,0s
-Healer Parallelism*\,0
-Merge Parallelism*\,0"
+Cache Max Entires*\,2000000
+Cache Expiry*\,1h0m0s
+Healer Max Scan Rate / Node*\,1000
+Healer Max Page Size*\,10000
+Healer Re-index % *\,10.00%
+Healer Schedule*\,0 0/15 * ? * * *
+Healer Parallelism*\,1
+Merge Index Parallelism*\,160
+Merge Re-Index Parallelism*\,53"
 2,list1,test,,vector,256,COSINE,0,map[foo:bar],"Namespace\,test
 Set\,list1","HNSW
 Max Edges\,16
 Ef\,100
 Construction Ef\,100
-MaxMemQueueSize*\,0
+MaxMemQueueSize*\,1000000
 Batch Max Records*\,100000
 Batch Interval*\,30s
-Cache Max Entires*\,0
-Cache Expiry*\,0s
-Healer Max Scan Rate / Node*\,0
-Healer Max Page Size*\,0
-Healer Re-index % *\,0.00%
-Healer Schedule Delay*\,0s
-Healer Parallelism*\,0
-Merge Parallelism*\,0"
+Cache Max Entires*\,2000000
+Cache Expiry*\,1h0m0s
+Healer Max Scan Rate / Node*\,1000
+Healer Max Page Size*\,10000
+Healer Re-index % *\,10.00%
+Healer Schedule*\,0 0/15 * ? * * *
+Healer Parallelism*\,1
+Merge Index Parallelism*\,160
+Merge Re-Index Parallelism*\,53"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},
@@ -1634,9 +1647,9 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"Error: invalid argument \"foo\" for \"--hnsw-ef-construction\"",
 		},
 		{
-			"test with bad hnsw-max-edges",
-			"index create -y --hnsw-max-edges foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-max-edges\"",
+			"test with bad hnsw-m",
+			"index create -y --hnsw-m foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-m\"",
 		},
 		{
 			"test with bad hnsw-batch-interval",
@@ -1674,19 +1687,14 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			"Error: invalid argument \"foo\" for \"--hnsw-healer-reindex-percent\"",
 		},
 		{
-			"test with bad hnsw-healer-schedule-delay",
-			"index create -y --hnsw-healer-schedule-delay foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-healer-schedule-delay\"",
-		},
-		{
 			"test with bad hnsw-healer-parallelism",
 			"index create -y --hnsw-healer-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
 			"Error: invalid argument \"foo\" for \"--hnsw-healer-parallelism\"",
 		},
 		{
-			"test with bad hnsw-merge-parallelism",
-			"index create -y --hnsw-merge-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-merge-parallelism\"",
+			"test with bad hnsw-merge-index-parallelism",
+			"index create -y --hnsw-merge-index-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			"Error: invalid argument \"foo\" for \"--hnsw-merge-index-parallelism\"",
 		},
 
 		// {

@@ -14,12 +14,13 @@ indices:
           maxScanRatePerNode: 1
           maxScanPageSize: 2
           reindexPercent: 3
-          scheduleDelay: 4
+          schedule: "0 15 10 ? * 6L 2022-2025"
           parallelism: 7
         m: 103
         maxMemQueueSize: 10004
         mergeParams:
-          parallelism: 7
+          indexParallelism: 7
+          reIndexParallelism: 5
       id:
         name: yaml-file-index
         namespace: test

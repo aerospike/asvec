@@ -73,7 +73,7 @@ asvec index ls
 			ctx, cancel := context.WithTimeout(context.Background(), indexListFlags.clientFlags.Timeout)
 			defer cancel()
 
-			indexList, err := client.IndexList(ctx)
+			indexList, err := client.IndexList(ctx, true)
 			if err != nil {
 				logger.Error("failed to list indexes", slog.Any("error", err))
 				return err

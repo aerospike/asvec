@@ -80,7 +80,7 @@ func (suite *CmdBaseTestSuite) TearDownSuite() {
 }
 
 func (suite *CmdBaseTestSuite) CleanUpIndexes(ctx context.Context) {
-	indexes, err := suite.AvsClient.IndexList(ctx)
+	indexes, err := suite.AvsClient.IndexList(ctx, false)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}

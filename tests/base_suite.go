@@ -4,6 +4,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/slog"
@@ -26,7 +27,7 @@ type CmdBaseTestSuite struct {
 	AvsHostPort  *avs.HostPort
 	AvsTLSConfig *tls.Config
 	AvsCreds     *avs.UserPassCredentials
-	AvsClient    *avs.AdminClient
+	AvsClient    *avs.Client
 	SuiteFlags   []string
 	Logger       *slog.Logger
 }
@@ -59,7 +60,7 @@ func (suite *CmdBaseTestSuite) SetupSuite() {
 
 	suite.Assert().NoError(err)
 
-	suite.AvsClient, err = GetAdminClient(suite.AvsHostPort, suite.AvsCreds, suite.AvsTLSConfig, suite.Logger)
+	suite.AvsClient, err = GetClient(suite.AvsHostPort, suite.AvsCreds, suite.AvsTLSConfig, suite.Logger)
 	if err != nil {
 		suite.FailNowf("unable to create admin client", "%v", err)
 	}
@@ -75,6 +76,20 @@ func (suite *CmdBaseTestSuite) TearDownSuite() {
 	err = DockerComposeDown(suite.ComposeFile)
 	if err != nil {
 		fmt.Println("unable to stop docker compose down")
+	}
+}
+
+func (suite *CmdBaseTestSuite) CleanUpIndexes(ctx context.Context) {
+	indexes, err := suite.AvsClient.IndexList(ctx)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	for _, index := range indexes.GetIndices() {
+		err := suite.AvsClient.IndexDrop(ctx, index.Id.Namespace, index.Id.Name)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
 	}
 }
 
@@ -104,7 +119,7 @@ func (suite *CmdBaseTestSuite) GetCmd(asvecCmd ...string) *exec.Cmd {
 }
 
 func (suite *CmdBaseTestSuite) getCmdOutput(cmd *exec.Cmd) (string, string, error) {
-	suite.Logger.Info("running command", slog.String("cmd", strings.Join(cmd.Args, " ")))
+	suite.Logger.Info("running command", slog.String("args", strings.Join(cmd.Args, " ")))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.Stdout = stdout

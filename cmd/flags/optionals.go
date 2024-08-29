@@ -12,6 +12,10 @@ type StringOptionalFlag struct {
 	Val *string
 }
 
+func NewStringOptionalFlag() StringOptionalFlag {
+	return StringOptionalFlag{}
+}
+
 func (f *StringOptionalFlag) Set(val string) error {
 	f.Val = &val
 	return nil
@@ -71,6 +75,29 @@ func (f *Uint64OptionalFlag) Type() string {
 func (f *Uint64OptionalFlag) String() string {
 	if f.Val != nil {
 		return strconv.FormatUint(*f.Val, 10)
+	}
+
+	return optionalEmptyString
+}
+
+type IntOptionalFlag struct {
+	Val *int64
+}
+
+func (f *IntOptionalFlag) Set(val string) error {
+	v, err := strconv.ParseInt(val, 0, 64)
+	f.Val = &v
+
+	return err
+}
+
+func (f *IntOptionalFlag) Type() string {
+	return "int"
+}
+
+func (f *IntOptionalFlag) String() string {
+	if f.Val != nil {
+		return strconv.FormatInt(*f.Val, 10)
 	}
 
 	return optionalEmptyString

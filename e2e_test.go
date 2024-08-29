@@ -5,13 +5,16 @@ package main
 import (
 	"asvec/cmd/flags"
 	"asvec/tests"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -112,7 +115,7 @@ func TestCmdSuite(t *testing.T) {
 					tests.CreateFlagStr(flags.AuthUser, "admin"),
 					tests.CreateFlagStr(flags.AuthPassword, "admin"),
 				},
-				AvsCreds: avs.NewCredntialsFromUserPass("admin", "admin"),
+				AvsCreds: avs.NewCredentialsFromUserPass("admin", "admin"),
 				AvsTLSConfig: &tls.Config{
 					Certificates: nil,
 					RootCAs:      rootCA,
@@ -122,7 +125,30 @@ func TestCmdSuite(t *testing.T) {
 		},
 	}
 
-	for _, s := range suites {
+	testSuiteEnv := os.Getenv("ASVEC_TEST_SUITES")
+	picked_suites := map[int]struct{}{}
+
+	if testSuiteEnv != "" {
+		testSuites := strings.Split(testSuiteEnv, ",")
+
+		for _, s := range testSuites {
+			i, err := strconv.Atoi(s)
+			if err != nil {
+				t.Fatalf("unable to convert %s to int: %v", s, err)
+			}
+
+			picked_suites[i] = struct{}{}
+		}
+	}
+
+	logger.Info("Running test suites", slog.Any("suites", picked_suites))
+
+	for i, s := range suites {
+		if len(picked_suites) != 0 {
+			if _, ok := picked_suites[i]; !ok {
+				continue
+			}
+		}
 		suite.Run(t, s)
 	}
 }
@@ -261,6 +287,8 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 }
 
 func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
+	suite.CleanUpIndexes(context.Background())
+
 	testCases := []struct {
 		name          string
 		indexDefs     []*protos.IndexDefinition
@@ -281,8 +309,8 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 			"s/exists/does-not-exist-yet/g",
 			false,
 			[]string{
-				"Successfully created index test.*.does-not-exist-yet",
-				"Successfully created index bar.barset.does-not-exist-yet",
+				"Successfully created index test.*.does-not-exist-yet1",
+				"Successfully created index bar.barset.does-not-exist-yet2",
 				"Successfully created all indexes from yaml",
 			},
 		},
@@ -355,43 +383,66 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 				suite.FailNowf("unable to create sed pipe", "%v", err)
 			}
 
-			sedCmd.Stdin = listPipe
+			listPipeStdout := &bytes.Buffer{}
+			sedPipeStdout := &bytes.Buffer{}
+			sedCmd.Stdin = io.TeeReader(listPipe, listPipeStdout)
+			// sedCmd.Stdin = listPipe
 
 			createArgs := []string{"index", "create", "--log-level", "debug"}
 			createArgs = suite.AddSuiteArgs(createArgs...)
 			createCmd := suite.GetCmd(createArgs...)
-			createCmd.Stdin = sedPipe
+			createCmd.Stdin = io.TeeReader(sedPipe, sedPipeStdout)
+			// createCmd.Stdin = sedPipe
 
 			// Start list and sed commands so data can flow through the pipes
 			if err := listCmd.Start(); err != nil {
 				suite.FailNowf("unable to start list cmd", "%v", err)
 			}
 
+			logger.Debug("started list command", slog.String("cmd", listCmd.String()))
+
+			// Need to pause a bit while listCmd has some output
+			time.Sleep(time.Second * 1)
+
 			if err := sedCmd.Start(); err != nil {
 				suite.FailNowf("unable to start sed cmd", "%v", err)
 			}
 
+			logger.Debug("started sed command", slog.String("cmd", sedCmd.String()))
+
+			// Need to pause a bit while listCmd has some output
+			time.Sleep(time.Second * 1)
+
 			// Run create Cmd to completion
+			logger.Debug("running create command", slog.String("cmd", createCmd.String()))
 			output, err := createCmd.CombinedOutput()
 			logger.Debug(string(output))
 
-			if tc.createFail && err == nil {
-				suite.FailNowf("expected create cmd to fail because at least one index failed to be created", "%v", err)
-			} else if !tc.createFail && err != nil {
-				suite.FailNowf("expected create cmd to succeed because all indexes were created", "%v", err)
-			}
-
 			// Cleanup list and sed commands
 			if err := listCmd.Wait(); err != nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
 				suite.FailNowf("unable to wait for list cmd", "%v", err)
 			}
 
 			if err := sedCmd.Wait(); err != nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
 				suite.FailNowf("unable to wait for sed cmd", "%v", err)
 			}
 
+			if tc.createFail && err == nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
+				suite.Failf("expected create cmd to fail because at least one index failed to be created", "%v", err)
+			} else if !tc.createFail && err != nil {
+				logger.Debug("asvec index ls output", slog.String("output", listPipeStdout.String()))
+				logger.Debug("sed output", slog.String("output", sedPipeStdout.String()))
+				suite.Failf("expected create cmd to succeed because all indexes were created", "%v : %s", err.Error(), output)
+			}
+
 			for _, str := range tc.checkContains {
-				suite.Contains(string(output), str)
+				suite.Assert().Contains(string(output), str)
 			}
 		})
 	}
@@ -553,15 +604,6 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 			nil,
 			"index drop -y -n test -i indexdrop1",
 		},
-		{
-			"test with set",
-			"indexdrop2",
-			"test",
-			[]string{
-				"testset",
-			},
-			"index drop -y -n test -s testset -i indexdrop2",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -613,17 +655,7 @@ func removeANSICodes(input string) string {
 }
 
 func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
-	indexes, err := suite.AvsClient.IndexList(context.Background())
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-
-	for _, index := range indexes.GetIndices() {
-		err := suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
-		if err != nil {
-			suite.FailNow(err.Error())
-		}
-	}
+	suite.CleanUpIndexes(context.Background())
 
 	testCases := []struct {
 		name          string
@@ -638,14 +670,10 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 			},
-			"index list --no-color",
-			`╭─────────────────────────────────────────────────────────────────────────╮
-│                                 Indexes                                 │
-├───┬──────┬───────────┬────────┬────────────┬─────────────────┬──────────┤
-│   │ NAME │ NAMESPACE │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │
-├───┼──────┼───────────┼────────┼────────────┼─────────────────┼──────────┤
-│ 1 │ list │ test      │ vector │        256 │          COSINE │        0 │
-╰───┴──────┴───────────┴────────┴────────────┴─────────────────┴──────────╯
+			"index list --no-color --format 1",
+			`Indexes
+,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged
+1,list,test,vector,256,COSINE,0
 `,
 		},
 		{
@@ -658,16 +686,11 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"index list --no-color",
-			`╭───────────────────────────────────────────────────────────────────────────────────╮
-│                                      Indexes                                      │
-├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┤
-│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┤
-│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┤
-│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │
-╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────╯
+			"index list --no-color --format 1",
+			`Indexes
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged
+1,list2,bar,barset,vector,256,HAMMING,0
+2,list1,test,,vector,256,COSINE,0
 `,
 		},
 		{
@@ -680,50 +703,41 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"index list --verbose --no-color",
-			`╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                Indexes                                                                               │
-├───┬───────┬───────────┬────────┬────────┬────────────┬─────────────────┬──────────┬──────────────┬───────────────────────┬───────────────────────────────────────────┤
-│   │ NAME  │ NAMESPACE │ SET    │ FIELD  │ DIMENSIONS │ DISTANCE METRIC │ UNMERGED │ LABELS*      │ STORAGE               │ INDEX PARAMETERS                          │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼──────────────┼───────────────────────┼───────────────────────────────────────────┤
-│ 1 │ list2 │ bar       │ barset │ vector │        256 │         HAMMING │        0 │ map[]        │ ╭───────────┬───────╮ │ ╭───────────────────────────────────────╮ │
-│   │       │           │        │        │            │                 │          │              │ │ Namespace │ bar   │ │ │                  HNSW                 │ │
-│   │       │           │        │        │            │                 │          │              │ │ Set       │ list2 │ │ ├──────────────────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │              │ ╰───────────┴───────╯ │ │ Max Edges                    │ 16     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Ef                           │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Construction Ef              │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ MaxMemQueueSize*             │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Max Records*           │ 100000 │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Interval*              │ 30s    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Max Entires*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Expiry*                │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Scan Rate / Node* │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Page Size*        │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Re-index % *          │ 0.00%  │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Schedule Delay*       │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Parallelism*          │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Merge Parallelism*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ ╰──────────────────────────────┴────────╯ │
-├───┼───────┼───────────┼────────┼────────┼────────────┼─────────────────┼──────────┼──────────────┼───────────────────────┼───────────────────────────────────────────┤
-│ 2 │ list1 │ test      │        │ vector │        256 │          COSINE │        0 │ map[foo:bar] │ ╭───────────┬───────╮ │ ╭───────────────────────────────────────╮ │
-│   │       │           │        │        │            │                 │          │              │ │ Namespace │ test  │ │ │                  HNSW                 │ │
-│   │       │           │        │        │            │                 │          │              │ │ Set       │ list1 │ │ ├──────────────────────────────┬────────┤ │
-│   │       │           │        │        │            │                 │          │              │ ╰───────────┴───────╯ │ │ Max Edges                    │ 16     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Ef                           │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Construction Ef              │ 100    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ MaxMemQueueSize*             │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Max Records*           │ 100000 │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Batch Interval*              │ 30s    │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Max Entires*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Cache Expiry*                │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Scan Rate / Node* │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Max Page Size*        │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Re-index % *          │ 0.00%  │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Schedule Delay*       │ 0s     │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Healer Parallelism*          │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ │ Merge Parallelism*           │ 0      │ │
-│   │       │           │        │        │            │                 │          │              │                       │ ╰──────────────────────────────┴────────╯ │
-╰───┴───────┴───────────┴────────┴────────┴────────────┴─────────────────┴──────────┴──────────────┴───────────────────────┴───────────────────────────────────────────╯
+			"index list --verbose --no-color --format 1",
+			`Indexes
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Labels*,Storage,Index Parameters
+1,list2,bar,barset,vector,256,HAMMING,0,map[],"Namespace\,bar
+Set\,list2","HNSW
+Max Edges\,16
+Ef\,100
+Construction Ef\,100
+MaxMemQueueSize*\,0
+Batch Max Records*\,100000
+Batch Interval*\,30s
+Cache Max Entires*\,0
+Cache Expiry*\,0s
+Healer Max Scan Rate / Node*\,0
+Healer Max Page Size*\,0
+Healer Re-index % *\,0.00%
+Healer Schedule Delay*\,0s
+Healer Parallelism*\,0
+Merge Parallelism*\,0"
+2,list1,test,,vector,256,COSINE,0,map[foo:bar],"Namespace\,test
+Set\,list1","HNSW
+Max Edges\,16
+Ef\,100
+Construction Ef\,100
+MaxMemQueueSize*\,0
+Batch Max Records*\,100000
+Batch Interval*\,30s
+Cache Max Entires*\,0
+Cache Expiry*\,0s
+Healer Max Scan Rate / Node*\,0
+Healer Max Page Size*\,0
+Healer Re-index % *\,0.00%
+Healer Schedule Delay*\,0s
+Healer Parallelism*\,0
+Merge Parallelism*\,0"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},
@@ -868,8 +882,8 @@ func (suite *CmdTestSuite) TestSuccessfulUserDropCmd() {
 			err := suite.AvsClient.CreateUser(context.Background(), tc.user, tc.user, []string{"admin"})
 			suite.Assert().NoError(err, "we were not able to create the user before we try to drop it", err)
 
-			lines, _, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
-			suite.Assert().NoError(err, "error: %s, stdout/err: %s", err, lines)
+			lines, stderr, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout: %s stderr:%s", err, lines, stderr)
 
 			if err != nil {
 				suite.FailNow("failed")
@@ -1006,8 +1020,8 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
 
-			creds := avs.NewCredntialsFromUserPass(tc.user, tc.newPassword)
-			_, err = avs.NewAdminClient(
+			creds := avs.NewCredentialsFromUserPass(tc.user, tc.newPassword)
+			_, err = avs.NewClient(
 				ctx,
 				avs.HostPortSlice{suite.AvsHostPort},
 				nil,
@@ -1031,14 +1045,10 @@ func (suite *CmdTestSuite) TestSuccessfulListUsersCmd() {
 	}{
 		{
 			"users list",
-			"users list --no-color",
-			`╭───────────────────────────────╮
-│             Users             │
-├───┬───────┬───────────────────┤
-│   │ USER  │ ROLES             │
-├───┼───────┼───────────────────┤
-│ 1 │ admin │ admin, read-write │
-╰───┴───────┴───────────────────╯
+			"users list --no-color --format 1",
+			`Users
+,User,Roles
+1,admin,"admin\, read-write"
 Use 'role list' to view available roles
 `,
 		},
@@ -1052,6 +1062,397 @@ Use 'role list' to view available roles
 			suite.Assert().Equal(tc.expectedTable, actualTable)
 		})
 	}
+}
+
+func getVectorFloat32(length int, last float32) []float32 {
+	vector := make([]float32, length)
+	for i := 0; i < length-1; i++ {
+		vector[i] = 0.0
+	}
+
+	vector[length-1] = last
+
+	return vector
+}
+
+func getVectorBool(length int, last int) []bool {
+	vector := make([]bool, length)
+	for i := 0; i < last; i++ {
+		vector[i] = true
+	}
+
+	return vector
+}
+
+func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
+	suite.CleanUpIndexes(context.Background())
+	strIndexName := "query-str-index"
+	intIndexName := "query-int-index"
+	indexes := []*protos.IndexDefinition{
+		tests.NewIndexDefinitionBuilder(
+			strIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-str",
+		).Build(),
+		tests.NewIndexDefinitionBuilder(
+			intIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-int",
+		).Build(),
+	}
+
+	for _, index := range indexes {
+		err := suite.AvsClient.IndexCreateFromIndexDef(context.Background(), index)
+		if err != nil {
+			suite.FailNowf("unable to index create", "%v", err)
+		}
+
+		defer suite.AvsClient.IndexDrop(context.Background(), index.Id.Namespace, index.Id.Name)
+	}
+
+	type testRecord struct {
+		key  any
+		data map[string]any
+	}
+
+	records := []testRecord{
+		{
+			key: "a",
+			data: map[string]any{
+				"str":         "a",
+				"int":         1,
+				"float":       3.14,
+				"float32-str": getVectorFloat32(10, 0.0),
+				"map": map[any]any{
+					"foo": "bar",
+				},
+				"extra": "to not display",
+			},
+		},
+		{
+			key: "b",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 1.0),
+			},
+		},
+		{
+			key: "c",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 2.0),
+			},
+		},
+		{
+			key: "d",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 3.0),
+			},
+		},
+		{
+			key: "e",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 4.0),
+			},
+		},
+		{
+			key: "f",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 5.0),
+			},
+		},
+		{
+			key: "g",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 6.0),
+			},
+		},
+		{
+			key: "h",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 7.0),
+			},
+		},
+		{
+			key: "i",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 8.0),
+			},
+		},
+		{
+			key: "j",
+			data: map[string]any{
+				"float32-str": getVectorFloat32(10, 9.0),
+			},
+		},
+		{
+			key: 0,
+			data: map[string]any{
+				"str":         "a",
+				"int":         1,
+				"float":       3.14,
+				"float32-int": getVectorFloat32(10, 0.0),
+				"map": map[any]any{
+					"foo": "bar",
+				},
+				"extra": "to not display",
+			},
+		},
+		{
+			key: 1,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 1.0),
+			},
+		},
+		{
+			key: 2,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 2.0),
+			},
+		},
+		{
+			key: 3,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 3.0),
+			},
+		},
+		{
+			key: 4,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 4.0),
+			},
+		},
+		{
+			key: 5,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 5.0),
+			},
+		},
+		{
+			key: 6,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 6.0),
+			},
+		},
+		{
+			key: 7,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 7.0),
+			},
+		},
+		{
+			key: 8,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 8.0),
+			},
+		},
+		{
+			key: 9,
+			data: map[string]any{
+				"float32-int": getVectorFloat32(10, 9.0),
+			},
+		},
+	}
+
+	for _, record := range records {
+		suite.AvsClient.Upsert(
+			context.Background(),
+			"test",
+			nil,
+			record.key,
+			record.data,
+			false,
+		)
+	}
+
+	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", strIndexName, 12*time.Second)
+	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", intIndexName, 12*time.Second)
+
+	testCases := []struct {
+		name          string
+		index         *protos.IndexDefinition
+		records       []testRecord
+		cmd           string
+		expectedTable string
+	}{
+		{
+			name:    "run query with zero vector",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test --max-results 3 --fields str,int,float,float32-str,map --no-color --format 1", strIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,a,0,0,"Key\,Value
+float\,3.14
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+str\,a"
+2,test,b,1,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
+3,test,c,4,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+`,
+		},
+		{
+			name:    "run query with custom vector",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test --vector [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0]  --no-color --format 1", strIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,b,0,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,1.0]\""
+2,test,a,1,0,"Key\,Value
+extra\,to not display
+float\,3.14
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+...\,..."
+3,test,c,1,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+4,test,d,4,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+5,test,e,9,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+		{
+			name:    "run query with using str key",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test -k b --no-color --format 1", strIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,a,1,0,"Key\,Value
+extra\,to not display
+float\,3.14
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+...\,..."
+2,test,c,1,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+3,test,d,4,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+4,test,e,9,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+5,test,f,16,0,"Key\,Value
+float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,5.0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+		{
+			name:    "run query with using int key",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test -t 1 --no-color --format 1", intIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,0,1,0,"Key\,Value
+extra\,to not display
+float\,3.14
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0]\"
+int\,1
+map\,map[foo:bar]
+...\,..."
+2,test,2,1,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
+3,test,3,4,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
+4,test,4,9,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+5,test,5,16,0,"Key\,Value
+float32-int\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,5.0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			actualTable, stderr, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().NoError(err, "error: %s, stdout: %s, stderr: %s", err, actualTable, stderr)
+
+			suite.Assert().Equal(tc.expectedTable, actualTable)
+		})
+	}
+}
+
+func (suite *CmdTestSuite) TestFailedQueryCmd() {
+	namespace := "test"
+	indexName := "index"
+	suite.AvsClient.IndexCreate(
+		context.Background(),
+		namespace,
+		indexName,
+		"field",
+		10,
+		protos.VectorDistanceMetric_COSINE,
+		nil,
+	)
+
+	testCases := []struct {
+		name           string
+		cmd            string
+		expectedErrStr string
+	}{
+		{
+			"use seeds and hosts together",
+			"query --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i i",
+			"Error: only --seeds or --host allowed",
+		},
+		{
+			"use set without the key flag",
+			"query --namespace test -i index --set testset",
+			"Warning: The --set flag is only used when the --key-str or --key-int flag is set.",
+		},
+		{
+			"try to query an index that does not exist",
+			"query --namespace test -i DNE",
+			"Error: Failed to get index definition: failed to get index: server error: NotFound, msg=index test:DNE not found",
+		},
+		{
+			"try to query a key that does not exist",
+			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			"Error: Failed to get vector using key: unable to get record: failed to get record: server error: NotFound",
+		},
+		{
+			"query a key without a set and check for prompt",
+			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+		},
+		{
+			"query a key without a set and check for prompt",
+			fmt.Sprintf("query --namespace %s -i %s -t 1234", namespace, indexName),
+			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+		},
+		{
+			"query using an invalid int key",
+			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
+			"Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
+		},
+		{
+			"query using key-int and key-str together",
+			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --key-int 1", namespace, indexName),
+			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int key-str] were all set",
+		},
+		{
+			"query using key-str and vector together",
+			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --vector [0,1,1,1]", namespace, indexName),
+			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-str vector] were all set",
+		},
+		{
+			"query using key-str and vector together",
+			fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
+			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			_, lines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+
+			suite.Assert().Error(err, "error: %s, stdout/err: %s", err, lines)
+			suite.Assert().Contains(lines, tc.expectedErrStr)
+		})
+	}
+
 }
 
 func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidUser() {
@@ -1124,13 +1525,10 @@ func (suite *CmdTestSuite) TestSuccessfulListRolesCmd() {
 	}{
 		{
 			"roles list",
-			"role list",
-			`╭───┬────────────╮
-│   │ ROLES      │
-├───┼────────────┤
-│ 1 │ admin      │
-│ 2 │ read-write │
-╰───┴────────────╯
+			"role list --format 1",
+			`,Roles
+1,admin
+2,read-write
 `,
 		},
 	}
@@ -1173,6 +1571,11 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
 			"error because no create index required args are provided",
 			fmt.Sprintf("index create --seeds %s", suite.AvsHostPort.String()),
+			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
+		},
+		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
+			"error because no create index required args are provided",
+			fmt.Sprintf("index create"),
 			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not

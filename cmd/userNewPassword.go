@@ -10,18 +10,16 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//nolint:govet // Padding not a concern for a CLI
 var userNewPassFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	username    string
 	password    string
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newUserNewPassFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.AddFlagSet(userNewPassFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userNewPassFlags.username, flags.Name, "", "The name of the user.")                                                                                                     //nolint:lll // For readability
 	flagSet.StringVar(&userNewPassFlags.password, flags.NewPassword, "", "The new password for the user. If a new password is not provided you you will be prompted to enter a new password.") //nolint:lll // For readability
 
@@ -39,6 +37,8 @@ func newUserNewPasswordCmd() *cobra.Command {
 		Aliases: []string{"new-pass"},
 		Short:   "Change the password for a user",
 		Long: fmt.Sprintf(`A command for changing the password for an existing user.
+For more information on managing users, refer to: 
+https://aerospike.com/docs/vector/operate/user-management
 
 For example:
 
@@ -56,11 +56,11 @@ asvec user new-password --%s foo
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userNewPassFlags.clientFlags)
+			client, err := createClientFromFlags(userNewPassFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			if userNewPassFlags.password == "" {
 				userNewPassFlags.password, err = passwordPrompt("New Password: ")
@@ -73,7 +73,7 @@ asvec user new-password --%s foo
 			ctx, cancel := context.WithTimeout(context.Background(), userNewPassFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.UpdateCredentials(
+			err = client.UpdateCredentials(
 				ctx,
 				userNewPassFlags.username,
 				userNewPassFlags.password,

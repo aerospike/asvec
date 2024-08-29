@@ -15,10 +15,17 @@ const (
 	NewPassword                  = "new-password"
 	Roles                        = "roles"
 	Namespace                    = "namespace"
-	Sets                         = "sets"
+	Set                          = "set"
 	Yes                          = "yes"
 	IndexName                    = "index-name"
 	VectorField                  = "vector-field"
+	Vector                       = "vector"
+	KeyString                    = "key-str"
+	KeyInt                       = "key-int"
+	Fields                       = "fields"
+	MaxResults                   = "max-results"
+	MaxDataKeys                  = "max-keys"
+	MaxDataColWidth              = "max-width"
 	Dimension                    = "dimension"
 	DistanceMetric               = "distance-metric"
 	IndexLabels                  = "index-labels"
@@ -30,9 +37,9 @@ const (
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"
 	CutoffTime                   = "cutoff-time"
-	MaxEdges                     = "hnsw-max-edges"
-	ConstructionEf               = "hnsw-ef-construction"
-	Ef                           = "hnsw-ef"
+	HnswMaxEdges                 = "hnsw-max-edges"
+	HnswConstructionEf           = "hnsw-ef-construction"
+	HnswEf                       = "hnsw-ef"
 	HnswMaxMemQueueSize          = "hnsw-max-mem-queue-size"
 	BatchMaxRecords              = "hnsw-batch-max-records"
 	BatchInterval                = "hnsw-batch-interval"
@@ -50,6 +57,18 @@ const (
 	TLSCertFile                  = "tls-certfile"
 	TLSKeyFile                   = "tls-keyfile"
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
+
+	// TODO  Replace short flag constants with variables
+	NamespaceShort       = "n"
+	SetShort             = "s"
+	IndexNameShort       = "i"
+	VectorShort          = "v"
+	KeyStrShort          = "k"
+	KeyIntShort          = "t"
+	MaxDataColWidthShort = "w"
+
+	DefaultIPv4 = "127.0.0.1"
+	DefaultPort = 5000
 )
 
 func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) error {

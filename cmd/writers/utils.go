@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/avs-client-go/protos"
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 func formatEndpoint(nodeEndpoint *protos.ServerEndpoint) string {
@@ -50,4 +51,12 @@ func formatEndpoints(nodeID uint64, nodeEndpoints map[uint64]*protos.ServerEndpo
 	nodeToEndpointsStr = append(nodeToEndpointsStr, "}")
 
 	return strings.Join(nodeToEndpointsStr, "\n")
+}
+
+func renderTable(t table.Writer, format int) string {
+	if format == 0 {
+		return t.Render()
+	}
+
+	return t.RenderCSV()
 }

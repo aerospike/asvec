@@ -36,7 +36,7 @@ func (cf *ClientFlags) NewClientFlagSet() *pflag.FlagSet {
 	flagSet.VarP(&cf.AuthCredentials.Password, AuthPassword, "P", "The AVS password for the specified user. If a password is not provided you will be prompted. Additionally can be set using the environment variable ASVEC_PASSWORD.")                                                                //nolint:lll // For readability
 	flagSet.VarP(&cf.AuthCredentials, AuthCredentials, "C", "The AVS user and password used to authenticate. Additionally can be set using the environment variable ASVEC_CREDENTIALS. If a password is not provided you will be prompted. This flag is provided in addition to --user and --password") //nolint:lll // For readability
 	flagSet.DurationVar(&cf.Timeout, Timeout, time.Second*5, "The timeout to use for each request to AVS")                                                                                                                                                                                              //nolint:lll // For readability
-	flagSet.AddFlagSet(cf.NewTLSFlagSet(func(s string) string { return s }))
+	flagSet.AddFlagSet(cf.newTLSFlagSet(func(s string) string { return s }))
 
 	return flagSet
 }
@@ -50,7 +50,7 @@ func (cf *ClientFlags) NewSLogAttr() []any {
 	return []any{slog.String(Host, cf.Host.String()),
 		slog.String(Seeds, cf.Seeds.String()),
 		slog.String(ListenerName, cf.ListenerName.String()),
-		slog.String(AuthUser, cf.AuthCredentials.String()),
+		slog.String(AuthUser, cf.AuthCredentials.User.String()),
 		slog.String(AuthPassword, logPass),
 		slog.Bool(TLSCaFile, cf.TLSRootCAFile != nil),
 		slog.Bool(TLSCaPath, cf.TLSRootCAPath != nil),

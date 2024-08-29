@@ -5,3 +5,4 @@ tmp
 /vendor
 /coverage
 VERSION.md
+/.vscode

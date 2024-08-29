@@ -73,3 +73,21 @@ func (suite *OptionalFlagSuite) TestUint32OptionalFlag() {
 		suite.T().Errorf("Expected error, got nil")
 	}
 }
+
+func (suite *OptionalFlagSuite) TestIntOptionalFlag() {
+	f := &IntOptionalFlag{}
+
+	err := f.Set("42")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	if f.Val == nil || *f.Val != 42 {
+		suite.T().Errorf("Expected 42, got %v", f.Val)
+	}
+
+	err = f.Set("not a number")
+	if err == nil {
+		suite.T().Errorf("Expected error, got nil")
+	}
+}

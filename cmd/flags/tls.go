@@ -24,9 +24,9 @@ func NewTLSFlags() *TLSFlags {
 	}
 }
 
-// NewTLSFlagSet returns a new pflag.FlagSet with TLS flags defined. Values
+// newTLSFlagSet returns a new pflag.FlagSet with TLS flags defined. Values
 // are stored in the TLSFlags struct.
-func (tf *TLSFlags) NewTLSFlagSet(fmtUsage commonFlags.UsageFormatter) *pflag.FlagSet {
+func (tf *TLSFlags) newTLSFlagSet(fmtUsage commonFlags.UsageFormatter) *pflag.FlagSet {
 	f := &pflag.FlagSet{}
 
 	f.Var(&tf.TLSRootCAFile, "tls-cafile", fmtUsage("The CA used when connecting to AVS."))

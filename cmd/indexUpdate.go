@@ -13,7 +13,7 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var indexUpdateFlags = &struct {
-	clientFlags         flags.ClientFlags
+	clientFlags         *flags.ClientFlags
 	yes                 bool
 	namespace           string
 	indexName           string
@@ -24,7 +24,7 @@ var indexUpdateFlags = &struct {
 	hnswHealer          flags.HealerFlags
 	hnswMerge           flags.MergeFlags
 }{
-	clientFlags:         *flags.NewClientFlags(),
+	clientFlags:         rootFlags.clientFlags,
 	hnswMaxMemQueueSize: flags.Uint32OptionalFlag{},
 	hnswBatch:           *flags.NewHnswBatchingFlags(),
 	hnswCache:           *flags.NewHnswCachingFlags(),
@@ -35,11 +35,10 @@ var indexUpdateFlags = &struct {
 func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                           //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, "n", "", "The namespace for the index.")                                             //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, "i", "", "The name of the index.")                                                   //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                            //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                  //nolint:lll // For readability
 	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, "The distance metric for the index.")                                //nolint:lll // For readability
 	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.") //nolint:lll // For readability
-	flagSet.AddFlagSet(indexUpdateFlags.clientFlags.NewClientFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswCache.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswHealer.NewFlagSet())
@@ -88,11 +87,11 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&indexUpdateFlags.clientFlags)
+			client, err := createClientFromFlags(indexUpdateFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			var batchingParams *protos.HnswBatchingParams
 			if indexUpdateFlags.hnswBatch.MaxRecords.Val != nil || indexUpdateFlags.hnswBatch.Interval.Uint32() != nil {
@@ -124,7 +123,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.IndexUpdate(
+			err = client.IndexUpdate(
 				ctx,
 				indexUpdateFlags.namespace,
 				indexUpdateFlags.indexName,

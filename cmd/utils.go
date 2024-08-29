@@ -27,7 +27,7 @@ func passwordPrompt(prompt string) (string, error) {
 	return string(bytePassword), nil
 }
 
-func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, error) {
+func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.Client, error) {
 	hosts := parseBothHostSeedsFlag(clientFlags.Seeds, clientFlags.Host)
 	isLoadBalancer := isLoadBalancer(clientFlags.Seeds)
 
@@ -59,10 +59,10 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 
 	var creds *avs.UserPassCredentials
 	if clientFlags.AuthCredentials.User.Val != nil {
-		creds = avs.NewCredntialsFromUserPass(*clientFlags.AuthCredentials.User.Val, *password)
+		creds = avs.NewCredentialsFromUserPass(*clientFlags.AuthCredentials.User.Val, *password)
 	}
 
-	adminClient, err := avs.NewAdminClient(
+	client, err := avs.NewClient(
 		ctx, hosts, clientFlags.ListenerName.Val, isLoadBalancer, creds, tlsConfig, logger,
 	)
 	if err != nil {
@@ -70,17 +70,17 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.AdminClient, er
 		return nil, err
 	}
 
-	return adminClient, nil
+	return client, nil
 }
 func parseBothHostSeedsFlag(seeds *flags.SeedsSliceFlag, host *flags.HostPortFlag) avs.HostPortSlice {
 	hosts := avs.HostPortSlice{}
 
 	if len(seeds.Seeds) > 0 {
-		logger.Debug("seeds is set")
+		logger.Debug(fmt.Sprintf("--%s is set, load-balancer will be DISABLED and tending WILL occur", flags.Seeds))
 
 		hosts = append(hosts, seeds.Seeds...)
 	} else {
-		logger.Debug("hosts is set")
+		logger.Debug(fmt.Sprintf("--%s is set, load-balancer will be ENABLED and tending WILL NOT occur", flags.Host))
 
 		hosts = append(hosts, &host.HostPort)
 	}
@@ -92,16 +92,13 @@ func isLoadBalancer(seeds *flags.SeedsSliceFlag) bool {
 	return len(seeds.Seeds) == 0
 }
 
-func nsAndSetString(namespace string, sets []string) string {
+func nsAndSetString(namespace string, sets *string) string {
 	var setStr string
 
-	switch len(sets) {
-	case 0:
+	if sets == nil {
 		setStr = "*"
-	case 1:
-		setStr = sets[0]
-	default:
-		setStr = fmt.Sprintf("%v", sets)
+	} else {
+		setStr = *sets
 	}
 
 	return fmt.Sprintf("%s.%s", namespace, setStr)

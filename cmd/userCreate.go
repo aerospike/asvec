@@ -11,17 +11,16 @@ import (
 )
 
 var userCreateFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	newUsername string
 	newPassword string
 	roles       []string
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newUserCreateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.AddFlagSet(userCreateFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userCreateFlags.newUsername, flags.Name, "", "The name of the new user.")                                                                                                 //nolint:lll // For readability
 	flagSet.StringVar(&userCreateFlags.newPassword, flags.NewPassword, "", "The password for the new user. If a new password is not provided you you will be prompted to enter a new password.") //nolint:lll // For readability
 	flagSet.StringSliceVar(&userCreateFlags.roles, flags.Roles, []string{}, "The roles to assign to the new user. To see valid roles run 'asvec role ls'.")                                      //nolint:lll // For readability
@@ -41,7 +40,8 @@ func newUserCreateCmd() *cobra.Command {
 		Short: "A command for creating new users",
 		Long: fmt.Sprintf(`A command for creating new users. Users are assigned 
 roles which have certain privileges. Users should have the minimum number of
-roles necessary to perform their tasks.
+roles necessary to perform their tasks. For more information on managing users, 
+refer to: https://aerospike.com/docs/vector/operate/user-management
 
 For example:
 
@@ -60,11 +60,11 @@ asvec user create --%s foo --%s read-write
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userCreateFlags.clientFlags)
+			client, err := createClientFromFlags(userCreateFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			if userCreateFlags.newPassword == "" {
 				userCreateFlags.newPassword, err = passwordPrompt("New User Password: ")
@@ -77,7 +77,7 @@ asvec user create --%s foo --%s read-write
 			ctx, cancel := context.WithTimeout(context.Background(), userCreateFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.CreateUser(
+			err = client.CreateUser(
 				ctx,
 				userCreateFlags.newUsername,
 				userCreateFlags.newPassword,

@@ -21,9 +21,12 @@ var view = NewView(os.Stdout, os.Stderr, logger)
 var Version = "development" // Overwritten at build time by ld_flags
 
 var rootFlags = &struct {
-	logLevel flags.LogLevelFlag
-	noColor  bool
-}{}
+	clientFlags *flags.ClientFlags
+	logLevel    flags.LogLevelFlag
+	noColor     bool
+}{
+	clientFlags: flags.NewClientFlags(),
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -113,6 +116,7 @@ func init() {
 		false,
 		"Disable color in output",
 	)
+	rootCmd.PersistentFlags().AddFlagSet(rootFlags.clientFlags.NewClientFlagSet())
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)
 
 	// TODO: Add custom template for usage to take into account terminal width

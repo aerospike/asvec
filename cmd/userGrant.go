@@ -13,16 +13,15 @@ import (
 )
 
 var userGrantFlags = &struct {
-	clientFlags flags.ClientFlags
+	clientFlags *flags.ClientFlags
 	grantUser   string
 	roles       []string
 }{
-	clientFlags: *flags.NewClientFlags(),
+	clientFlags: rootFlags.clientFlags,
 }
 
 func newUserGrantFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.AddFlagSet(userGrantFlags.clientFlags.NewClientFlagSet())
 	flagSet.StringVar(&userGrantFlags.grantUser, flags.Name, "", "The existing user to grant new roles")                                                           //nolint:lll // For readability
 	flagSet.StringSliceVar(&userGrantFlags.roles, flags.Roles, []string{}, "The roles to grant the existing user. New roles are added to a users existing roles.") //nolint:lll // For readability
 
@@ -39,6 +38,8 @@ func newUserGrantCmd() *cobra.Command {
 		Use:   "grant",
 		Short: "A command for granting roles to an existing users.",
 		Long: fmt.Sprintf(`A command for granting roles to an existing users.
+For more information on managing users, refer to: 
+https://aerospike.com/docs/vector/operate/user-management
 
 For example:
 
@@ -57,16 +58,16 @@ asvec user grant --%s foo --%s admin
 				)...,
 			)
 
-			adminClient, err := createClientFromFlags(&userGrantFlags.clientFlags)
+			client, err := createClientFromFlags(userGrantFlags.clientFlags)
 			if err != nil {
 				return err
 			}
-			defer adminClient.Close()
+			defer client.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), userGrantFlags.clientFlags.Timeout)
 			defer cancel()
 
-			err = adminClient.GrantRoles(
+			err = client.GrantRoles(
 				ctx,
 				userGrantFlags.grantUser,
 				userGrantFlags.roles,

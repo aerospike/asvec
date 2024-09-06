@@ -1,7 +1,7 @@
 Buildroot: ./
 Name: asvec
 Version: VERSIONHERE
-Release: 2
+Release: 1
 Summary: Tool for deploying non-prod Aerospike server clusters on docker or in AWS
 License: see github.com/aerospike/asvec
 Group: aerospike
@@ -13,8 +13,10 @@ Group: aerospike
 
 %description
 
-
 Tool for deploying non-prod Aerospike server clusters on docker or in AWS
 
 %files
-"/usr/local/aerospike/bin/asvec"
+/opt/aerospike/bin/asvec
+
+%prep
+ln -sf /opt/aerospike/bin/asvec %{buildroot}/usr/bin/asvec

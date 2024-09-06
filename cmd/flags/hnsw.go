@@ -80,11 +80,11 @@ func NewHnswHealerFlags() *HealerFlags {
 
 func (cf *HealerFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxScanRatePerNode, HnswHealerMaxScanRatePerNode, "Maximum allowed record scan rate per AVS node.")                         //nolint:lll // For readability
-	flagSet.Var(&cf.MaxScanPageSize, HnswHealerMaxScanPageSize, "Maximum number of records in a single scanned page.")                          //nolint:lll // For readability
-	flagSet.Var(&cf.ReindexPercent, HnswHealerReindexPercent, "Percentage of good records randomly selected for reindexing in a healer cycle.") //nolint:lll // For readability
-	flagSet.Var(&cf.Schedule, HnswHealerSchedule, "The quartz cron expression defining schedule at which the healer cycle is invoked.")         //nolint:lll // For readability
-	flagSet.Var(&cf.Parallelism, HnswHealerParallelism, "Maximum number of records to heal in parallel.")                                       //nolint:lll // For readability
+	flagSet.Var(&cf.MaxScanRatePerNode, HnswHealerMaxScanRatePerNode, "Maximum allowed record scan rate per AVS node.")                           //nolint:lll // For readability
+	flagSet.Var(&cf.MaxScanPageSize, HnswHealerMaxScanPageSize, "Maximum number of records in a single scanned page.")                            //nolint:lll // For readability
+	flagSet.Var(&cf.ReindexPercent, HnswHealerReindexPercent, "Percentage of good records randomly selected for reindexing in a healer cycle.")   //nolint:lll // For readability
+	flagSet.Var(&cf.Schedule, HnswHealerSchedule, "The quartz cron expression defining the schedule at which the index healer cycle is invoked.") //nolint:lll // For readability
+	flagSet.Var(&cf.Parallelism, HnswHealerParallelism, "Maximum number of records to heal in parallel.")                                         //nolint:lll // For readability
 
 	return flagSet
 }

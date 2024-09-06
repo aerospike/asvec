@@ -172,7 +172,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index0",
 			"test",
 			"index create -y -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar",
-			tests.NewIndexDefinitionBuilder("index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+			tests.NewIndexDefinitionBuilder(false, "index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
 				WithLabels(map[string]string{"model": "all-MiniLM-L6-v2", "foo": "bar"}).
 				Build(),
 		},
@@ -181,7 +181,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index1",
 			"test",
 			"index create -y -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
-			tests.NewIndexDefinitionBuilder("index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
+			tests.NewIndexDefinitionBuilder(false, "index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
 				WithStorageNamespace("bar").
 				WithStorageSet("testbar").
 				Build(),
@@ -191,7 +191,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index2",
 			"test",
 			"index create -y -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-m 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10",
-			tests.NewIndexDefinitionBuilder("index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
+			tests.NewIndexDefinitionBuilder(false, "index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
 				WithHnswM(10).
 				WithHnswEf(11).
 				WithHnswEfConstruction(12).
@@ -203,7 +203,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index3",
 			"test",
 			"index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
-			tests.NewIndexDefinitionBuilder("index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
+			tests.NewIndexDefinitionBuilder(false, "index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
 				WithHnswBatchingMaxRecord(10001).
 				WithHnswBatchingInterval(50000).
 				Build(),
@@ -213,7 +213,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index4",
 			"test",
 			"index create -y -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
-			tests.NewIndexDefinitionBuilder("index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
+			tests.NewIndexDefinitionBuilder(false, "index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
 				Build(),
@@ -223,7 +223,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"index5",
 			"test",
 			"index create -y -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10",
-			tests.NewIndexDefinitionBuilder("index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
+			tests.NewIndexDefinitionBuilder(false, "index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
@@ -235,9 +235,10 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"test with hnsw merge params",
 			"index6",
 			"test",
-			"index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-index-parallelism 10",
-			tests.NewIndexDefinitionBuilder("index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
+			"index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-index-parallelism 10 --hnsw-merge-reindex-parallelism 11",
+			tests.NewIndexDefinitionBuilder(false, "index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
 				WithHnswMergeIndexParallelism(10).
+				WithHnswMergeReIndexParallelism(11).
 				Build(),
 		},
 		{
@@ -245,7 +246,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			"yaml-file-index",
 			"test",
 			fmt.Sprintf("index create -y --file tests/indexDef.yaml"),
-			tests.NewIndexDefinitionBuilder("yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
+			tests.NewIndexDefinitionBuilder(false, "yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
 				WithSet("testset").
 				WithHnswEf(101).
 				WithHnswEfConstruction(102).
@@ -262,6 +263,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswHealerSchedule("0 15 10 ? * 6L 2022-2025").
 				WithHnswMergeIndexParallelism(7).
 				WithHnswMergeReIndexParallelism(5).
+				WithStorageNamespace("test").
 				WithStorageSet("name").
 				Build(),
 		},
@@ -276,7 +278,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				suite.FailNow("unable to index create")
 			}
 
-			actual, err := suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+			actual, err := suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName, false)
 
 			if err != nil {
 				suite.FailNowf("unable to get index", "%v", err)
@@ -300,10 +302,10 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 		{
 			"test with all indexes succeed",
 			[]*protos.IndexDefinition{
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
@@ -318,10 +320,10 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 		{
 			"test with one index that fails",
 			[]*protos.IndexDefinition{
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"exists3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"exists4", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
@@ -336,10 +338,10 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 		{
 			"test with no index successfully created",
 			[]*protos.IndexDefinition{
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
@@ -454,7 +456,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 	index := "successful-update"
 
 	newBuilder := func() *tests.IndexDefinitionBuilder {
-		return tests.NewIndexDefinitionBuilder(index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
+		return tests.NewIndexDefinitionBuilder(true, index, ns, 256, protos.VectorDistanceMetric_COSINE, "field")
 	}
 
 	testCases := []struct {
@@ -511,9 +513,10 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			"test with hnsw merge params",
 			"successful-update",
 			"test",
-			"index update -y -n test -i successful-update --hnsw-merge-index-parallelism 10",
+			"index update -y -n test -i successful-update --hnsw-merge-index-parallelism 10 --hnsw-merge-reindex-parallelism 11",
 			newBuilder().
 				WithHnswMergeIndexParallelism(10).
+				WithHnswMergeReIndexParallelism(11).
 				Build(),
 		},
 	}
@@ -536,7 +539,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 
 			time.Sleep(5 * time.Second)
 
-			actual, err := suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+			actual, err := suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName, false)
 
 			if err != nil {
 				suite.FailNowf("unable to get index", "%v", err)
@@ -642,7 +645,7 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 				suite.FailNow("unable to index drop")
 			}
 
-			_, err = suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName)
+			_, err = suite.AvsClient.IndexGet(context.Background(), tc.indexNamespace, tc.indexName, false)
 
 			time.Sleep(time.Second * 3)
 
@@ -677,7 +680,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		{
 			"single index",
 			[]*protos.IndexDefinition{
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 			},
@@ -690,10 +693,10 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		{
 			"double index with set",
 			[]*protos.IndexDefinition{
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
@@ -707,13 +710,13 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		{
 			"double index with set and verbose",
 			[]*protos.IndexDefinition{
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).WithLabels(map[string]string{"foo": "bar"}).
 					WithHnswMergeIndexParallelism(80).
 					WithHnswMergeReIndexParallelism(26).
 					Build(),
-				tests.NewIndexDefinitionBuilder(
+				tests.NewIndexDefinitionBuilder(false,
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").
 					WithHnswMergeIndexParallelism(80).
@@ -1108,10 +1111,10 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 	strIndexName := "query-str-index"
 	intIndexName := "query-int-index"
 	indexes := []*protos.IndexDefinition{
-		tests.NewIndexDefinitionBuilder(
+		tests.NewIndexDefinitionBuilder(false,
 			strIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-str",
 		).Build(),
-		tests.NewIndexDefinitionBuilder(
+		tests.NewIndexDefinitionBuilder(false,
 			intIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-int",
 		).Build(),
 	}

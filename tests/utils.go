@@ -38,6 +38,7 @@ func CreateFlagStr(name, value string) string {
 }
 
 type IndexDefinitionBuilder struct {
+	updateCmd                      bool
 	indexName                      string
 	namespace                      string
 	set                            *string
@@ -65,6 +66,7 @@ type IndexDefinitionBuilder struct {
 }
 
 func NewIndexDefinitionBuilder(
+	updateCmd bool,
 	indexName,
 	namespace string,
 	dimension int,
@@ -72,6 +74,7 @@ func NewIndexDefinitionBuilder(
 	vectorField string,
 ) *IndexDefinitionBuilder {
 	return &IndexDefinitionBuilder{
+		updateCmd:            updateCmd,
 		indexName:            indexName,
 		namespace:            namespace,
 		dimension:            dimension,
@@ -176,33 +179,48 @@ func (idb *IndexDefinitionBuilder) WithHnswMergeReIndexParallelism(mergeParallel
 }
 
 func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
-	indexDef := &protos.IndexDefinition{
-		Id: &protos.IndexId{
-			Name:      idb.indexName,
-			Namespace: idb.namespace,
-		},
-		Dimensions:           uint32(idb.dimension),
-		VectorDistanceMetric: idb.vectorDistanceMetric,
-		Field:                idb.vectorField,
-		Type:                 protos.IndexType_HNSW,
-		Storage: &protos.IndexStorage{
-			Namespace: &idb.namespace,
-			Set:       &idb.indexName,
-		},
-		Params: &protos.IndexDefinition_HnswParams{
-			HnswParams: &protos.HnswParams{
-				M:              GetUint32Ptr(16),
-				EfConstruction: GetUint32Ptr(100),
-				Ef:             GetUint32Ptr(100),
-				BatchingParams: &protos.HnswBatchingParams{
-					MaxRecords: GetUint32Ptr(100000),
-					Interval:   GetUint32Ptr(30000),
-				},
-				CachingParams: &protos.HnswCachingParams{},
-				HealerParams:  &protos.HnswHealerParams{},
-				MergeParams:   &protos.HnswIndexMergeParams{},
+	var indexDef *protos.IndexDefinition
+
+	if idb.updateCmd {
+		indexDef = &protos.IndexDefinition{
+			Id: &protos.IndexId{
+				Name:      idb.indexName,
+				Namespace: idb.namespace,
 			},
-		},
+			Dimensions:           uint32(idb.dimension),
+			VectorDistanceMetric: idb.vectorDistanceMetric,
+			Field:                idb.vectorField,
+			Type:                 protos.IndexType_HNSW,
+			// Storage:              ,
+			Params: &protos.IndexDefinition_HnswParams{
+				HnswParams: &protos.HnswParams{
+					// BatchingParams: &protos.HnswBatchingParams{},
+					CachingParams: &protos.HnswCachingParams{},
+					HealerParams:  &protos.HnswHealerParams{},
+					MergeParams:   &protos.HnswIndexMergeParams{},
+				},
+			},
+		}
+	} else {
+		indexDef = &protos.IndexDefinition{
+			Id: &protos.IndexId{
+				Name:      idb.indexName,
+				Namespace: idb.namespace,
+			},
+			Dimensions:           uint32(idb.dimension),
+			VectorDistanceMetric: idb.vectorDistanceMetric,
+			Field:                idb.vectorField,
+			Type:                 protos.IndexType_HNSW,
+			Storage:              &protos.IndexStorage{},
+			Params: &protos.IndexDefinition_HnswParams{
+				HnswParams: &protos.HnswParams{
+					BatchingParams: &protos.HnswBatchingParams{},
+					CachingParams:  &protos.HnswCachingParams{},
+					HealerParams:   &protos.HnswHealerParams{},
+					MergeParams:    &protos.HnswIndexMergeParams{},
+				},
+			},
+		}
 	}
 
 	indexDef.SetFilter = idb.set
@@ -211,12 +229,11 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		indexDef.Labels = idb.labels
 	}
 
-	if idb.storageNamespace != nil {
-		indexDef.Storage.Namespace = idb.storageNamespace
-	}
-
-	if idb.storageSet != nil {
-		indexDef.Storage.Set = idb.storageSet
+	if idb.storageNamespace != nil || idb.storageSet != nil {
+		indexDef.Storage = &protos.IndexStorage{
+			Namespace: idb.storageNamespace,
+			Set:       idb.storageSet,
+		}
 	}
 
 	if idb.hnsfM != nil {
@@ -229,6 +246,10 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 
 	if idb.hnsfEfC != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EfConstruction = idb.hnsfEfC
+	}
+
+	if idb.hnsfBatchingInterval != nil || idb.hnsfBatchingMaxRecord != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams = &protos.HnswBatchingParams{}
 	}
 
 	if idb.hnsfBatchingMaxRecord != nil {

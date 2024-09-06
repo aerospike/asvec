@@ -395,6 +395,7 @@ pkg-zip: pkg-zip-amd64 pkg-zip-arm64
 pkg-rpm-amd64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
+	mkdir -p $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin
 	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-amd64 $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin/asvec
 	rm -f $(BIN_DIR)/asvec-linux-x86_64.rpm
@@ -406,6 +407,7 @@ pkg-rpm-amd64:
 pkg-rpm-arm64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
+	mkdir -p $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin
 	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-arm64 $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin/asvec
 	rm -f $(BIN_DIR)/asvec-linux-arm64.rpm

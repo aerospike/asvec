@@ -20,7 +20,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:0.9.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:0.10.0
     volumes:
       - ./config/aerospike-vector-search-1.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
       - ./config/features.conf:/etc/aerospike-vector-search/features.conf
@@ -35,7 +35,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:0.9.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:0.10.0
     volumes:
       - ./config/aerospike-vector-search-2.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
       - ./config/features.conf:/etc/aerospike-vector-search/features.conf
@@ -50,7 +50,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:0.9.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:0.10.0
     volumes:
       - ./config/aerospike-vector-search-3.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
       - ./config/features.conf:/etc/aerospike-vector-search/features.conf

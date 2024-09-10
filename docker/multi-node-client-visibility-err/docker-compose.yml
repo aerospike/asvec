@@ -20,7 +20,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:0.9.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:0.10.0
     ports:
       - "10000:10000"
     volumes:
@@ -37,7 +37,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:0.9.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:0.10.0
     ports:
       - "10001:10001"
     volumes:
@@ -54,7 +54,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:0.9.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:0.10.0
     # ports:
     #   - "10002:10002" # This causes the visibility err
     volumes:

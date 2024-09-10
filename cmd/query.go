@@ -146,7 +146,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 					return
 				}
 			} else {
-				indexDef, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName)
+				indexDef, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName, false)
 				if err != nil {
 					logger.ErrorContext(ctx, "unable to get index definition", slog.Any("error", err))
 					view.Errorf("Failed to get index definition: %s", err)

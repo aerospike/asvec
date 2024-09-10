@@ -43,6 +43,10 @@ func TestMultiNodeLBCmdSuite(t *testing.T) {
 }
 
 func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
+	about, err := suite.AvsClient.About(context.Background(), nil)
+	if err != nil {
+		suite.T().Fatal(err)
+	}
 
 	testCases := []struct {
 		name            string
@@ -57,7 +61,7 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
 			true,
 			`Nodes
 ,Node,Endpoint,Cluster ID,Version,Visible Nodes
-1,Seed,localhost:10000,<cluster-id>,0.9.0,"{
+1,Seed,localhost:10000,<cluster-id>,<version>,"{
     1103823447824: [1.1.1.1:10000]
     2207646885648: [2.2.2.2:10000]
     3311470323472: [3.3.3.3:10000]
@@ -76,7 +80,7 @@ Possible scenarios:
 			false,
 			`Nodes
 ,Node,Endpoint,Cluster ID,Version,Visible Nodes
-1,LB,localhost:10000,<cluster-id>,0.9.0,"{
+1,LB,localhost:10000,<cluster-id>,<version>,"{
     1103823447824: [1.1.1.1:10000]
     2207646885648: [2.2.2.2:10000]
     3311470323472: [3.3.3.3:10000]
@@ -93,6 +97,7 @@ Possible scenarios:
 
 			clusterIDStr := fmt.Sprintf("%d", state.ClusterId.GetId())
 			tc.expectedTable = strings.ReplaceAll(tc.expectedTable, "<cluster-id>", clusterIDStr)
+			tc.expectedTable = strings.ReplaceAll(tc.expectedTable, "<version>", about.Version)
 			outLines, errLines, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
 
 			if tc.expectErrCoded {

@@ -341,11 +341,12 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 				MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,
 				MaxScanPageSize:    indexCreateFlags.hnswHealer.MaxScanPageSize.Val,
 				ReindexPercent:     indexCreateFlags.hnswHealer.ReindexPercent.Val,
-				ScheduleDelay:      indexCreateFlags.hnswHealer.ScheduleDelay.Uint64(),
+				Schedule:           indexCreateFlags.hnswHealer.Schedule.Val,
 				Parallelism:        indexCreateFlags.hnswHealer.Parallelism.Val,
 			},
 			MergeParams: &protos.HnswIndexMergeParams{
-				Parallelism: indexCreateFlags.hnswMerge.Parallelism.Val,
+				IndexParallelism:   indexCreateFlags.hnswMerge.IndexParallelism.Val,
+				ReIndexParallelism: indexCreateFlags.hnswMerge.ReIndexParallelism.Val,
 			},
 		},
 	}

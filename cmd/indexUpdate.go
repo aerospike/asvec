@@ -112,11 +112,12 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					MaxScanRatePerNode: indexUpdateFlags.hnswHealer.MaxScanRatePerNode.Val,
 					MaxScanPageSize:    indexUpdateFlags.hnswHealer.MaxScanPageSize.Val,
 					ReindexPercent:     indexUpdateFlags.hnswHealer.ReindexPercent.Val,
-					ScheduleDelay:      indexUpdateFlags.hnswHealer.ScheduleDelay.Uint64(),
+					Schedule:           indexUpdateFlags.hnswHealer.Schedule.Val,
 					Parallelism:        indexUpdateFlags.hnswHealer.Parallelism.Val,
 				},
 				MergeParams: &protos.HnswIndexMergeParams{
-					Parallelism: indexUpdateFlags.hnswMerge.Parallelism.Val,
+					IndexParallelism:   indexUpdateFlags.hnswMerge.IndexParallelism.Val,
+					ReIndexParallelism: indexUpdateFlags.hnswMerge.ReIndexParallelism.Val,
 				},
 			}
 

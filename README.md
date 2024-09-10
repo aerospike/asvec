@@ -30,8 +30,12 @@ asvec --help
 > [!NOTE]
 > More features are in the works. Don't worry!
 
+- **Data Browsing**: Easily run queries on an index.
 - **Index Management**: Listing, creating, and dropping indexes.
-- **User Management**: Listing, creating, and dropping users. Revoking and granting user's roles.
+- **User Management**: Listing, creating, and dropping users. Revoking and
+  granting user's roles.
+- **Node visibility**: Listing nodes and important metadata i.e. version, peers,
+  etc.
 
 ## Issues
 

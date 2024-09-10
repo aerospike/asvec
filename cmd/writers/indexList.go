@@ -82,9 +82,10 @@ func (itw *IndexTableWriter) AppendIndexRow(
 				{"Healer Max Scan Rate / Node*", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},
 				{"Healer Max Page Size*", v.HnswParams.HealerParams.GetMaxScanPageSize()},
 				{"Healer Re-index % *", convertFloatToPercentStr(v.HnswParams.HealerParams.GetReindexPercent())},
-				{"Healer Schedule Delay*", convertMillisecondToDuration(v.HnswParams.HealerParams.GetScheduleDelay())},
+				{"Healer Schedule*", v.HnswParams.HealerParams.GetSchedule()},
 				{"Healer Parallelism*", v.HnswParams.HealerParams.GetParallelism()},
-				{"Merge Parallelism*", v.HnswParams.MergeParams.GetParallelism()},
+				{"Merge Index Parallelism*", v.HnswParams.MergeParams.GetIndexParallelism()},
+				{"Merge Re-Index Parallelism*", v.HnswParams.MergeParams.GetReIndexParallelism()},
 			})
 
 			row = append(row, renderTable(tHNSW, format))

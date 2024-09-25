@@ -1,0 +1,21 @@
+# Description: Aerospike Vector CLI Configuration File
+# 
+# When the --config-file flag is not provided asvec looks for this configuration
+# file in the following locations: ./asvec.yml and /etc/aerospike/asvec.yml
+# The "default" context is used when no --cluster-name is provided to asvec. To
+# support multiple clusters, add additional contexts with unique cluster names.
+# Then start asvec with the --cluster-name <name>.
+
+default:
+  # host: 127.0.0.1:5000
+  # credentials: admin:admin
+  # tls-cafile: ./ca.crt
+  # tls-certfile: ./cert.crt
+  # tls-keyfile: ./key.key
+
+# cluster-2:
+  # host: 192.168.0.1:5000
+  # credentials: foo:bar
+  # tls-cafile: ./other/ca.crt
+  # tls-certfile: ./other/cert.crt
+  # tls-keyfile: ./other/key.key

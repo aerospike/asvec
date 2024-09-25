@@ -5,6 +5,8 @@ import "github.com/spf13/pflag"
 const (
 	LogLevel                     = "log-level"
 	NoColor                      = "no-color"
+	ClusterName                  = "cluster-name"
+	ConfigFile                   = "config-file"
 	Seeds                        = "seeds"
 	Host                         = "host"
 	ListenerName                 = "listener-name"

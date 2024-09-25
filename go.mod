@@ -2,6 +2,8 @@ module asvec
 
 go 1.22.5
 
+replace github.com/aerospike/tools-common-go => ../tools-common-go
+
 require (
 	github.com/aerospike/avs-client-go v0.0.0-20240906211641-97c1df4005ae
 	github.com/aerospike/tools-common-go v0.0.0-20240701164814-36eec593d9c6

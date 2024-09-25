@@ -8,10 +8,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aerospike/tools-common-go/config"
 	common "github.com/aerospike/tools-common-go/flags"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"golang.org/x/term"
 )
 
@@ -19,11 +18,14 @@ var lvl = new(slog.LevelVar)
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout, os.Stderr, logger)
 var Version = "development" // Overwritten at build time by ld_flags
+var defaultConfigFile = "asvec.yml"
 
 var rootFlags = &struct {
 	clientFlags *flags.ClientFlags
 	logLevel    flags.LogLevelFlag
 	noColor     bool
+	confFile    string
+	clusterName string
 }{
 	clientFlags: flags.NewClientFlags(),
 }
@@ -61,30 +63,53 @@ asvec --help
 		}
 
 		cmd.SilenceUsage = true
+		config.SetConfName("asvec")
 
-		if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
+		configFile, err := config.InitConfig(rootFlags.confFile)
+		if err != nil {
 			return err
 		}
 
-		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			return err
+		if configFile != "" {
+			view.PrintfErr("Using config file: %s\n", configFile)
 		}
 
-		var persistedErr error
-		flags := cmd.Flags()
+		bindEnvs := []string{
+			flags.Host,
+			flags.Seeds,
+			flags.AuthUser,
+			flags.AuthPassword,
+			flags.AuthCredentials,
+			flags.TLSCaFile,
+			flags.TLSCaPath,
+			flags.TLSCertFile,
+			flags.TLSKeyFile,
+			flags.TLSKeyFilePass,
+		}
 
-		flags.VisitAll(func(f *pflag.Flag) {
-			val := viper.GetString(f.Name)
+		flagToEnv := func(flag string) string {
+			env := strings.ReplaceAll(flag, "-", "_")
+			env = strings.ToUpper(env)
+			env = "ASVEC_" + env
+			return env
+		}
 
-			// Apply the viper config value to the flag when viper has a value
-			if viper.IsSet(f.Name) && !f.Changed {
-				if err := f.Value.Set(val); err != nil {
-					persistedErr = fmt.Errorf("failed to parse flag %s: %s", f.Name, err)
-				}
+		// Bind specified flags to ASVEC_*. Viper fails to set it correctly
+		// because of the funky stuff we do in config.SetFlags()
+		for _, flagName := range bindEnvs {
+			env := flagToEnv(flagName)
+
+			if value := os.Getenv(env); value != "" {
+				cmd.Flags().Lookup(flagName).Value.Set(value)
 			}
-		})
+		}
 
-		return persistedErr
+		err = config.SetFlags(rootFlags.clusterName, cmd.Flags())
+		if err != nil {
+			return err
+		}
+
+		return nil
 	},
 	PersistentPostRun: func(_ *cobra.Command, _ []string) {
 		code := errCode.Load()
@@ -105,17 +130,10 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().Var(
-		&rootFlags.logLevel,
-		flags.LogLevel,
-		fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", ")), //nolint:lll // For readability
-	)
-	rootCmd.PersistentFlags().BoolVar(
-		&rootFlags.noColor,
-		flags.NoColor,
-		false,
-		"Disable color in output",
-	)
+	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, flags.LogLevel, fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))) //nolint:lll // For readability)
+	rootCmd.PersistentFlags().BoolVar(&rootFlags.noColor, flags.NoColor, false, "Disable color in output")
+	rootCmd.PersistentFlags().StringVar(&rootFlags.confFile, flags.ConfigFile, "", fmt.Sprintf("Config file (default is %s/%s)", config.DefaultConfDir, defaultConfigFile))
+	rootCmd.PersistentFlags().StringVar(&rootFlags.clusterName, flags.ClusterName, "default", "Cluster name to use as defined in your configuration file")
 	rootCmd.PersistentFlags().AddFlagSet(rootFlags.clientFlags.NewClientFlagSet())
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)
 
@@ -131,25 +149,5 @@ func init() {
 		logger.Debug("failed to get terminal width", slog.Any("error", err))
 	}
 
-	viper.SetEnvPrefix("ASVEC")
-
-	bindEnvs := []string{
-		flags.Host,
-		flags.Seeds,
-		flags.AuthUser,
-		flags.AuthPassword,
-		flags.AuthCredentials,
-		flags.TLSCaFile,
-		flags.TLSCaPath,
-		flags.TLSCertFile,
-		flags.TLSKeyFile,
-		flags.TLSKeyFilePass,
-	}
-
-	// Bind specified flags to ASVEC_*
-	for _, env := range bindEnvs {
-		if err := viper.BindEnv(env); err != nil {
-			panic(fmt.Sprintf("failed to bind environment variable: %s", err))
-		}
-	}
+	config.BindPFlags(rootCmd.Flags(), "")
 }

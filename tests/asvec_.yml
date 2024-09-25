@@ -1,0 +1,17 @@
+vanilla:
+  host: 127.0.0.1:10000
+
+tls:
+  seeds: 127.0.0.1:10000
+  tls-cafile: docker/tls/config/tls/ca.aerospike.com.crt
+
+mtls:
+  host: 127.0.0.1:10000
+  tls-cafile: docker/tls/config/tls/ca.aerospike.com.crt
+  tls-certfile: "docker/mtls/config/tls/localhost.crt"
+  tls-keyfile: "docker/mtls/config/tls/localhost.key"
+
+auth:
+  host: 127.0.0.1:10000
+  tls-cafile: docker/tls/config/tls/ca.aerospike.com.crt
+  credentials: admin:admin

@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/aerospike/asvec/graph/badge.svg?token=14G1LIEP2Q)](https://codecov.io/gh/aerospike/asvec)
+
 # Aerospike Vector Search CLI Tool
 
 ## Overview

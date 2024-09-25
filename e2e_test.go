@@ -34,6 +34,7 @@ var (
 
 type CmdTestSuite struct {
 	tests.CmdBaseTestSuite
+	configFileClusterName string
 }
 
 func TestCmdSuite(t *testing.T) {
@@ -59,6 +60,7 @@ func TestCmdSuite(t *testing.T) {
 	logger.Info("%v", slog.Any("cert", rootCA))
 	suites := []*CmdTestSuite{
 		{
+			configFileClusterName: "vanilla",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 
 				ComposeFile: "docker/vanilla/docker-compose.yml", // vanilla
@@ -71,6 +73,7 @@ func TestCmdSuite(t *testing.T) {
 			},
 		},
 		{
+			configFileClusterName: "tls",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				ComposeFile: "docker/tls/docker-compose.yml", // tls
 				SuiteFlags: []string{
@@ -87,6 +90,7 @@ func TestCmdSuite(t *testing.T) {
 			},
 		},
 		{
+			configFileClusterName: "mtls",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
 				SuiteFlags: []string{
@@ -105,6 +109,7 @@ func TestCmdSuite(t *testing.T) {
 			},
 		},
 		{
+			configFileClusterName: "auth",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
 				SuiteFlags: []string{
@@ -1415,54 +1420,54 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 		expectedErrStr string
 	}{
 		{
-			"use seeds and hosts together",
-			"query --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i i",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "query --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i i",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use set without the key flag",
-			"query --namespace test -i index --set testset",
-			"Warning: The --set flag is only used when the --key-str or --key-int flag is set.",
+			name:           "use set without the key flag",
+			cmd:            "query --namespace test -i index --set testset",
+			expectedErrStr: "Warning: The --set flag is only used when the --key-str or --key-int flag is set.",
 		},
 		{
-			"try to query an index that does not exist",
-			"query --namespace test -i DNE",
-			"Error: Failed to get index definition: failed to get index: server error: NotFound, msg=index test:DNE not found",
+			name:           "try to query an index that does not exist",
+			cmd:            "query --namespace test -i DNE",
+			expectedErrStr: "Error: Failed to get index definition: failed to get index: server error: NotFound, msg=index test:DNE not found",
 		},
 		{
-			"try to query a key that does not exist",
-			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
-			"Error: Failed to get vector using key: unable to get record: failed to get record: server error: NotFound",
+			name:           "try to query a key that does not exist",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			expectedErrStr: "Error: Failed to get vector using key: unable to get record: failed to get record: server error: NotFound",
 		},
 		{
-			"query a key without a set and check for prompt",
-			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
-			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+			name:           "query a key without a set and check for prompt",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			expectedErrStr: "Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
 		},
 		{
-			"query a key without a set and check for prompt",
-			fmt.Sprintf("query --namespace %s -i %s -t 1234", namespace, indexName),
-			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+			name:           "query a key without a set and check for prompt",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -t 1234", namespace, indexName),
+			expectedErrStr: "Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
 		},
 		{
-			"query using an invalid int key",
-			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
-			"Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
+			name:           "query using an invalid int key",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
+			expectedErrStr: "Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
 		},
 		{
-			"query using key-int and key-str together",
-			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --key-int 1", namespace, indexName),
-			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int key-str] were all set",
+			name:           "query using key-int and key-str together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-str DNA --key-int 1", namespace, indexName),
+			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int key-str] were all set",
 		},
 		{
-			"query using key-str and vector together",
-			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --vector [0,1,1,1]", namespace, indexName),
-			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-str vector] were all set",
+			name:           "query using key-str and vector together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-str DNA --vector [0,1,1,1]", namespace, indexName),
+			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-str vector] were all set",
 		},
 		{
-			"query using key-str and vector together",
-			fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
-			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
+			name:           "query using key-int and vector together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
+			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
 		},
 	}
 
@@ -1746,4 +1751,45 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			suite.Assert().Contains(lines, tc.expectedErrStr)
 		})
 	}
+}
+
+func (suite *CmdTestSuite) TestConfigFile() {
+	configFile := "tests/asvec_.yml"
+	cmd := fmt.Sprintf("node ls --config-file %s --cluster-name %s", configFile, suite.configFileClusterName)
+
+	stdout, stderr, err := suite.RunCmd(strings.Split(cmd, " ")...)
+
+	suite.NoError(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
+}
+
+func (suite *CmdTestSuite) TestEnvVars() {
+	convertArgsToEnvs := func(args []string) []string {
+		envs := make([]string, 0)
+		for _, arg := range args {
+			key_val := strings.Split(arg, " ")
+
+			if len(key_val) != 2 {
+				continue
+			}
+
+			key := key_val[0]
+			val := key_val[1]
+
+			key = strings.Replace(key, "--", "ASVEC_", 1)
+			key = strings.ReplaceAll(key, "-", "_")
+			key = strings.ToUpper(key)
+			envs = append(envs, key+"="+val)
+		}
+
+		return envs
+	}
+
+	envs := convertArgsToEnvs(suite.SuiteFlags)
+	suite.Logger.Debug("suite flags", slog.Any("env", envs))
+
+	cmd := suite.GetCmd(strings.Split("index ls --log-level debug", " ")...)
+	cmd.Env = append(cmd.Env, envs...)
+	stdout, stderr, err := suite.GetCmdOutput(cmd)
+
+	suite.NoError(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
 }

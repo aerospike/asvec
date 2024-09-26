@@ -334,7 +334,7 @@ pkg-deb-amd64:
 	mkdir -p $(BIN_DIR)/deb/usr/bin
 	@ eval "$$amddebscript"
 	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/opt/aerospike/bin/
-	mv $(BIN_DIR)/asvec.yml $(BIN_DIR)/deb/etc/aerospike/
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/deb/etc/aerospike/asvec.yml
 	ln -s /opt/aerospike/bin/asvec $(BIN_DIR)/deb/usr/bin/asvec
 	sudo dpkg-deb -Zxz -b $(BIN_DIR)/deb
 	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.deb
@@ -351,7 +351,7 @@ pkg-deb-arm64:
 	mkdir -p $(BIN_DIR)/deb/usr/bin
 	@ eval "$$armdebscript"
 	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/opt/aerospike/bin/
-	mv $(BIN_DIR)/asvec.yml $(BIN_DIR)/deb/etc/aerospike/
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/deb/etc/aerospike/asvec.yml
 	ln -s /opt/aerospike/bin/asvec $(BIN_DIR)/deb/usr/bin/asvec
 	sudo dpkg-deb -Zxz -b $(BIN_DIR)/deb
 	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.deb

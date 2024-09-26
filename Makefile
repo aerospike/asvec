@@ -330,6 +330,7 @@ pkg-deb-amd64:
 	rm -rf $(BIN_DIR)/deb
 	mkdir -p $(BIN_DIR)/deb/DEBIAN
 	mkdir -p $(BIN_DIR)/deb/opt/aerospike/bin
+	mkdir -p $(BIN_DIR)/deb/etc/aerospike/
 	mkdir -p $(BIN_DIR)/deb/usr/bin
 	@ eval "$$amddebscript"
 	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/opt/aerospike/bin/
@@ -346,6 +347,7 @@ pkg-deb-arm64:
 	rm -rf $(BIN_DIR)/deb
 	mkdir -p $(BIN_DIR)/deb/DEBIAN
 	mkdir -p $(BIN_DIR)/deb/opt/aerospike/bin
+	mkdir -p $(BIN_DIR)/deb/etc/aerospike/
 	mkdir -p $(BIN_DIR)/deb/usr/bin
 	@ eval "$$armdebscript"
 	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/opt/aerospike/bin/

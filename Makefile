@@ -513,8 +513,18 @@ macos-pkg-notarize:
 ### make cleanall && make build-prerelease && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 ### make cleanall && make build-official && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
 # set var fail fast to value of env var or to true by default
 FAIL_FAST ?= false
+FAIL_FAST_FLAG := $(if $(FAIL_FAST),-failfast,)
+
+GOLANGCI_LINT ?= $(GOBIN)/golangci-lint
+GOLANGCI_LINT_VERSION ?= v1.58.0
 
 .PHONY: test
 test: integration unit
@@ -525,13 +535,7 @@ test-large: integration-large unit
 .PHONY: integration
 integration:
 	mkdir -p $(COV_INTEGRATION_DIR) || true
-	if [ "$(FAIL_FAST)" = "true" ]; then \
-		COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -failfast -tags=integration -timeout 30m ; \
-	else \
-		COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m ; \
-	fi
-
-# COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m 
+	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test $(FAIL_FAST_FLAG) -tags=integration -timeout 30m ; \
 
 .PHONY: integration-large
 integration-large:
@@ -553,6 +557,9 @@ PHONY: view-coverage
 view-coverage: $(COVERAGE_DIR)/total.cov
 	go tool cover -html=$(COVERAGE_DIR)/total.cov
 
+$(GOLANGCI_LINT): $(GOBIN)
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
+
 PHONY: lint
-list:
+lint: $(GOLANGCI_LINT)
 	golangci-lint run

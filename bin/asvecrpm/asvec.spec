@@ -16,6 +16,7 @@ Tool for deploying non-prod Aerospike server clusters on docker or in AWS
 
 %files
 /opt/aerospike/bin/asvec
+/etc/aerospike/asvec.yml
 /usr/bin/asvec
 
 %install

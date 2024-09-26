@@ -404,7 +404,7 @@ pkg-rpm-amd64:
 	mkdir -p $(BIN_DIR)/asvec-rpm-centos/usr/bin
 	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-amd64 $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin/asvec
-	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/asvec-rpm-centos/etc/aerpospike/asvec.yml
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/asvec-rpm-centos/etc/aerospike/asvec.yml
 	rm -f $(BIN_DIR)/asvec-linux-x86_64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=x86_64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
 	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${rpm_ver}.rpm
@@ -419,7 +419,7 @@ pkg-rpm-arm64:
 	mkdir -p $(BIN_DIR)/asvec-rpm-centos/usr/bin
 	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-arm64 $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin/asvec
-	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/asvec-rpm-centos/etc/aerpospike/asvec.yml
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/asvec-rpm-centos/etc/aerospike/asvec.yml
 	rm -f $(BIN_DIR)/asvec-linux-arm64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=arm64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
 	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${rpm_ver}.rpm

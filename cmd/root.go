@@ -23,9 +23,9 @@ var defaultConfigFile = "asvec.yml"
 var rootFlags = &struct {
 	clientFlags *flags.ClientFlags
 	logLevel    flags.LogLevelFlag
-	noColor     bool
 	confFile    string
 	clusterName string
+	noColor     bool
 }{
 	clientFlags: flags.NewClientFlags(),
 }
@@ -100,7 +100,10 @@ asvec --help
 			env := flagToEnv(flagName)
 
 			if value := os.Getenv(env); value != "" {
-				cmd.Flags().Lookup(flagName).Value.Set(value)
+				err := cmd.Flags().Lookup(flagName).Value.Set(value)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -130,10 +133,10 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, flags.LogLevel, fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))) //nolint:lll // For readability)
-	rootCmd.PersistentFlags().BoolVar(&rootFlags.noColor, flags.NoColor, false, "Disable color in output")
-	rootCmd.PersistentFlags().StringVar(&rootFlags.confFile, flags.ConfigFile, "", fmt.Sprintf("Config file (default is %s/%s)", config.DefaultConfDir, defaultConfigFile))
-	rootCmd.PersistentFlags().StringVar(&rootFlags.clusterName, flags.ClusterName, "default", "Cluster name to use as defined in your configuration file")
+	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, flags.LogLevel, fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))) //nolint:lll // For readability
+	rootCmd.PersistentFlags().BoolVar(&rootFlags.noColor, flags.NoColor, false, "Disable color in output")                                                                                        //nolint:lll // For readability
+	rootCmd.PersistentFlags().StringVar(&rootFlags.confFile, flags.ConfigFile, "", fmt.Sprintf("Config file (default is %s/%s)", config.DefaultConfDir, defaultConfigFile))                       //nolint:lll // For readability
+	rootCmd.PersistentFlags().StringVar(&rootFlags.clusterName, flags.ClusterName, "default", "Cluster name to use as defined in your configuration file")                                        //nolint:lll // For readability
 	rootCmd.PersistentFlags().AddFlagSet(rootFlags.clientFlags.NewClientFlagSet())
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)
 

@@ -40,10 +40,20 @@ asvec --help
   etc.
 
 ## Configuration File
-All connection related command-line flags are available 
+All connection related command-line flags can also be configured using a
+configuration file. By default, the configuration file is installed at
+`/etc/aerospike/asvec.yml`. Asvec checks for the existence of `asvec.yml` in
+both `/etc/aerospike` and the current working directory. If your configuration
+file is elsewhere use the `--config-file` flag.
 
-asvec.yml:
-```
+To support multi-cluster scenarios the configuration file requires nesting keys
+under the `cluster-name`. By default, when a configuration file is loaded the
+`default` cluster name is used. To use a cluster-name other than `default` use
+the `--cluster-name` flag.
+
+Example asvec.yml:
+
+```yaml
 default:
   host: 127.0.0.1:5000
   credentials: admin:admin

@@ -1755,7 +1755,7 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 
 func (suite *CmdTestSuite) TestConfigFile() {
 	configFile := "tests/asvec_.yml"
-	cmd := fmt.Sprintf("node ls --config-file %s --cluster-name %s", configFile, suite.configFileClusterName)
+	cmd := fmt.Sprintf("index ls --log-level debug --config-file %s --cluster-name %s", configFile, suite.configFileClusterName)
 
 	stdout, stderr, err := suite.RunCmd(strings.Split(cmd, " ")...)
 

@@ -55,11 +55,28 @@ Example asvec.yml:
 
 ```yaml
 default:
-  host: 127.0.0.1:5000
+  # Host address of the Aerospike server.
+  # Uncomment and configure the 'host' field as needed.
+  host: 127.0.0.1:5000              # Use host when using a load-balancer
+  # seeds: 1.1.1.1:5000,2.2.2.2:5000  # Use seeds when not using a load-balancer
+  
+  # Credentials for authenticating with the Aerospike server.
+  # Format: username:password
   credentials: admin:admin
-  tls-cafile: ./ca.crt
-  tls-certfile: ./cert.crt
-  tls-keyfile: ./key.key
+
+  # TLS Configuration (optional)
+  # Uncomment and provide the paths to the respective TLS files if secure communication is required.
+  tls-cafile: ./ca.crt        # Path to the CA certificate file.
+  tls-certfile: ./cert.crt    # Path to the client certificate file. (mtls)
+  tls-keyfile: ./key.key      # Path to the client key file. (mtls)
+
+# Additional cluster configuration example:
+# cluster-2:
+  # host: 192.168.0.1:5000
+  # credentials: foo:bar
+  # tls-cafile: ./other/ca.crt
+  # tls-certfile: ./other/cert.crt
+  # tls-keyfile: ./other/key.key
 ```
 
 ## Issues

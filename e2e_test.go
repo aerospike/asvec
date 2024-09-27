@@ -34,6 +34,7 @@ var (
 
 type CmdTestSuite struct {
 	tests.CmdBaseTestSuite
+	configFileClusterName string
 }
 
 func TestCmdSuite(t *testing.T) {
@@ -59,6 +60,7 @@ func TestCmdSuite(t *testing.T) {
 	logger.Info("%v", slog.Any("cert", rootCA))
 	suites := []*CmdTestSuite{
 		{
+			configFileClusterName: "vanilla",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 
 				ComposeFile: "docker/vanilla/docker-compose.yml", // vanilla
@@ -71,6 +73,7 @@ func TestCmdSuite(t *testing.T) {
 			},
 		},
 		{
+			configFileClusterName: "tls",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				ComposeFile: "docker/tls/docker-compose.yml", // tls
 				SuiteFlags: []string{
@@ -87,6 +90,7 @@ func TestCmdSuite(t *testing.T) {
 			},
 		},
 		{
+			configFileClusterName: "mtls",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				ComposeFile: "docker/mtls/docker-compose.yml", // mutual tls
 				SuiteFlags: []string{
@@ -105,6 +109,7 @@ func TestCmdSuite(t *testing.T) {
 			},
 		},
 		{
+			configFileClusterName: "auth",
 			CmdBaseTestSuite: tests.CmdBaseTestSuite{
 				ComposeFile: "docker/auth/docker-compose.yml", // tls + auth (auth requires tls)
 				SuiteFlags: []string{
@@ -165,33 +170,33 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 		indexName      string // index names must be unique for the suite
 		indexNamespace string
 		cmd            string
-		expected_index *protos.IndexDefinition
+		expectedIndex  *protos.IndexDefinition
 	}{
 		{
-			"test with labels",
-			"index0",
-			"test",
-			"index create -y -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar",
-			tests.NewIndexDefinitionBuilder(false, "index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+			name:           "test with labels",
+			indexName:      "index0",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index0 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-labels model=all-MiniLM-L6-v2,foo=bar",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index0", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
 				WithLabels(map[string]string{"model": "all-MiniLM-L6-v2", "foo": "bar"}).
 				Build(),
 		},
 		{
-			"test with storage config",
-			"index1",
-			"test",
-			"index create -y -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
-			tests.NewIndexDefinitionBuilder(false, "index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
+			name:           "test with storage config",
+			indexName:      "index1",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index1", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector1").
 				WithStorageNamespace("bar").
 				WithStorageSet("testbar").
 				Build(),
 		},
 		{
-			"test with hnsw params and seeds",
-			"index2",
-			"test",
-			"index create -y -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-m 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10",
-			tests.NewIndexDefinitionBuilder(false, "index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
+			name:           "test with hnsw params and seeds",
+			indexName:      "index2",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index2 -d 256 -m HAMMING --vector-field vector2 --hnsw-m 10 --hnsw-ef 11 --hnsw-ef-construction 12 --hnsw-max-mem-queue-size 10",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index2", "test", 256, protos.VectorDistanceMetric_HAMMING, "vector2").
 				WithHnswM(10).
 				WithHnswEf(11).
 				WithHnswEfConstruction(12).
@@ -199,31 +204,31 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				Build(),
 		},
 		{
-			"test with hnsw batch params",
-			"index3",
-			"test",
-			"index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
-			tests.NewIndexDefinitionBuilder(false, "index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
+			name:           "test with hnsw batch params",
+			indexName:      "index3",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
 				WithHnswBatchingMaxRecord(10001).
 				WithHnswBatchingInterval(50000).
 				Build(),
 		},
 		{
-			"test with hnsw cache params",
-			"index4",
-			"test",
-			"index create -y -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
-			tests.NewIndexDefinitionBuilder(false, "index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
+			name:           "test with hnsw cache params",
+			indexName:      "index4",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
 				Build(),
 		},
 		{
-			"test with hnsw healer params",
-			"index5",
-			"test",
-			"index create -y -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10",
-			tests.NewIndexDefinitionBuilder(false, "index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
+			name:           "test with hnsw healer params",
+			indexName:      "index5",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index5 -d 256 -m COSINE --vector-field vector5 --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index5", "test", 256, protos.VectorDistanceMetric_COSINE, "vector5").
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
@@ -232,21 +237,21 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				Build(),
 		},
 		{
-			"test with hnsw merge params",
-			"index6",
-			"test",
-			"index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-index-parallelism 10 --hnsw-merge-reindex-parallelism 11",
-			tests.NewIndexDefinitionBuilder(false, "index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
+			name:           "test with hnsw merge params",
+			indexName:      "index6",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i index6 -d 256 -m COSINE --vector-field vector6 --hnsw-merge-index-parallelism 10 --hnsw-merge-reindex-parallelism 11",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index6", "test", 256, protos.VectorDistanceMetric_COSINE, "vector6").
 				WithHnswMergeIndexParallelism(10).
 				WithHnswMergeReIndexParallelism(11).
 				Build(),
 		},
 		{
-			"test with yaml file",
-			"yaml-file-index",
-			"test",
-			fmt.Sprintf("index create -y --file tests/indexDef.yaml"),
-			tests.NewIndexDefinitionBuilder(false, "yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
+			name:           "test with yaml file",
+			indexName:      "yaml-file-index",
+			indexNamespace: "test",
+			cmd:            fmt.Sprintf("index create -y --file tests/indexDef.yaml"),
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "yaml-file-index", "test", 10, protos.VectorDistanceMetric_COSINE, "vector").
 				WithSet("testset").
 				WithHnswEf(101).
 				WithHnswEfConstruction(102).
@@ -284,7 +289,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				suite.FailNowf("unable to get index", "%v", err)
 			}
 
-			suite.EqualExportedValues(tc.expected_index, actual)
+			suite.EqualExportedValues(tc.expectedIndex, actual)
 		})
 	}
 }
@@ -300,8 +305,8 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 		checkContains []string
 	}{
 		{
-			"test with all indexes succeed",
-			[]*protos.IndexDefinition{
+			name: "test with all indexes succeed",
+			indexDefs: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
@@ -309,17 +314,17 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"s/exists/does-not-exist-yet/g",
-			false,
-			[]string{
+			sedReplaceStr: "s/exists/does-not-exist-yet/g",
+			createFail:    false,
+			checkContains: []string{
 				"Successfully created index test.*.does-not-exist-yet1",
 				"Successfully created index bar.barset.does-not-exist-yet2",
 				"Successfully created all indexes from yaml",
 			},
 		},
 		{
-			"test with one index that fails",
-			[]*protos.IndexDefinition{
+			name: "test with one index that fails",
+			indexDefs: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"exists3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
@@ -327,17 +332,17 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 					"exists4", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"s/exists3/does-not-exist-yet2/g",
-			true,
-			[]string{
+			sedReplaceStr: "s/exists3/does-not-exist-yet2/g",
+			createFail:    true,
+			checkContains: []string{
 				"Successfully created index test.*.does-not-exist-yet2",
 				"Failed to create index bar.barset.exists4",
 				"Some indexes failed to be created",
 			},
 		},
 		{
-			"test with no index successfully created",
-			[]*protos.IndexDefinition{
+			name: "test with no index successfully created",
+			indexDefs: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"exists1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
@@ -345,9 +350,9 @@ func (suite *CmdTestSuite) TestPipeFromListIndexToCreateIndex() {
 					"exists2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"s/COSINE/HAMMING/g", // Doing this rather than removing sed for this test case
-			true,
-			[]string{
+			sedReplaceStr: "s/COSINE/HAMMING/g", // Doing this rather than removing sed for this test case
+			createFail:    true,
+			checkContains: []string{
 				"Failed to create index test.*.exists1",
 				"Failed to create index bar.barset.exists2",
 				"Unable to create any new indexes",
@@ -464,44 +469,44 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 		indexName      string // index names must be unique for the suite
 		indexNamespace string
 		cmd            string
-		expected_index *protos.IndexDefinition
+		expectedIndex  *protos.IndexDefinition
 	}{
 		{
-			"test with hnsw params and seeds",
-			"successful-update",
-			ns,
-			"index update -y -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10",
-			newBuilder().
+			name:           "test with hnsw params and seeds",
+			indexName:      "successful-update",
+			indexNamespace: ns,
+			cmd:            "index update -y -n test -i successful-update --index-labels new-label=foo --hnsw-max-mem-queue-size 10",
+			expectedIndex: newBuilder().
 				WithLabels(map[string]string{"new-label": "foo"}).
 				WithHnswMaxMemQueueSize(10).
 				Build(),
 		},
 		{
-			"test with hnsw batch params",
-			"successful-update",
-			"test",
-			"index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
-			newBuilder().
+			name:           "test with hnsw batch params",
+			indexName:      "successful-update",
+			indexNamespace: "test",
+			cmd:            "index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			expectedIndex: newBuilder().
 				WithHnswBatchingMaxRecord(10001).
 				WithHnswBatchingInterval(50000).
 				Build(),
 		},
 		{
-			"test with hnsw cache params",
-			"successful-update",
-			"test",
-			"index update -y -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
-			newBuilder().
+			name:           "test with hnsw cache params",
+			indexName:      "successful-update",
+			indexNamespace: "test",
+			cmd:            "index update -y -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
+			expectedIndex: newBuilder().
 				WithHnswCacheExpiry(10000).
 				WithHnswCacheMaxEntries(1000).
 				Build(),
 		},
 		{
-			"test with hnsw healer params",
-			"successful-update",
-			"test",
-			"index update -y -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 30 11 ? * 6#2\" --hnsw-healer-parallelism 10",
-			newBuilder().
+			name:           "test with hnsw healer params",
+			indexName:      "successful-update",
+			indexNamespace: "test",
+			cmd:            "index update -y -n test -i successful-update --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 30 11 ? * 6#2\" --hnsw-healer-parallelism 10",
+			expectedIndex: newBuilder().
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
@@ -510,11 +515,11 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 				Build(),
 		},
 		{
-			"test with hnsw merge params",
-			"successful-update",
-			"test",
-			"index update -y -n test -i successful-update --hnsw-merge-index-parallelism 10 --hnsw-merge-reindex-parallelism 11",
-			newBuilder().
+			name:           "test with hnsw merge params",
+			indexName:      "successful-update",
+			indexNamespace: "test",
+			cmd:            "index update -y -n test -i successful-update --hnsw-merge-index-parallelism 10 --hnsw-merge-reindex-parallelism 11",
+			expectedIndex: newBuilder().
 				WithHnswMergeIndexParallelism(10).
 				WithHnswMergeReIndexParallelism(11).
 				Build(),
@@ -545,7 +550,7 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 				suite.FailNowf("unable to get index", "%v", err)
 			}
 
-			suite.EqualExportedValues(tc.expected_index, actual)
+			suite.EqualExportedValues(tc.expectedIndex, actual)
 		})
 	}
 
@@ -568,10 +573,10 @@ func (suite *CmdTestSuite) TestSuccessfulGCIndexCmd() {
 		cmd            string
 	}{
 		{
-			"test with hnsw params and seeds",
-			"successful-gc",
-			ns,
-			"index gc -n test -i successful-gc -c 10",
+			name:           "test with hnsw params and seeds",
+			indexName:      "successful-gc",
+			indexNamespace: ns,
+			cmd:            "index gc -n test -i successful-gc -c 10",
 		},
 	}
 
@@ -612,11 +617,11 @@ func (suite *CmdTestSuite) TestSuccessfulDropIndexCmd() {
 		cmd            string
 	}{
 		{
-			"test with just namespace and seeds",
-			"indexdrop1",
-			"test",
-			nil,
-			"index drop -y -n test -i indexdrop1",
+			name:           "test with just namespace and seeds",
+			indexName:      "indexdrop1",
+			indexNamespace: "test",
+			indexSet:       nil,
+			cmd:            "index drop -y -n test -i indexdrop1",
 		},
 	}
 
@@ -678,21 +683,21 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 		expectedTable string
 	}{
 		{
-			"single index",
-			[]*protos.IndexDefinition{
+			name: "single index",
+			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
 			},
-			"index list --no-color --format 1",
-			`Indexes
+			cmd: "index list --no-color --format 1",
+			expectedTable: `Indexes
 ,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged
 1,list,test,vector,256,COSINE,0
 `,
 		},
 		{
-			"double index with set",
-			[]*protos.IndexDefinition{
+			name: "double index with set",
+			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).Build(),
@@ -700,16 +705,16 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
-			"index list --no-color --format 1",
-			`Indexes
+			cmd: "index list --no-color --format 1",
+			expectedTable: `Indexes
 ,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged
 1,list2,bar,barset,vector,256,HAMMING,0
 2,list1,test,,vector,256,COSINE,0
 `,
 		},
 		{
-			"double index with set and verbose",
-			[]*protos.IndexDefinition{
+			name: "double index with set and verbose",
+			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
 				).WithLabels(map[string]string{"foo": "bar"}).
@@ -723,8 +728,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					WithHnswMergeReIndexParallelism(26).
 					Build(),
 			},
-			"index list --verbose --no-color --format 1",
-			`Indexes
+			cmd: "index list --verbose --no-color --format 1",
+			expectedTable: `Indexes
 ,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Labels*,Storage,Index Parameters
 1,list2,bar,barset,vector,256,HAMMING,0,map[],"Namespace\,bar
 Set\,list2","HNSW
@@ -811,14 +816,14 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
-		name         string
-		cmd          string
-		expectedUser *protos.User
+		name         string       // name of the test case
+		cmd          string       // command to be executed
+		expectedUser *protos.User // expected user details after command execution
 	}{
 		{
-			"create user with comma sep roles",
-			"users create --name foo1 --new-password foo --roles admin,read-write",
-			&protos.User{
+			name: "create user with comma sep roles",
+			cmd:  "users create --name foo1 --new-password foo --roles admin,read-write",
+			expectedUser: &protos.User{
 				Username: "foo1",
 				Roles: []string{
 					"admin",
@@ -827,9 +832,9 @@ func (suite *CmdTestSuite) TestSuccessfulUserCreateCmd() {
 			},
 		},
 		{
-			"create user with comma multiple roles",
-			"users create --name foo2 --new-password foo --roles admin --roles read-write",
-			&protos.User{
+			name: "create user with comma multiple roles",
+			cmd:  "users create --name foo2 --new-password foo --roles admin --roles read-write",
+			expectedUser: &protos.User{
 				Username: "foo2",
 				Roles: []string{
 					"admin",
@@ -863,14 +868,14 @@ func (suite *CmdTestSuite) TestFailUserCreateCmd() {
 	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
-		name        string
-		cmd         string
-		expectedErr string
+		name        string // name of the test case
+		cmd         string // command to be executed
+		expectedErr string // expected error message after command execution
 	}{
 		{
-			"fail to create user with invalid role",
-			"users create --name foo1 --new-password foo --roles invalid",
-			"unknown roles [invalid]",
+			name:        "fail to create user with invalid role",
+			cmd:         "users create --name foo1 --new-password foo --roles invalid",
+			expectedErr: "unknown roles [invalid]",
 		},
 	}
 
@@ -934,16 +939,16 @@ func (suite *CmdTestSuite) TestSuccessfulUserGrantCmd() {
 	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
-		name         string
-		user         string
-		cmd          string
-		expectedUser *protos.User
+		name         string       // name of the test case
+		user         string       // username of the user
+		cmd          string       // command to be executed
+		expectedUser *protos.User // expected user details after command execution
 	}{
 		{
-			"grant user",
-			"grant0",
-			"users grant --name grant0 --roles read-write",
-			&protos.User{
+			name: "grant user",
+			user: "grant0",
+			cmd:  "users grant --name grant0 --roles read-write",
+			expectedUser: &protos.User{
 				Username: "grant0",
 				Roles:    []string{"read-write", "admin"},
 			},
@@ -974,16 +979,16 @@ func (suite *CmdTestSuite) TestSuccessfulUserRevokeCmd() {
 	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
-		name         string
-		user         string
-		cmd          string
-		expectedUser *protos.User
+		name         string       // name of the test case
+		user         string       // username of the user
+		cmd          string       // command to be executed
+		expectedUser *protos.User // expected user details after command execution
 	}{
 		{
-			"revoke user",
-			"revoke0",
-			"users revoke --name revoke0 --roles read-write",
-			&protos.User{
+			name: "revoke user",
+			user: "revoke0",
+			cmd:  "users revoke --name revoke0 --roles read-write",
+			expectedUser: &protos.User{
 				Username: "revoke0",
 				Roles:    []string{"admin"},
 			},
@@ -1014,16 +1019,16 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
-		name        string
-		user        string
-		newPassword string
-		cmd         string
+		name        string // name of the test case
+		user        string // username of the user
+		newPassword string // new password for the user
+		cmd         string // command to be executed
 	}{
 		{
-			"change password",
-			"password0",
-			"foo",
-			"users new-password --name password0 --new-password foo",
+			name:        "change password",
+			user:        "password0",
+			newPassword: "foo",
+			cmd:         "users new-password --name password0 --new-password foo",
 		},
 	}
 
@@ -1066,9 +1071,9 @@ func (suite *CmdTestSuite) TestSuccessfulListUsersCmd() {
 		expectedTable string
 	}{
 		{
-			"users list",
-			"users list --no-color --format 1",
-			`Users
+			name: "users list",
+			cmd:  "users list --no-color --format 1",
+			expectedTable: `Users
 ,User,Roles
 1,admin,"admin\, read-write"
 Use 'role list' to view available roles
@@ -1415,54 +1420,54 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 		expectedErrStr string
 	}{
 		{
-			"use seeds and hosts together",
-			"query --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i i",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "query --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i i",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use set without the key flag",
-			"query --namespace test -i index --set testset",
-			"Warning: The --set flag is only used when the --key-str or --key-int flag is set.",
+			name:           "use set without the key flag",
+			cmd:            "query --namespace test -i index --set testset",
+			expectedErrStr: "Warning: The --set flag is only used when the --key-str or --key-int flag is set.",
 		},
 		{
-			"try to query an index that does not exist",
-			"query --namespace test -i DNE",
-			"Error: Failed to get index definition: failed to get index: server error: NotFound, msg=index test:DNE not found",
+			name:           "try to query an index that does not exist",
+			cmd:            "query --namespace test -i DNE",
+			expectedErrStr: "Error: Failed to get index definition: failed to get index: server error: NotFound, msg=index test:DNE not found",
 		},
 		{
-			"try to query a key that does not exist",
-			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
-			"Error: Failed to get vector using key: unable to get record: failed to get record: server error: NotFound",
+			name:           "try to query a key that does not exist",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			expectedErrStr: "Error: Failed to get vector using key: unable to get record: failed to get record: server error: NotFound",
 		},
 		{
-			"query a key without a set and check for prompt",
-			fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
-			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+			name:           "query a key without a set and check for prompt",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -k DNE", namespace, indexName),
+			expectedErrStr: "Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
 		},
 		{
-			"query a key without a set and check for prompt",
-			fmt.Sprintf("query --namespace %s -i %s -t 1234", namespace, indexName),
-			"Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
+			name:           "query a key without a set and check for prompt",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -t 1234", namespace, indexName),
+			expectedErrStr: "Warning: The requested record was not found. If the record is in a set, you may also need to provide the --set flag.",
 		},
 		{
-			"query using an invalid int key",
-			fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
-			"Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
+			name:           "query using an invalid int key",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s -t DNE", namespace, indexName),
+			expectedErrStr: "Error: invalid argument \"DNE\" for \"-t, --key-int\" flag: strconv.ParseInt: parsing \"DNE\": invalid syntax",
 		},
 		{
-			"query using key-int and key-str together",
-			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --key-int 1", namespace, indexName),
-			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int key-str] were all set",
+			name:           "query using key-int and key-str together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-str DNA --key-int 1", namespace, indexName),
+			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int key-str] were all set",
 		},
 		{
-			"query using key-str and vector together",
-			fmt.Sprintf("query --namespace %s -i %s --key-str DNA --vector [0,1,1,1]", namespace, indexName),
-			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-str vector] were all set",
+			name:           "query using key-str and vector together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-str DNA --vector [0,1,1,1]", namespace, indexName),
+			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-str vector] were all set",
 		},
 		{
-			"query using key-str and vector together",
-			fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
-			"Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
+			name:           "query using key-int and vector together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
+			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
 		},
 	}
 
@@ -1486,14 +1491,14 @@ func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidUser() {
 		expectedErr string
 	}{
 		{
-			"fail to revoke user to invalid user",
-			"users revoke --name foo1 --roles admin",
-			"failed to revoke user roles: server error: NotFound",
+			name:        "fail to revoke user to invalid user",
+			cmd:         "users revoke --name foo1 --roles admin",
+			expectedErr: "failed to revoke user roles: server error: NotFound",
 		},
 		{
-			"fail to grant user to invalid user",
-			"users grant --name foo1 --roles admin",
-			"failed to grant user roles: server error: NotFound",
+			name:        "fail to grant user to invalid user",
+			cmd:         "users grant --name foo1 --roles admin",
+			expectedErr: "failed to grant user roles: server error: NotFound",
 		},
 	}
 
@@ -1516,14 +1521,14 @@ func (suite *CmdTestSuite) TestFailUserCmdsWithInvalidRoles() {
 		expectedErr string
 	}{
 		{
-			"fail to grant user with invalid role",
-			"users grant --name foo1 --roles invalid",
-			"unknown roles [invalid]",
+			name:        "fail to grant user with invalid role",
+			cmd:         "users grant --name foo1 --roles invalid",
+			expectedErr: "unknown roles [invalid]",
 		},
 		{
-			"fail to revoke user with invalid role",
-			"users revoke --name foo1 --roles invalid",
-			"unknown roles [invalid]",
+			name:        "fail to revoke user with invalid role",
+			cmd:         "users revoke --name foo1 --roles invalid",
+			expectedErr: "unknown roles [invalid]",
 		},
 	}
 
@@ -1571,170 +1576,164 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		expectedErrStr string
 	}{
 		{
-			"use seeds and hosts together",
-			"index create -y --seeds 2.2.2.2:3000 --host 1.1.1.1:3001 -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "index create -y --seeds 2.2.2.2:3000 --host 1.1.1.1:3001 -n test -i index1 -d 256 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use seeds and hosts together",
-			"index list --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "index list --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use seeds and hosts together",
-			"index drop -y --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "index drop -y --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use seeds and hosts together",
-			"index gc --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
-			"Error: only --seeds or --host allowed",
-		},
-		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
-			"error because no create index required args are provided",
-			fmt.Sprintf("index create --seeds %s", suite.AvsHostPort.String()),
-			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
-		},
-		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
-			"error because no create index required args are provided",
-			fmt.Sprintf("index create"),
-			"Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
-		},
-		{ // To test `asvec index create` logic where it infers that the user is trying to pass via stdin or not
-			"error because some create index required args are not provided",
-			fmt.Sprintf("index create --seeds %s --dimension 10", suite.AvsHostPort.String()),
-			"Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
+			name:           "use seeds and hosts together",
+			cmd:            "index gc --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 -n test -i index1",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use seeds and hosts together",
-			"user create --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 --name foo --roles admin",
-			"Error: only --seeds or --host allowed",
+			name:           "error because no create index required args are provided",
+			cmd:            fmt.Sprintf("index create --seeds %s", suite.AvsHostPort.String()),
+			expectedErrStr: "Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{
-			"use seeds and hosts together",
-			"user drop --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 --name foo",
-			"Error: only --seeds or --host allowed",
+			name:           "error because no create index required args are provided",
+			cmd:            fmt.Sprintf("index create"),
+			expectedErrStr: "Error: required flag(s) \"dimension\", \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{
-			"use seeds and hosts together",
-			"user ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
-			"Error: only --seeds or --host allowed",
+			name:           "error because some create index required args are not provided",
+			cmd:            fmt.Sprintf("index create --seeds %s --dimension 10", suite.AvsHostPort.String()),
+			expectedErrStr: "Error: required flag(s) \"distance-metric\", \"index-name\", \"namespace\", \"vector-field\" not set",
 		},
 		{
-			"use seeds and hosts together",
-			"roles ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "user create --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 --name foo --roles admin",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"use seeds and hosts together",
-			"nodes ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
-			"Error: only --seeds or --host allowed",
+			name:           "use seeds and hosts together",
+			cmd:            "user drop --host 1.1.1.1:3001 --seeds 2.2.2.2:3000 --name foo",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"test with bad dimension",
-			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d -1 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
-			"Error: invalid argument \"-1\" for \"-d, --dimension\"",
+			name:           "use seeds and hosts together",
+			cmd:            "user ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"test with bad distance metric",
-			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m BAD --vector-field vector1 --storage-namespace bar --storage-set testbar",
-			"Error: invalid argument \"BAD\" for \"-m, --distance-metric\"",
+			name:           "use seeds and hosts together",
+			cmd:            "roles ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"test with bad timeout",
-			"index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
-			"Error: invalid argument \"10\" for \"--timeout\"",
+			name:           "use seeds and hosts together",
+			cmd:            "nodes ls --host 1.1.1.1:3001 --seeds 2.2.2.2:3000",
+			expectedErrStr: "Error: only --seeds or --host allowed",
 		},
 		{
-			"test with bad hnsw-ef",
-			"index create -y --hnsw-ef foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-ef\"",
+			name:           "test with bad dimension",
+			cmd:            "index create -y --host 1.1.1.1:3001  -n test -i index1 -d -1 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar",
+			expectedErrStr: "Error: invalid argument \"-1\" for \"-d, --dimension\"",
 		},
 		{
-			"test with bad hnsw-ef-construction",
-			"index create -y --hnsw-ef-construction foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-ef-construction\"",
+			name:           "test with bad distance metric",
+			cmd:            "index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m BAD --vector-field vector1 --storage-namespace bar --storage-set testbar",
+			expectedErrStr: "Error: invalid argument \"BAD\" for \"-m, --distance-metric\"",
 		},
 		{
-			"test with bad hnsw-m",
-			"index create -y --hnsw-m foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-m\"",
+			name:           "test with bad timeout",
+			cmd:            "index create -y --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar --timeout 10",
+			expectedErrStr: "Error: invalid argument \"10\" for \"--timeout\"",
 		},
 		{
-			"test with bad hnsw-batch-interval",
-			"index create -y --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
+			name:           "test with bad hnsw-ef",
+			cmd:            "index create -y --hnsw-ef foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-ef\"",
 		},
 		{
-			"test with bad hnsw-batch-max-records",
-			"index create -y --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
+			name:           "test with bad hnsw-ef-construction",
+			cmd:            "index create -y --hnsw-ef-construction foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-ef-construction\"",
 		},
 		{
-			"test with bad hnsw-cache-max-entries",
-			"index create -y --hnsw-cache-max-entries foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-cache-max-entries\"",
+			name:           "test with bad hnsw-m",
+			cmd:            "index create -y --hnsw-m foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-m\"",
 		},
 		{
-			"test with bad hnsw-cache-expiry",
-			"index create -y --hnsw-cache-expiry 10 --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"10\" for \"--hnsw-cache-expiry\"",
+			name:           "test with bad hnsw-batch-interval",
+			cmd:            "index create -y --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
 		},
 		{
-			"test with bad hnsw-healer-max-scan-rate-per-node",
-			"index create -y --hnsw-healer-max-scan-rate-per-node foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-healer-max-scan-rate-per-node\"",
+			name:           "test with bad hnsw-batch-max-records",
+			cmd:            "index create -y --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
 		},
 		{
-			"test with bad hnsw-healer-max-scan-page-size",
-			"index create -y --hnsw-healer-max-scan-page-size foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-healer-max-scan-page-size\"",
+			name:           "test with bad hnsw-cache-max-entries",
+			cmd:            "index create -y --hnsw-cache-max-entries foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-cache-max-entries\"",
 		},
 		{
-			"test with bad hnsw-healer-reindex-percent",
-			"index create -y --hnsw-healer-reindex-percent foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-healer-reindex-percent\"",
+			name:           "test with bad hnsw-cache-expiry",
+			cmd:            "index create -y --hnsw-cache-expiry 10 --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"10\" for \"--hnsw-cache-expiry\"",
 		},
 		{
-			"test with bad hnsw-healer-parallelism",
-			"index create -y --hnsw-healer-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-healer-parallelism\"",
+			name:           "test with bad hnsw-healer-max-scan-rate-per-node",
+			cmd:            "index create -y --hnsw-healer-max-scan-rate-per-node foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-healer-max-scan-rate-per-node\"",
 		},
 		{
-			"test with bad hnsw-merge-index-parallelism",
-			"index create -y --hnsw-merge-index-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			"Error: invalid argument \"foo\" for \"--hnsw-merge-index-parallelism\"",
-		},
-
-		// {
-		// 	"test with bad password",
-		// 	"user create --password file:blah --name foo --roles admin",
-		// 	"blah: no such file or directory",
-		// },
-		{
-			"test with bad tls-cafile",
-			"user create --tls-cafile blah --name foo --roles admin",
-			"blah: no such file or directory",
+			name:           "test with bad hnsw-healer-max-scan-page-size",
+			cmd:            "index create -y --hnsw-healer-max-scan-page-size foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-healer-max-scan-page-size\"",
 		},
 		{
-			"test with bad tls-capath",
-			"user create --tls-capath blah --name foo --roles admin",
-			"blah: no such file or directory",
+			name:           "test with bad hnsw-healer-reindex-percent",
+			cmd:            "index create -y --hnsw-healer-reindex-percent foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-healer-reindex-percent\"",
 		},
 		{
-			"test with bad tls-certfile",
-			"user create --tls-certfile blah --name foo --roles admin",
-			"blah: no such file or directory",
+			name:           "test with bad hnsw-healer-parallelism",
+			cmd:            "index create -y --hnsw-healer-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-healer-parallelism\"",
 		},
 		{
-			"test with bad tls-keyfile",
-			"user create --tls-keyfile blah --name foo --roles admin",
-			"blah: no such file or directory",
+			name:           "test with bad hnsw-merge-index-parallelism",
+			cmd:            "index create -y --hnsw-merge-index-parallelism foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-merge-index-parallelism\"",
 		},
 		{
-			"test with bad tls-keyfile-password",
-			"user create --tls-keyfile-password b64:bla65asdf54r345123!@#$h --name foo --roles admin",
-			"Error: invalid argument \"b64:bla65asdf54r345123!@#$h\"",
+			name:           "test with bad tls-cafile",
+			cmd:            "user create --tls-cafile blah --name foo --roles admin",
+			expectedErrStr: "blah: no such file or directory",
+		},
+		{
+			name:           "test with bad tls-capath",
+			cmd:            "user create --tls-capath blah --name foo --roles admin",
+			expectedErrStr: "blah: no such file or directory",
+		},
+		{
+			name:           "test with bad tls-certfile",
+			cmd:            "user create --tls-certfile blah --name foo --roles admin",
+			expectedErrStr: "blah: no such file or directory",
+		},
+		{
+			name:           "test with bad tls-keyfile",
+			cmd:            "user create --tls-keyfile blah --name foo --roles admin",
+			expectedErrStr: "blah: no such file or directory",
+		},
+		{
+			name:           "test with bad tls-keyfile-password",
+			cmd:            "user create --tls-keyfile-password b64:bla65asdf54r345123!@#$h --name foo --roles admin",
+			expectedErrStr: "Error: invalid argument \"b64:bla65asdf54r345123!@#$h\"",
 		},
 	}
 
@@ -1746,4 +1745,45 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			suite.Assert().Contains(lines, tc.expectedErrStr)
 		})
 	}
+}
+
+func (suite *CmdTestSuite) TestConfigFile() {
+	configFile := "tests/asvec_.yml"
+	cmd := fmt.Sprintf("index ls --log-level debug --config-file %s --cluster-name %s", configFile, suite.configFileClusterName)
+
+	stdout, stderr, err := suite.RunCmd(strings.Split(cmd, " ")...)
+
+	suite.NoError(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
+}
+
+func (suite *CmdTestSuite) TestEnvVars() {
+	convertArgsToEnvs := func(args []string) []string {
+		envs := make([]string, 0)
+		for _, arg := range args {
+			key_val := strings.Split(arg, " ")
+
+			if len(key_val) != 2 {
+				continue
+			}
+
+			key := key_val[0]
+			val := key_val[1]
+
+			key = strings.Replace(key, "--", "ASVEC_", 1)
+			key = strings.ReplaceAll(key, "-", "_")
+			key = strings.ToUpper(key)
+			envs = append(envs, key+"="+val)
+		}
+
+		return envs
+	}
+
+	envs := convertArgsToEnvs(suite.SuiteFlags)
+	suite.Logger.Debug("suite flags", slog.Any("env", envs))
+
+	cmd := suite.GetCmd(strings.Split("index ls --log-level debug", " ")...)
+	cmd.Env = append(cmd.Env, envs...)
+	stdout, stderr, err := suite.GetCmdOutput(cmd)
+
+	suite.NoError(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
 }

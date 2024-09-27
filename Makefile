@@ -330,9 +330,11 @@ pkg-deb-amd64:
 	rm -rf $(BIN_DIR)/deb
 	mkdir -p $(BIN_DIR)/deb/DEBIAN
 	mkdir -p $(BIN_DIR)/deb/opt/aerospike/bin
+	mkdir -p $(BIN_DIR)/deb/etc/aerospike/
 	mkdir -p $(BIN_DIR)/deb/usr/bin
 	@ eval "$$amddebscript"
 	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/opt/aerospike/bin/
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/deb/etc/aerospike/asvec.yml
 	ln -s /opt/aerospike/bin/asvec $(BIN_DIR)/deb/usr/bin/asvec
 	sudo dpkg-deb -Zxz -b $(BIN_DIR)/deb
 	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${ver}.deb
@@ -345,9 +347,11 @@ pkg-deb-arm64:
 	rm -rf $(BIN_DIR)/deb
 	mkdir -p $(BIN_DIR)/deb/DEBIAN
 	mkdir -p $(BIN_DIR)/deb/opt/aerospike/bin
+	mkdir -p $(BIN_DIR)/deb/etc/aerospike/
 	mkdir -p $(BIN_DIR)/deb/usr/bin
 	@ eval "$$armdebscript"
 	mv $(BIN_DIR)/asvec $(BIN_DIR)/deb/opt/aerospike/bin/
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/deb/etc/aerospike/asvec.yml
 	ln -s /opt/aerospike/bin/asvec $(BIN_DIR)/deb/usr/bin/asvec
 	sudo dpkg-deb -Zxz -b $(BIN_DIR)/deb
 	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${ver}.deb
@@ -396,9 +400,11 @@ pkg-rpm-amd64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
 	mkdir -p $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin
+	mkdir -p $(BIN_DIR)/asvec-rpm-centos/etc/aerospike
 	mkdir -p $(BIN_DIR)/asvec-rpm-centos/usr/bin
 	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-amd64 $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin/asvec
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/asvec-rpm-centos/etc/aerospike/asvec.yml
 	rm -f $(BIN_DIR)/asvec-linux-x86_64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=x86_64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
 	rm -f $(BIN_DIR)/packages/asvec-linux-amd64-${rpm_ver}.rpm
@@ -409,9 +415,11 @@ pkg-rpm-arm64:
 	rm -rf $(BIN_DIR)/asvec-rpm-centos
 	cp -a $(BIN_DIR)/asvecrpm $(BIN_DIR)/asvec-rpm-centos
 	mkdir -p $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin
+	mkdir -p $(BIN_DIR)/asvec-rpm-centos/etc/aerospike
 	mkdir -p $(BIN_DIR)/asvec-rpm-centos/usr/bin
 	sed -i.bak "s/VERSIONHERE/${rpm_ver}/g" $(BIN_DIR)/asvec-rpm-centos/asvec.spec
 	cp $(BIN_DIR)/asvec-linux-arm64 $(BIN_DIR)/asvec-rpm-centos/opt/aerospike/bin/asvec
+	cp $(BIN_DIR)/asvec.yml $(BIN_DIR)/asvec-rpm-centos/etc/aerospike/asvec.yml
 	rm -f $(BIN_DIR)/asvec-linux-arm64.rpm
 	bash -ce "cd $(BIN_DIR) && rpmbuild --target=arm64-redhat-linux --buildroot \$$(pwd)/asvec-rpm-centos -bb asvec-rpm-centos/asvec.spec"
 	rm -f $(BIN_DIR)/packages/asvec-linux-arm64-${rpm_ver}.rpm
@@ -507,8 +515,18 @@ macos-pkg-notarize:
 ### make cleanall && make build-prerelease && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 ### make cleanall && make build-official && make pkg-linux && make pkg-windows-zip && make macos-build-all && make macos-notarize-all
 
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
 # set var fail fast to value of env var or to true by default
 FAIL_FAST ?= false
+FAIL_FAST_FLAG := $(if $(FAIL_FAST),-failfast,)
+
+GOLANGCI_LINT ?= $(GOBIN)/golangci-lint
+GOLANGCI_LINT_VERSION ?= v1.58.0
 
 .PHONY: test
 test: integration unit
@@ -519,13 +537,7 @@ test-large: integration-large unit
 .PHONY: integration
 integration:
 	mkdir -p $(COV_INTEGRATION_DIR) || true
-	if [ "$(FAIL_FAST)" = "true" ]; then \
-		COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -failfast -tags=integration -timeout 30m ; \
-	else \
-		COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m ; \
-	fi
-
-# COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test -tags=integration -timeout 30m 
+	COVERAGE_DIR=$(COV_INTEGRATION_DIR) go test $(FAIL_FAST_FLAG) -tags=integration -timeout 30m ; \
 
 .PHONY: integration-large
 integration-large:
@@ -546,3 +558,10 @@ coverage: test-large
 PHONY: view-coverage
 view-coverage: $(COVERAGE_DIR)/total.cov
 	go tool cover -html=$(COVERAGE_DIR)/total.cov
+
+$(GOLANGCI_LINT): $(GOBIN)
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION)
+
+PHONY: lint
+lint: $(GOLANGCI_LINT)
+	golangci-lint run

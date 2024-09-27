@@ -103,7 +103,7 @@ func (suite *CmdBaseTestSuite) RunSuiteCmd(asvecCmd ...string) (string, string, 
 func (suite *CmdBaseTestSuite) RunCmd(asvecCmd ...string) (string, string, error) {
 	suite.Logger.Info("running command", slog.String("cmd", strings.Join(asvecCmd, " ")))
 	cmd := suite.GetCmd(asvecCmd...)
-	return suite.getCmdOutput(cmd)
+	return suite.GetCmdOutput(cmd)
 }
 
 func (suite *CmdBaseTestSuite) AddSuiteArgs(args ...string) []string {
@@ -118,7 +118,7 @@ func (suite *CmdBaseTestSuite) GetCmd(asvecCmd ...string) *exec.Cmd {
 	return cmd
 }
 
-func (suite *CmdBaseTestSuite) getCmdOutput(cmd *exec.Cmd) (string, string, error) {
+func (suite *CmdBaseTestSuite) GetCmdOutput(cmd *exec.Cmd) (string, string, error) {
 	suite.Logger.Info("running command", slog.String("args", strings.Join(cmd.Args, " ")))
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}

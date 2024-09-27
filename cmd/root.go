@@ -71,8 +71,13 @@ asvec --help
 			return err
 		}
 
+		err = config.SetFlags("", cmd.Flags())
+		if err != nil {
+			return err
+		}
+
 		if configFile != "" {
-			view.PrintfErr("Using config file: %s\n", configFile)
+			logger.Info("Using config file: %s\n", configFile)
 		}
 
 		bindEnvs := []string{

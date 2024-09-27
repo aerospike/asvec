@@ -6,7 +6,7 @@ go 1.22.5
 
 require (
 	github.com/aerospike/avs-client-go v0.0.0-20240906211641-97c1df4005ae
-	github.com/aerospike/tools-common-go v0.0.0-20240927032742-8448edce79c5
+	github.com/aerospike/tools-common-go v0.0.0-20240927170813-c352c1917359
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5

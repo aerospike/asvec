@@ -77,7 +77,7 @@ asvec --help
 		}
 
 		if configFile != "" {
-			logger.Info("Using config file: %s\n", configFile)
+			logger.Info("Loading configuration parameters from file", slog.String("file", configFile))
 		}
 
 		bindEnvs := []string{

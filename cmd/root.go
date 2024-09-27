@@ -63,9 +63,10 @@ asvec --help
 		}
 
 		cmd.SilenceUsage = true
-		config.SetConfName("asvec")
+		config.SetDefaultConfName("asvec")
+		config.BindPFlags(cmd.Flags(), rootFlags.clusterName)
 
-		configFile, err := config.InitConfig(rootFlags.confFile)
+		configFile, err := config.InitConfig(rootFlags.confFile, "", cmd.Flags())
 		if err != nil {
 			return err
 		}
@@ -107,11 +108,6 @@ asvec --help
 			}
 		}
 
-		err = config.SetFlags(rootFlags.clusterName, cmd.Flags())
-		if err != nil {
-			return err
-		}
-
 		return nil
 	},
 	PersistentPostRun: func(_ *cobra.Command, _ []string) {
@@ -151,6 +147,4 @@ func init() {
 	} else {
 		logger.Debug("failed to get terminal width", slog.Any("error", err))
 	}
-
-	config.BindPFlags(rootCmd.Flags(), "")
 }

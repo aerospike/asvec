@@ -66,7 +66,13 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.Client, error) 
 		ctx, hosts, clientFlags.ListenerName.Val, isLoadBalancer, creds, tlsConfig, logger,
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "because it doesn't contain any IP SANs") {
+			view.Printf("Hint: Failed to verify because of certificate hostname mismatch.")
+			view.Printf("Hint: Either correctly set your certificate SAN or use --%s", flags.TLSHostnameOverride)
+		}
+
 		logger.Error("failed to create AVS client", slog.Any("error", err))
+
 		return nil, err
 	}
 

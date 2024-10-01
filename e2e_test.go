@@ -1787,3 +1787,58 @@ func (suite *CmdTestSuite) TestEnvVars() {
 
 	suite.NoError(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
 }
+
+func (suite *CmdTestSuite) TestTLSHostnameOverride_Success() {
+	if suite.AvsTLSConfig == nil {
+		suite.T().Skip("Not a TLS suite")
+	}
+
+	newSuiteFlags := []string{}
+	for _, flag := range suite.SuiteFlags {
+		if strings.Contains(flag, tests.CreateFlagStr(flags.Host, "")) || strings.Contains(flag, tests.CreateFlagStr(flags.Seeds, "")) {
+			flagSplit := strings.Split(flag, " ")
+
+			flagSplit[1] = "127.0.0.1:10000" // For tls the certs only work with localhost not 127.0.0.1
+			flag = strings.Join(flagSplit, " ")
+		}
+
+		newSuiteFlags = append(newSuiteFlags, flag)
+	}
+
+	newSuiteFlags = append(newSuiteFlags, tests.CreateFlagStr(flags.TLSHostnameOverride, "localhost"))
+
+	suite.Logger.Debug("suite flags", slog.Any("flags", newSuiteFlags))
+	asvecCmd := strings.Split("index ls --log-level debug --timeout 10s", " ")
+	asvecCmd = append(asvecCmd, strings.Split(strings.Join(newSuiteFlags, " "), " ")...)
+
+	stdout, stderr, err := suite.RunCmd(asvecCmd...)
+
+	suite.NoError(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
+}
+
+func (suite *CmdTestSuite) TestTLSHostnameOverride_Failure() {
+	if suite.AvsTLSConfig == nil {
+		suite.T().Skip("Not a TLS suite")
+	}
+
+	newSuiteFlags := []string{}
+	for _, flag := range suite.SuiteFlags {
+		if strings.Contains(flag, tests.CreateFlagStr(flags.Host, "")) || strings.Contains(flag, tests.CreateFlagStr(flags.Seeds, "")) {
+			flagSplit := strings.Split(flag, " ")
+
+			flagSplit[1] = "127.0.0.1:10000" // For tls the certs only work with localhost not 127.0.0.1
+			flag = strings.Join(flagSplit, " ")
+		}
+
+		newSuiteFlags = append(newSuiteFlags, flag)
+	}
+
+	suite.Logger.Debug("suite flags", slog.Any("flags", newSuiteFlags))
+	asvecCmd := strings.Split("index ls --log-level debug --timeout 10s", " ")
+	asvecCmd = append(asvecCmd, strings.Split(strings.Join(newSuiteFlags, " "), " ")...)
+
+	stdout, stderr, err := suite.RunCmd(asvecCmd...)
+	suite.Error(err, "err: %s, stdout: %s, stderr: %s", err, stdout, stderr)
+	suite.Contains(stdout, "Hint: Failed to verify because of certificate hostname mismatch.")
+	suite.Contains(stdout, "Hint: Either correctly set your certificate SAN or use")
+}

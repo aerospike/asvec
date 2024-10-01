@@ -17,9 +17,6 @@ on:
               type: boolean
 
 
-    # push:
-    #     branches:
-    #       - "update-go" 
 jobs:
     build-and-release:
         runs-on: macos-13
@@ -137,35 +134,83 @@ jobs:
                 export asvec_installsigner="${xasvec_installsigner}"
                 export asvec_teamid="${xasvec_teamid}"
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin && cd ~/work/asvec/asvec && make macos-build-all && make macos-notarize-all
+            - name: Store Artifact in Env Var
+              run: |
+                ARTIFACTS="asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip"
+                echo "ARTIFACTS=${ARTIFACTS}" >> $GITHUB_ENV
+                echo VER=$(cat ../../VERSION.md) >> $GITHUB_ENV
+                echo RPM_VER=$(echo ${VER} | sed 's/-/_/g') >> $GITHUB_ENV
+
+                RPM_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.rpm$' | tr '\n' ' ')
+                echo "RPM_ARTIFACTS=${RPM_ARTIFACTS}" >> $GITHUB_ENV
+
+                DEB_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.deb$' | tr '\n' ' ')
+                echo "DEB_ARTIFACTS=${DEB_ARTIFACTS}" >> $GITHUB_ENV
+
+                ZIP_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.zip$' | tr '\n' ' ')
+                echo "ZIP_ARTIFACTS=${ZIP_ARTIFACTS}" >> $GITHUB_ENV
+
+                PKG_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.pkg$' | tr '\n' ' ')
+                echo "PKG_ARTIFACTS=${PKG_ARTIFACTS}" >> $GITHUB_ENV
+
+                SHA256_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.sha256"; done | tr '\n' ' ')
+                echo "SHA256_FILES=${SHA256_FILES}" >> $GITHUB_ENV
+
+                ASC_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.asc"; done | tr '\n' ' ')
+                echo "ASC_FILES=${ASC_FILES}" >> $GITHUB_ENV
+            - name: Create Checksums
+              run: |
+                cd ~/work/asvec/asvec/bin/packages
+                for pkg in ${ARTIFACTS}; do
+                  shasum -a 256 $pkg > ${pkg}.sha256
+                done
+            - name: Install GPG
+              run: sudo apt-get update && sudo apt-get install ca-certificates && sudo apt-get install gnupg -y
+            - name: setup GPG
+              uses: aerospike/shared-workflows/devops/setup-gpg@pvinh-gpg-sign-example
+              with:
+                gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+                gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+                gpg-key-pass: ${{ secrets.GPG_PASS }}
+                gpg-key-name: "aerospike-inc"
+            - name: GPG Sign All Files
+              env:
+                GPG_TTY: no-tty
+                GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
+              run: |
+                rpm --addsign ${RPM_ARTIFACTS}
+                rpm --checksig ${RPM_ARTIFACTS}
+
+                depkg-sig --sign builder ${DEB_ARTIFACTS}
+                depkg-sig --verify ${DEB_ARTIFACTS}
+
+                for file in ${ZIP_ARTIFACTS} ${PKG_ARTIFACTS}; do
+                  gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+                  gpg --verify "${file}.asc" "${file}"
+                done
             - name: "Create a new pre-release"
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                 set -e
                 cd ~/work/asvec/asvec/bin/packages
-                VER=$(cat ../../VERSION.md)
-                RPM_VER=$(echo ${VER} | sed 's/-/_/g')
                 TAG=${VER} 
                 FULLCOMMIT=$(git rev-parse HEAD)
-                gh release create -R github.com/aerospike/asvec --notes-file ../../RELEASE.md --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip
+                gh release create -R github.com/aerospike/asvec --notes-file ../../RELEASE.md --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} ${ARTIFACTS} ${SHA256_FILES} ${ASC_FILES}
             - name: "Delete previous pre-release"
               env:
                   TAG: ${{ inputs.version }}
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   DELPREV: ${{ inputs.deletePrevBuild }}
-              run: |
-                if [ "${DELPREV}" = "true" ]
-                then
-                  set -e
-                  gh release list -R github.com/aerospike/asvec -L 100 |grep Pre-release |awk -F'\t' '{print $3}' |while read line
-                  do
-                    if [ "$line" != "${TAG}" ]
-                    then
-                      if [[ $line =~ ^${TAG}- ]]
-                      then
-                        echo "Removing $line"
-                        gh release delete $line -R github.com/aerospike/asvec --yes --cleanup-tag
+                run: |
+                  if [ "${DELPREV}" = "true" ]; then
+                    set -e
+                    gh release list -R github.com/aerospike/asvec -L 100 | grep Pre-release | awk -F'\t' '{print $3}' | while read -r line; do
+                    if [ "$line" != "${TAG}" ]; then
+                      if [[ "$line" == "${TAG}-SNAPSHOT-"* ]]; then
+                      echo "Removing $line"
+                      gh release delete "$line" -R github.com/aerospike/asvec --yes --cleanup-tag
                       fi
                     fi
-                  done
-                fi
+                    done
+                  fi

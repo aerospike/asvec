@@ -28,8 +28,6 @@ func newRoleListFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var roleListRequiredFlags = []string{}
-
 // listIndexCmd represents the listIndex command
 func newRoleListCmd() *cobra.Command {
 	return &cobra.Command{
@@ -80,11 +78,4 @@ func init() {
 
 	roleCmd.AddCommand(roleListCmd)
 	roleListCmd.Flags().AddFlagSet(newRoleListFlagSet())
-
-	for _, flag := range roleListRequiredFlags {
-		err := roleListCmd.MarkFlagRequired(flag)
-		if err != nil {
-			panic(err)
-		}
-	}
 }

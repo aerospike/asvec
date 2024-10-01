@@ -37,8 +37,6 @@ func newNodeListFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var nodeListRequiredFlags = []string{}
-
 // nodeListCmd creates a new cobra command for listing nodes.
 func newNodeListCmd() *cobra.Command {
 	return &cobra.Command{
@@ -318,11 +316,4 @@ func init() {
 
 	nodeCmd.AddCommand(nodeListCmd)
 	nodeListCmd.Flags().AddFlagSet(newNodeListFlagSet())
-
-	for _, flag := range nodeListRequiredFlags {
-		err := nodeListCmd.MarkFlagRequired(flag)
-		if err != nil {
-			panic(err)
-		}
-	}
 }

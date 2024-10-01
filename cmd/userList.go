@@ -30,8 +30,6 @@ func newUserListFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-var userListRequiredFlags = []string{}
-
 // listIndexCmd represents the listIndex command
 func newUserListCmd() *cobra.Command {
 	return &cobra.Command{
@@ -86,11 +84,4 @@ func init() {
 
 	userCmd.AddCommand(userListCmd)
 	userListCmd.Flags().AddFlagSet(newUserListFlagSet())
-
-	for _, flag := range userListRequiredFlags {
-		err := userListCmd.MarkFlagRequired(flag)
-		if err != nil {
-			panic(err)
-		}
-	}
 }

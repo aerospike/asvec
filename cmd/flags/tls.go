@@ -27,19 +27,24 @@ func NewTLSFlags() *TLSFlags {
 
 // newTLSFlagSet returns a new pflag.FlagSet with TLS flags defined. Values
 // are stored in the TLSFlags struct.
-func (tf *TLSFlags) newTLSFlagSet(fmtUsage commonFlags.UsageFormatter) *pflag.FlagSet {
+func (tf *TLSFlags) newTLSFlagSet() *pflag.FlagSet {
 	f := &pflag.FlagSet{}
 
-	f.Var(&tf.RootCAFile, TLSCaFile, fmtUsage("The CA used when connecting to AVS."))
-	f.Var(&tf.RootCAPath, TLSCaPath, fmtUsage("A path containing CAs for connecting to AVS."))
-	f.Var(&tf.CertFile, TLSCertFile, fmtUsage("The certificate file for mutual TLS authentication with AVS."))
-	f.Var(&tf.KeyFile, TLSKeyFile, fmtUsage("The key file used for mutual TLS authentication with AVS."))
-	f.Var(&tf.KeyFilePass, TLSKeyFilePass, fmtUsage("The password used to decrypt the key-file if encrypted."))
-	f.Var(&tf.Protocols, TLSProtocols, fmtUsage(
+	f.Var(&tf.RootCAFile, TLSCaFile, "The CA used when connecting to AVS.")
+	f.Var(&tf.RootCAPath, TLSCaPath, "A path containing CAs for connecting to AVS.")
+	f.Var(&tf.CertFile, TLSCertFile, "The certificate file for mutual TLS authentication with AVS.")
+	f.Var(&tf.KeyFile, TLSKeyFile, "The key file used for mutual TLS authentication with AVS.")
+	f.Var(&tf.KeyFilePass, TLSKeyFilePass, "The password used to decrypt the key-file if encrypted.")
+	f.Var(&tf.Protocols, TLSProtocols,
 		"Set the TLS protocol selection criteria. This format is the same as"+
 			" Apache's SSLProtocol documented at https://httpd.apache.org/docs/current/mod/mod_ssl.html#ssl protocol.",
-	))
-	f.StringVar(&tf.HostnameOverride, TLSHostnameOverride, "", fmtUsage("The hostname to use when validating the server certificate."))
+	)
+	f.StringVar(
+		&tf.HostnameOverride,
+		TLSHostnameOverride,
+		"",
+		"The hostname to use when validating the server certificate.",
+	)
 
 	return f
 }

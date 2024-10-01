@@ -72,6 +72,7 @@ func createClientFromFlags(clientFlags *flags.ClientFlags) (*avs.Client, error) 
 		}
 
 		logger.Error("failed to create AVS client", slog.Any("error", err))
+
 		return nil, err
 	}
 

@@ -1019,10 +1019,10 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 	suite.SkipIfUserPassAuthDisabled()
 
 	testCases := []struct {
-		name        string // name of the test case
-		user        string // username of the user
-		newPassword string // new password for the user
-		cmd         string // command to be executed
+		name        string
+		user        string
+		newPassword string
+		cmd         string
 	}{
 		{
 			name:        "change password",
@@ -1058,6 +1058,35 @@ func (suite *CmdTestSuite) TestSuccessfulUsersNewPasswordCmd() {
 				logger,
 			)
 			suite.Assert().NoError(err, "error: %s", err)
+		})
+	}
+}
+
+func (suite *CmdTestSuite) TestFailUsersNewPasswordCmd() {
+	// If the user DNE it will not fail. Only fails if auth is disabled.
+	if suite.AvsCreds != nil {
+		suite.T().Skip("authentication is enabled. skipping test")
+	}
+
+	testCases := []struct {
+		name        string
+		user        string
+		newPassword string
+		cmd         string
+	}{
+		{
+			name:        "change password with invalid user",
+			user:        "DNE",
+			newPassword: "foo",
+			cmd:         "users new-password --name DNE --new-password foo",
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			_, stderr, err := suite.RunSuiteCmd(strings.Split(tc.cmd, " ")...)
+			suite.Assert().Error(err, "error: %s, stdout: %s stderr:%s", err, stderr, stderr)
+			suite.Assert().Contains(stderr, "server error")
 		})
 	}
 }
@@ -1115,12 +1144,16 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 	suite.CleanUpIndexes(context.Background())
 	strIndexName := "query-str-index"
 	intIndexName := "query-int-index"
+	boolIndexName := "query-bool-index"
 	indexes := []*protos.IndexDefinition{
 		tests.NewIndexDefinitionBuilder(false,
 			strIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-str",
 		).Build(),
 		tests.NewIndexDefinitionBuilder(false,
 			intIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "float32-int",
+		).Build(),
+		tests.NewIndexDefinitionBuilder(false,
+			boolIndexName, "test", 10, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "bool",
 		).Build(),
 	}
 
@@ -1273,6 +1306,24 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 				"float32-int": getVectorFloat32(10, 9.0),
 			},
 		},
+		{
+			key: 10,
+			data: map[string]any{
+				"bool": getVectorBool(10, 7.0),
+			},
+		},
+		{
+			key: 11,
+			data: map[string]any{
+				"bool": getVectorBool(10, 8.0),
+			},
+		},
+		{
+			key: 12,
+			data: map[string]any{
+				"bool": getVectorBool(10, 9.0),
+			},
+		},
 	}
 
 	for _, record := range records {
@@ -1288,6 +1339,7 @@ func (suite *CmdTestSuite) TestSuccessfulQueryCmd() {
 
 	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", strIndexName, 12*time.Second)
 	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", intIndexName, 12*time.Second)
+	suite.AvsClient.WaitForIndexCompletion(context.Background(), "test", boolIndexName, 12*time.Second)
 
 	testCases := []struct {
 		name          string
@@ -1315,7 +1367,7 @@ float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 `,
 		},
 		{
-			name:    "run query with custom vector",
+			name:    "run query with custom float32 vector",
 			records: records,
 			cmd:     fmt.Sprintf("query -i %s -n test --vector [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0]  --no-color --format 1", strIndexName),
 			expectedTable: `Query Results
@@ -1335,6 +1387,35 @@ float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,2.0]\""
 float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,3.0]\""
 5,test,e,9,0,"Key\,Value
 float32-str\,\"[0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,0.0\\,4.0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		},
+		{
+			name:    "run query with custom bool vector",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test --vector [0,0,0,0,0,0,0,0,0,1]  --no-color --format 1", boolIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,10,8,0,"Key\,Value
+bool\,\"[1\\,1\\,1\\,1\\,1\\,1\\,1\\,0\\,0\\,0]\""
+2,test,11,9,0,"Key\,Value
+bool\,\"[1\\,1\\,1\\,1\\,1\\,1\\,1\\,1\\,0\\,0]\""
+3,test,12,10,0,"Key\,Value
+bool\,\"[1\\,1\\,1\\,1\\,1\\,1\\,1\\,1\\,1\\,0]\""
+Hint: To increase the number of records returned, use the --max-results flag.
+Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
+`,
+		}, {
+			name:    "run query with using int key with bool vector",
+			records: records,
+			cmd:     fmt.Sprintf("query -i %s -n test --key-int 10  --no-color --format 1", boolIndexName),
+			expectedTable: `Query Results
+,Namespace,Key,Distance,Generation,Data
+1,test,11,1,0,"Key\,Value
+bool\,\"[1\\,1\\,1\\,1\\,1\\,1\\,1\\,1\\,0\\,0]\""
+2,test,12,2,0,"Key\,Value
+bool\,\"[1\\,1\\,1\\,1\\,1\\,1\\,1\\,1\\,1\\,0]\""
 Hint: To increase the number of records returned, use the --max-results flag.
 Hint: To choose which record keys are displayed, use the --fields flag. By default only 5 are displayed.
 `,
@@ -1468,6 +1549,11 @@ func (suite *CmdTestSuite) TestFailedQueryCmd() {
 			name:           "query using key-int and vector together",
 			cmd:            fmt.Sprintf("query --namespace %s -i %s --key-int 1 --vector [0,1,1,1]", namespace, indexName),
 			expectedErrStr: "Error: if any flags in the group [vector key-str key-int] are set none of the others can be; [key-int vector] were all set",
+		},
+		{
+			name:           "query using key-int and vector together",
+			cmd:            fmt.Sprintf("query --namespace %s -i %s --vector [0,1,1,1]", namespace, indexName),
+			expectedErrStr: "Error: Failed to get vector using vector: failed to receive all neighbors: rpc error: code = InvalidArgument desc = dimension mismatch, required 10, actual 4",
 		},
 	}
 

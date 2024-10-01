@@ -63,6 +63,9 @@ const (
 	TLSHostnameOverride          = "tls-hostname-override"
 
 	// TODO  Replace short flag constants with variables
+	DimensionShort       = "d"
+	VectorFieldShort     = "f"
+	DistanceMetricShort  = "m"
 	NamespaceShort       = "n"
 	SetShort             = "s"
 	IndexNameShort       = "i"
@@ -70,6 +73,7 @@ const (
 	KeyStrShort          = "k"
 	KeyIntShort          = "t"
 	MaxDataColWidthShort = "w"
+	YesShort             = "y"
 
 	DefaultIPv4 = "127.0.0.1"
 	DefaultPort = 5000

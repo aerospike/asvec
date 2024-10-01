@@ -2,7 +2,7 @@ module asvec
 
 go 1.22.5
 
-// replace github.com/aerospike/tools-common-go => ../tools-common-go
+replace github.com/aerospike/avs-client-go => ../avs-client-go
 
 require (
 	github.com/aerospike/avs-client-go v0.0.0-20240906211641-97c1df4005ae
@@ -39,6 +39,8 @@ require (
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
+	go.uber.org/goleak v1.3.0 // indirect
+	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.27.0 // indirect

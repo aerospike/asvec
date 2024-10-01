@@ -60,6 +60,7 @@ const (
 	TLSCertFile                  = "tls-certfile"
 	TLSKeyFile                   = "tls-keyfile"
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
+	TLSHostnameOverride          = "tls-hostname-override"
 
 	// TODO  Replace short flag constants with variables
 	NamespaceShort       = "n"

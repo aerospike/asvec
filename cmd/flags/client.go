@@ -52,11 +52,12 @@ func (cf *ClientFlags) NewSLogAttr() []any {
 		slog.String(ListenerName, cf.ListenerName.String()),
 		slog.String(AuthUser, cf.AuthCredentials.User.String()),
 		slog.String(AuthPassword, logPass),
-		slog.Bool(TLSCaFile, cf.TLSRootCAFile != nil),
-		slog.Bool(TLSCaPath, cf.TLSRootCAPath != nil),
-		slog.Bool(TLSCertFile, cf.TLSCertFile != nil),
-		slog.Bool(TLSKeyFile, cf.TLSKeyFile != nil),
-		slog.Bool(TLSKeyFilePass, cf.TLSKeyFilePass != nil),
+		slog.Bool(TLSCaFile, cf.RootCAFile != nil),
+		slog.Bool(TLSCaPath, cf.RootCAPath != nil),
+		slog.Bool(TLSCertFile, cf.CertFile != nil),
+		slog.Bool(TLSKeyFile, cf.KeyFile != nil),
+		slog.Bool(TLSKeyFilePass, cf.KeyFilePass != nil),
+		slog.String(TLSHostnameOverride, cf.HostnameOverride),
 		slog.Duration(Timeout, cf.Timeout),
 	}
 }

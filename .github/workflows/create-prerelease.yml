@@ -21,7 +21,6 @@ jobs:
     build:
         outputs:
           version: ${{ steps.save-version.outputs.version }}
-          full-tag: ${{ steps.tag.outputs.full-tag }}
           rpm-version: ${{ steps.save-version.outputs.rpm-version }}
           artifacts: ${{ steps.save-version.outputs.artifacts }}
           rpm-artifacts: ${{ steps.save-version.outputs.rpm-artifacts }}
@@ -78,8 +77,6 @@ jobs:
                   COMMIT=$(git rev-parse --short HEAD)
                   TAG="${TAG}-SNAPSHOT-${COMMIT}"
                 fi
-
-                echo full-tag=${TAG} >> $GITHUB_OUTPUT
                 
                 # Ensure the tag does not already exist
                 if ! gh release view "${TAG}" > /dev/null 2>&1; then
@@ -176,7 +173,7 @@ jobs:
                 SHA256_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.sha256"; done | tr '\n' ' ')
                 echo "sha-artifacts=${SHA256_FILES}" >> $GITHUB_OUTPUT
 
-                ASC_FILES=$(for pkg in ${ARTIFACTS}; do
+                ASC_FILES=$(for pkg in ${ARTIFACTS} ${SHA256_FILES}; do
                   if [[ ! "${pkg}" =~ \.rpm$ && ! "${pkg}" =~ \.deb$ ]]; then
                   echo "${pkg}.asc"
                   fi
@@ -231,6 +228,10 @@ jobs:
                 shasum -a 256 $pkg > ${pkg}.sha256
               done
 
+              for file in ${{needs.build.outputs.sha-artifacts}}; do
+                gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+                gpg --verify "${file}.asc" "${file}"
+              done
           - name: "Upload Artifacts"
             uses: actions/upload-artifact@v4
             with:
@@ -269,7 +270,7 @@ jobs:
               if [ "${DELPREV}" = "true" ]; then
                 set -e
                 gh release list -R github.com/aerospike/asvec -L 100 | grep Pre-release | awk -F'\t' '{print $3}' | while read -r line; do
-                if [ "$line" != "${{ needs.build.outputs.full-tag }}" ]; then
+                if [ "$line" != "${{needs.build.outputs.version}}" ]; then
                   if [[ "$line" == "${{ inputs.version }}-SNAPSHOT-"* ]]; then
                   echo "Removing $line"
                   gh release delete "$line" -R github.com/aerospike/asvec --yes --cleanup-tag

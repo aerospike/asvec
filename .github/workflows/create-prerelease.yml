@@ -172,7 +172,11 @@ jobs:
                 SHA256_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.sha256"; done | tr '\n' ' ')
                 echo "sha-artifacts=${SHA256_FILES}" >> $GITHUB_OUTPUT
 
-                ASC_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.asc"; done | tr '\n' ' ')
+                ASC_FILES=$(for pkg in ${ARTIFACTS}; do
+                  if [[ ! "${pkg}" =~ \.rpm$ && ! "${pkg}" =~ \.deb$ ]]; then
+                  echo "${pkg}.asc"
+                  fi
+                done | tr '\n' ' ')
                 echo "asc-artifacts=${ASC_FILES}" >> $GITHUB_OUTPUT
 
             - name: "Upload Artifacts"

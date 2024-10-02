@@ -189,8 +189,6 @@ jobs:
                 name: asvec-artifacts
                 path: ~/work/asvec/asvec/bin/packages/asvec-*
 
-  
-
     sign:
         needs: build
         runs-on: ubuntu-latest
@@ -210,20 +208,12 @@ jobs:
               gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
               gpg-key-pass: ${{ secrets.GPG_PASS }}
               gpg-key-name: "aerospike-inc"
-          - name: Create Checksums
-            run: |
-              # cd ~/work/asvec/asvec/bin/packages
-              for pkg in ${{needs.build.outputs.artifacts}}; do
-                shasum -a 256 $pkg > ${pkg}.sha256
-              done
 
           - name: GPG Sign All Files
             env:
               GPG_TTY: no-tty
               GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
             run: |
-              # cd ~/work/asvec/asvec/bin/packages
-
               rpm --addsign ${{needs.build.outputs.rpm-artifacts}}
               rpm --checksig ${{needs.build.outputs.rpm-artifacts}}
 
@@ -234,6 +224,13 @@ jobs:
                 gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
                 gpg --verify "${file}.asc" "${file}"
               done
+
+          - name: Create Checksums
+            run: |
+              for pkg in ${{needs.build.outputs.artifacts}}; do
+                shasum -a 256 $pkg > ${pkg}.sha256
+              done
+
           - name: "Upload Artifacts"
             uses: actions/upload-artifact@v4
             with:
@@ -261,7 +258,6 @@ jobs:
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             run: |
               set -e
-              # cd ~/work/asvec/asvec/bin/packages
               TAG=${{needs.build.outputs.version}}
               FULLCOMMIT=$(git rev-parse HEAD)
               gh release create -R github.com/aerospike/asvec --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} ${{needs.build.outputs.artifacts}} ${{needs.build.outputs.sha-artifacts}} ${{needs.build.outputs.asc-artifacts}}

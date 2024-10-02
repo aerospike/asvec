@@ -17,11 +17,18 @@ on:
               type: boolean
 
 
-    # push:
-    #     branches:
-    #       - "update-go" 
 jobs:
-    build-and-release:
+    build:
+        outputs:
+          version: ${{ steps.save-version.outputs.version }}
+          rpm-version: ${{ steps.save-version.outputs.rpm-version }}
+          artifacts: ${{ steps.save-version.outputs.artifacts }}
+          rpm-artifacts: ${{ steps.save-version.outputs.rpm-artifacts }}
+          deb-artifacts: ${{ steps.save-version.outputs.deb-artifacts }}
+          zip-artifacts: ${{ steps.save-version.outputs.zip-artifacts }}
+          pkg-artifacts: ${{ steps.save-version.outputs.pkg-artifacts }}
+          sha-artifacts: ${{ steps.save-version.outputs.sha-artifacts }}
+          asc-artifacts: ${{ steps.save-version.outputs.asc-artifacts }}
         runs-on: macos-13
         steps:
             - name: "Git checkout"
@@ -40,6 +47,7 @@ jobs:
                 /usr/local/bin/brew install python-tk@3.11 || echo "I1.5"
                 for i in dpkg zip make wget jq rpm python3.11; do command -v $i || exit 1; done
                 echo "Dependencies checked"
+
             - name: Get go version from go.mod
               run: |
                 echo "GO_VERSION=$(grep '^go ' go.mod | cut -d " " -f 2)" >> $GITHUB_ENV
@@ -54,6 +62,7 @@ jobs:
                 cd /Volumes/Packages
                 sudo installer -pkg Install\ Packages.pkg -target /
             - name: Tag Before Building
+              id: tag
               if: inputs.version != ''
               env:
                 TAG: ${{ inputs.version }}
@@ -137,35 +146,135 @@ jobs:
                 export asvec_installsigner="${xasvec_installsigner}"
                 export asvec_teamid="${xasvec_teamid}"
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin && cd ~/work/asvec/asvec && make macos-build-all && make macos-notarize-all
-            - name: "Create a new pre-release"
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Save Version
+              id: save-version
               run: |
-                set -e
-                cd ~/work/asvec/asvec/bin/packages
-                VER=$(cat ../../VERSION.md)
+                VER=$(cat VERSION.md)
+                echo version=${VER} >> $GITHUB_OUTPUT
+
                 RPM_VER=$(echo ${VER} | sed 's/-/_/g')
-                TAG=${VER} 
-                FULLCOMMIT=$(git rev-parse HEAD)
-                gh release create -R github.com/aerospike/asvec --notes-file ../../RELEASE.md --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip
-            - name: "Delete previous pre-release"
-              env:
-                  TAG: ${{ inputs.version }}
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  DELPREV: ${{ inputs.deletePrevBuild }}
-              run: |
-                if [ "${DELPREV}" = "true" ]
-                then
-                  set -e
-                  gh release list -R github.com/aerospike/asvec -L 100 |grep Pre-release |awk -F'\t' '{print $3}' |while read line
-                  do
-                    if [ "$line" != "${TAG}" ]
-                    then
-                      if [[ $line =~ ^${TAG}- ]]
-                      then
-                        echo "Removing $line"
-                        gh release delete $line -R github.com/aerospike/asvec --yes --cleanup-tag
-                      fi
-                    fi
-                  done
+                echo rpm-verion=${RPM_VER} >> $GITHUB_OUTPUT
+
+                ARTIFACTS="asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip"
+                echo "artifacts=${ARTIFACTS}" >> $GITHUB_OUTPUT
+
+                RPM_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.rpm$' | tr '\n' ' ')
+                echo "rpm-artifacts=${RPM_ARTIFACTS}" >> $GITHUB_OUTPUT
+
+                DEB_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.deb$' | tr '\n' ' ')
+                echo "deb-artifacts=${DEB_ARTIFACTS}" >> $GITHUB_OUTPUT
+
+                ZIP_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.zip$' | tr '\n' ' ')
+                echo "zip-artifacts=${ZIP_ARTIFACTS}" >> $GITHUB_OUTPUT
+
+                PKG_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.pkg$' | tr '\n' ' ')
+                echo "pkg-artifacts=${PKG_ARTIFACTS}" >> $GITHUB_OUTPUT
+
+                SHA256_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.sha256"; done | tr '\n' ' ')
+                echo "sha-artifacts=${SHA256_FILES}" >> $GITHUB_OUTPUT
+
+                ASC_FILES=$(for pkg in ${ARTIFACTS} ${SHA256_FILES}; do
+                  if [[ ! "${pkg}" =~ \.rpm$ && ! "${pkg}" =~ \.deb$ ]]; then
+                  echo "${pkg}.asc"
+                  fi
+                done | tr '\n' ' ')
+                echo "asc-artifacts=${ASC_FILES}" >> $GITHUB_OUTPUT
+
+            - name: "Upload Artifacts"
+              uses: actions/upload-artifact@v4
+              with:
+                name: asvec-artifacts
+                path: ~/work/asvec/asvec/bin/packages/asvec-*
+
+    sign:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+          - name: "Git checkout"
+            uses: actions/checkout@v3
+            with:
+              fetch-depth: 0
+          - name: "Download Artifacts"
+            uses: actions/download-artifact@v4
+            with:
+              name: asvec-artifacts
+          - name: setup GPG
+            uses: aerospike/shared-workflows/devops/setup-gpg@main
+            with:
+              gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+              gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+              gpg-key-pass: ${{ secrets.GPG_PASS }}
+              gpg-key-name: "aerospike-inc"
+
+          - name: GPG Sign All Files
+            env:
+              GPG_TTY: no-tty
+              GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
+            run: |
+              rpm --addsign ${{needs.build.outputs.rpm-artifacts}}
+              rpm --checksig ${{needs.build.outputs.rpm-artifacts}}
+
+              dpkg-sig --sign builder ${{needs.build.outputs.deb-artifacts}}
+              dpkg-sig --verify ${{needs.build.outputs.deb-artifacts}}
+
+              for file in ${{needs.build.outputs.zip-artifacts}} ${{needs.build.outputs.pkg-artifacts}}; do
+                gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+                gpg --verify "${file}.asc" "${file}"
+              done
+
+          - name: Create Checksums
+            run: |
+              for pkg in ${{needs.build.outputs.artifacts}}; do
+                shasum -a 256 $pkg > ${pkg}.sha256
+              done
+
+              for file in ${{needs.build.outputs.sha-artifacts}}; do
+                gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+                gpg --verify "${file}.asc" "${file}"
+              done
+          - name: "Upload Artifacts"
+            uses: actions/upload-artifact@v4
+            with:
+              name: asvec-artifacts
+              path: asvec-*
+              overwrite: true
+
+
+    pre-release:
+        needs: 
+          - sign
+          - build
+        runs-on: ubuntu-latest
+        steps:
+          - name: "Git checkout"
+            uses: actions/checkout@v3
+            with:
+              fetch-depth: 0
+          - name: "Download Artifacts"
+            uses: actions/download-artifact@v4
+            with:
+              name: asvec-artifacts
+          - name: "Create a new pre-release"
+            env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            run: |
+              set -e
+              TAG=${{needs.build.outputs.version}}
+              FULLCOMMIT=$(git rev-parse HEAD)
+              gh release create -R github.com/aerospike/asvec --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} ${{needs.build.outputs.artifacts}} ${{needs.build.outputs.sha-artifacts}} ${{needs.build.outputs.asc-artifacts}}
+          - name: "Delete previous pre-release"
+            env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                DELPREV: ${{ inputs.deletePrevBuild }}
+            run: |
+              if [ "${DELPREV}" = "true" ]; then
+                set -e
+                gh release list -R github.com/aerospike/asvec -L 100 | grep Pre-release | awk -F'\t' '{print $3}' | while read -r line; do
+                if [ "$line" != "${{needs.build.outputs.version}}" ]; then
+                  if [[ "$line" == "${{ inputs.version }}-SNAPSHOT-"* ]]; then
+                  echo "Removing $line"
+                  gh release delete "$line" -R github.com/aerospike/asvec --yes --cleanup-tag
+                  fi
                 fi
+                done
+              fi

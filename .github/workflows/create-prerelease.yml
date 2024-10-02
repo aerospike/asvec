@@ -21,6 +21,7 @@ jobs:
     build:
         outputs:
           version: ${{ steps.save-version.outputs.version }}
+          full-tag: ${{ steps.tag.outputs.full-tag }}
           rpm-version: ${{ steps.save-version.outputs.rpm-version }}
           artifacts: ${{ steps.save-version.outputs.artifacts }}
           rpm-artifacts: ${{ steps.save-version.outputs.rpm-artifacts }}
@@ -62,6 +63,7 @@ jobs:
                 cd /Volumes/Packages
                 sudo installer -pkg Install\ Packages.pkg -target /
             - name: Tag Before Building
+              id: tag
               if: inputs.version != ''
               env:
                 TAG: ${{ inputs.version }}
@@ -76,6 +78,8 @@ jobs:
                   COMMIT=$(git rev-parse --short HEAD)
                   TAG="${TAG}-SNAPSHOT-${COMMIT}"
                 fi
+
+                echo full-tag=${TAG} >> $GITHUB_OUTPUT
                 
                 # Ensure the tag does not already exist
                 if ! gh release view "${TAG}" > /dev/null 2>&1; then
@@ -238,7 +242,7 @@ jobs:
               overwrite: true
 
 
-    release:
+    pre-release:
         needs: 
           - sign
           - build
@@ -263,15 +267,14 @@ jobs:
               gh release create -R github.com/aerospike/asvec --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} ${{needs.build.outputs.artifacts}} ${{needs.build.outputs.sha-artifacts}} ${{needs.build.outputs.asc-artifacts}}
           - name: "Delete previous pre-release"
             env:
-                TAG: ${{ inputs.version }}
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                 DELPREV: ${{ inputs.deletePrevBuild }}
             run: |
               if [ "${DELPREV}" = "true" ]; then
                 set -e
                 gh release list -R github.com/aerospike/asvec -L 100 | grep Pre-release | awk -F'\t' '{print $3}' | while read -r line; do
-                if [ "$line" != "${TAG}" ]; then
-                  if [[ "$line" == "${TAG}-SNAPSHOT-"* ]]; then
+                if [ "$line" != "${{ needs.build.outputs.full-tag }}" ]; then
+                  if [[ "$line" == "${{ inputs.version }}-SNAPSHOT-"* ]]; then
                   echo "Removing $line"
                   gh release delete "$line" -R github.com/aerospike/asvec --yes --cleanup-tag
                   fi

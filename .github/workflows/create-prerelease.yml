@@ -174,9 +174,6 @@ jobs:
               gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
               gpg-key-pass: ${{ secrets.GPG_PASS }}
               gpg-key-name: "aerospike-inc"
-          - name: Install GPG
-            run: |
-              apt update && apt install ca-certificates && apt install gnupg -y
           - name: Store Artifact in Env Var
             run: |
               # VER=$(cat VERSION.md)

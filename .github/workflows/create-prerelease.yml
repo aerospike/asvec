@@ -136,7 +136,7 @@ jobs:
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin && cd ~/work/asvec/asvec && make macos-build-all && make macos-notarize-all
             - name: Store Artifact in Env Var
               run: |
-                VER=$(cat ../../VERSION.md)
+                VER=$(cat VERSION.md)
                 echo VER=${VER} >> $GITHUB_ENV
 
                 RPM_VER=$(echo ${VER} | sed 's/-/_/g')

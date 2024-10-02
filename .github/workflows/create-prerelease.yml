@@ -169,7 +169,8 @@ jobs:
                   shasum -a 256 $pkg > ${pkg}.sha256
                 done
             - name: Install GPG
-              run: sudo apt-get update && sudo apt-get install ca-certificates && sudo apt-get install gnupg -y
+              run: |
+               apt update && apt install ca-certificates && apt install gnupg -y
             - name: setup GPG
               uses: aerospike/shared-workflows/devops/setup-gpg@pvinh-gpg-sign-example
               with:

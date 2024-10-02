@@ -219,8 +219,8 @@ jobs:
               rpm --addsign ${RPM_ARTIFACTS}
               rpm --checksig ${RPM_ARTIFACTS}
 
-              depkg-sig --sign builder ${DEB_ARTIFACTS}
-              depkg-sig --verify ${DEB_ARTIFACTS}
+              dpkg-sig --sign builder ${DEB_ARTIFACTS}
+              dpkg-sig --verify ${DEB_ARTIFACTS}
 
               for file in ${ZIP_ARTIFACTS} ${PKG_ARTIFACTS}; do
                 gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"

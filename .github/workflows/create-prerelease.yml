@@ -204,7 +204,7 @@ jobs:
               echo "ASC_FILES=${ASC_FILES}" >> $GITHUB_ENV
           - name: Create Checksums
             run: |
-              cd ~/work/asvec/asvec/bin/packages
+              # cd ~/work/asvec/asvec/bin/packages
               for pkg in ${{needs.build.outputs.artifacts}}; do
                 shasum -a 256 $pkg > ${pkg}.sha256
               done
@@ -214,7 +214,7 @@ jobs:
               GPG_TTY: no-tty
               GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
             run: |
-              cd ~/work/asvec/asvec/bin/packages
+              # cd ~/work/asvec/asvec/bin/packages
 
               rpm --addsign ${RPM_ARTIFACTS}
               rpm --checksig ${RPM_ARTIFACTS}
@@ -242,7 +242,7 @@ jobs:
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             run: |
               set -e
-              cd ~/work/asvec/asvec/bin/packages
+              # cd ~/work/asvec/asvec/bin/packages
               TAG=${{needs.build.outputs.version}}
               FULLCOMMIT=$(git rev-parse HEAD)
               gh release create -R github.com/aerospike/asvec --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} ${ARTIFACTS} ${SHA256_FILES} ${ASC_FILES}

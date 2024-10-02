@@ -37,6 +37,16 @@ jobs:
                 /usr/local/bin/brew install python-tk@3.11 || echo "I1.5"
                 for i in dpkg zip make wget jq rpm python3.11; do command -v $i || exit 1; done
                 echo "Dependencies checked"
+            - name: setup GPG
+              uses: aerospike/shared-workflows/devops/setup-gpg@pvinh-gpg-sign-example
+              with:
+                gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+                gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+                gpg-key-pass: ${{ secrets.GPG_PASS }}
+                gpg-key-name: "aerospike-inc"
+            - name: Install GPG
+              run: |
+                apt update && apt install ca-certificates && apt install gnupg -y
             - name: Get go version from go.mod
               run: |
                 echo "GO_VERSION=$(grep '^go ' go.mod | cut -d " " -f 2)" >> $GITHUB_ENV
@@ -168,16 +178,7 @@ jobs:
                 for pkg in ${ARTIFACTS}; do
                   shasum -a 256 $pkg > ${pkg}.sha256
                 done
-            - name: Install GPG
-              run: |
-               apt update && apt install ca-certificates && apt install gnupg -y
-            - name: setup GPG
-              uses: aerospike/shared-workflows/devops/setup-gpg@pvinh-gpg-sign-example
-              with:
-                gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
-                gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
-                gpg-key-pass: ${{ secrets.GPG_PASS }}
-                gpg-key-name: "aerospike-inc"
+
             - name: GPG Sign All Files
               env:
                 GPG_TTY: no-tty

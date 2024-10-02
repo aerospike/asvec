@@ -231,6 +231,7 @@ jobs:
             with:
               name: asvec-artifacts
               path: asvec-*
+              overwrite: true
 
 
     release:

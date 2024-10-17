@@ -335,7 +335,7 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 			},
 			CachingParams: &protos.HnswCachingParams{
 				MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
-				Expiry:     indexCreateFlags.hnswCache.Expiry.Uint64(),
+				Expiry:     indexCreateFlags.hnswCache.Expiry.Int64(),
 			},
 			HealerParams: &protos.HnswHealerParams{
 				MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,

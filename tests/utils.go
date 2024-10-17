@@ -18,19 +18,8 @@ import (
 	"github.com/aerospike/tools-common-go/client"
 )
 
-func GetStrPtr(str string) *string {
-	ptr := str
-	return &ptr
-}
-
-func GetUint32Ptr(i int) *uint32 {
-	ptr := uint32(i)
-	return &ptr
-}
-
-func GetBoolPtr(b bool) *bool {
-	ptr := b
-	return &ptr
+func Ptr[T any](v T) *T {
+	return &v
 }
 
 func CreateFlagStr(name, value string) string {
@@ -54,7 +43,7 @@ type IndexDefinitionBuilder struct {
 	hnswMemQueueSize               *uint32
 	hnsfBatchingMaxRecord          *uint32
 	hnsfBatchingInterval           *uint32
-	hnswCacheExpiry                *uint64
+	hnswCacheExpiry                *int64
 	hnswCacheMaxEntries            *uint64
 	hnswHealerMaxScanPageSize      *uint32
 	hnswHealerMaxScanRatePerSecond *uint32
@@ -133,7 +122,7 @@ func (idb *IndexDefinitionBuilder) WithHnswBatchingInterval(interval uint32) *In
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswCacheExpiry(expiry uint64) *IndexDefinitionBuilder {
+func (idb *IndexDefinitionBuilder) WithHnswCacheExpiry(expiry int64) *IndexDefinitionBuilder {
 	idb.hnswCacheExpiry = &expiry
 	return idb
 }
@@ -188,9 +177,9 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				Namespace: idb.namespace,
 			},
 			Dimensions:           uint32(idb.dimension),
-			VectorDistanceMetric: idb.vectorDistanceMetric,
+			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
-			Type:                 protos.IndexType_HNSW,
+			Type:                 Ptr(protos.IndexType_HNSW),
 			// Storage:              ,
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
@@ -208,9 +197,9 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				Namespace: idb.namespace,
 			},
 			Dimensions:           uint32(idb.dimension),
-			VectorDistanceMetric: idb.vectorDistanceMetric,
+			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
-			Type:                 protos.IndexType_HNSW,
+			Type:                 Ptr(protos.IndexType_HNSW),
 			Storage:              &protos.IndexStorage{},
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{

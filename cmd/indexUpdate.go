@@ -106,7 +106,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				BatchingParams:  batchingParams,
 				CachingParams: &protos.HnswCachingParams{
 					MaxEntries: indexUpdateFlags.hnswCache.MaxEntries.Val,
-					Expiry:     indexUpdateFlags.hnswCache.Expiry.Uint64(),
+					Expiry:     indexUpdateFlags.hnswCache.Expiry.Int64(),
 				},
 				HealerParams: &protos.HnswHealerParams{
 					MaxScanRatePerNode: indexUpdateFlags.hnswHealer.MaxScanRatePerNode.Val,

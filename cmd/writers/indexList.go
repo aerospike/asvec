@@ -105,7 +105,7 @@ func (itw *IndexTableWriter) Render(renderFormat int) {
 	}
 }
 
-func convertMillisecondToDuration(m uint64) time.Duration {
+func convertMillisecondToDuration[T int64 | uint64 | uint32](m T) time.Duration {
 	return time.Millisecond * time.Duration(m)
 }
 

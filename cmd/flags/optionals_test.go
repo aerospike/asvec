@@ -4,6 +4,7 @@ package flags
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -87,6 +88,24 @@ func (suite *OptionalFlagSuite) TestIntOptionalFlag() {
 	}
 
 	err = f.Set("not a number")
+	if err == nil {
+		suite.T().Errorf("Expected error, got nil")
+	}
+}
+
+func (suite *OptionalFlagSuite) TestDurationOptionalFlag() {
+	f := &DurationOptionalFlag{}
+
+	err := f.Set("300ms")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	if f.Val == nil || *f.Val != time.Duration(300)*time.Millisecond {
+		suite.T().Errorf("Expected 300ms, got %v", f.Val)
+	}
+
+	err = f.Set("not a time")
 	if err == nil {
 		suite.T().Errorf("Expected error, got nil")
 	}

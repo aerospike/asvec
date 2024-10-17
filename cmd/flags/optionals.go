@@ -196,3 +196,13 @@ func (f *DurationOptionalFlag) Uint32() *uint32 {
 
 	return &milli
 }
+
+func (f *DurationOptionalFlag) Int64() *int64 {
+	if f.Val == nil {
+		return nil
+	}
+
+	milli := f.Val.Milliseconds()
+
+	return &milli
+}

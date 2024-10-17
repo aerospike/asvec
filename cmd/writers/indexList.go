@@ -22,11 +22,30 @@ type IndexTableWriter struct {
 func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *IndexTableWriter {
 	t := IndexTableWriter{NewDefaultWriter(writer), verbose, logger}
 
+	// type any because the table.Row type is a slice of interface{}
+	headings := table.Row{
+		"Name",
+		"Namespace",
+		"Set",
+		"Field",
+		"Dimensions",
+		"Distance Metric",
+		"Unmerged",
+	}
+	verboseHeadings := append(table.Row{}, headings...)
+	verboseHeadings = append(
+		verboseHeadings,
+		"Vector Records",
+		"Vertices",
+		"Labels",
+		"Storage",
+		"HNSW",
+	)
+
 	if verbose {
-		t.table.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions",
-			"Distance Metric", "Unmerged", "Labels*", "Storage", "Index Parameters"}, rowConfigAutoMerge)
+		t.table.AppendHeader(verboseHeadings, rowConfigAutoMerge)
 	} else {
-		t.table.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged"})
+		t.table.AppendHeader(headings)
 	}
 
 	t.table.SetTitle("Indexes")
@@ -38,7 +57,6 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 	})
 	t.table.SetColumnConfigs([]table.ColumnConfig{
 		{
-
 			Number:      3,
 			Transformer: removeNil,
 		},
@@ -54,10 +72,19 @@ func (itw *IndexTableWriter) AppendIndexRow(
 	status *protos.IndexStatusResponse,
 	format int,
 ) {
-	row := table.Row{index.Id.Name, index.Id.Namespace, index.SetFilter, index.Field,
-		index.Dimensions, index.VectorDistanceMetric, status.GetUnmergedRecordCount()}
+	row := table.Row{
+		index.Id.Name,
+		index.Id.Namespace,
+		index.SetFilter,
+		index.Field,
+		index.Dimensions,
+		index.VectorDistanceMetric,
+		status.GetUnmergedRecordCount(),
+	}
 
 	if itw.verbose {
+		row = append(row, status.GetIndexHealerVectorRecordsIndexed())
+		row = append(row, status.GetIndexHealerVerticesValid())
 		row = append(row, index.Labels)
 
 		tStorage := NewDefaultWriter(nil)

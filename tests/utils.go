@@ -52,6 +52,7 @@ type IndexDefinitionBuilder struct {
 	HnswHealerSchedule             *string
 	hnswMergeIndexParallelism      *uint32
 	hnswMergeReIndexParallelism    *uint32
+	enableVectorIntegrityCheck     *bool
 }
 
 func NewIndexDefinitionBuilder(
@@ -164,6 +165,11 @@ func (idb *IndexDefinitionBuilder) WithHnswMergeIndexParallelism(mergeParallelis
 
 func (idb *IndexDefinitionBuilder) WithHnswMergeReIndexParallelism(mergeParallelism uint32) *IndexDefinitionBuilder {
 	idb.hnswMergeReIndexParallelism = &mergeParallelism
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithEnableVectorIntegrityCheck(enableVectorIntegrityCheck bool) *IndexDefinitionBuilder {
+	idb.enableVectorIntegrityCheck = &enableVectorIntegrityCheck
 	return idb
 }
 

@@ -54,6 +54,7 @@ const (
 	HnswHealerParallelism        = "hnsw-healer-parallelism"
 	HnswMergeParallelism         = "hnsw-merge-index-parallelism"
 	HnswMergeReIndexParallelism  = "hnsw-merge-reindex-parallelism"
+	EnableVectorIntegrityCheck   = "enable-vector-integrity-check"
 	TLSProtocols                 = "tls-protocols"
 	TLSCaFile                    = "tls-cafile"
 	TLSCaPath                    = "tls-capath"

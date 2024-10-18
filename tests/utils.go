@@ -179,7 +179,6 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 			Dimensions:           uint32(idb.dimension),
 			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
-			Type:                 Ptr(protos.IndexType_HNSW),
 			// Storage:              ,
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
@@ -199,7 +198,6 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 			Dimensions:           uint32(idb.dimension),
 			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
-			Type:                 Ptr(protos.IndexType_HNSW),
 			Storage:              &protos.IndexStorage{},
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{

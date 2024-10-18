@@ -37,9 +37,9 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 		verboseHeadings,
 		"Vector Records",
 		"Vertices",
-		"Labels",
+		"Labels*",
 		"Storage",
-		"HNSW",
+		"Index Parameters",
 	)
 
 	if verbose {
@@ -113,6 +113,7 @@ func (itw *IndexTableWriter) AppendIndexRow(
 				{"Healer Parallelism*", v.HnswParams.HealerParams.GetParallelism()},
 				{"Merge Index Parallelism*", v.HnswParams.MergeParams.GetIndexParallelism()},
 				{"Merge Re-Index Parallelism*", v.HnswParams.MergeParams.GetReIndexParallelism()},
+				// TODO enable this when testing is done {"Enable Vector Integrity Check", v.HnswParams.GetEnableVectorIntegrityCheck()},
 			})
 
 			row = append(row, renderTable(tHNSW, format))

@@ -3,9 +3,9 @@ indices:
       field: vector
       hnswParams:
         batchingParams:
-            interval: 30001
-            maxRecords: 100001
-        cachingParams: 
+            indexInterval: 30001
+            maxIndexRecords: 100001
+        indexCachingParams: 
           maxEntries: 1001
           expiry: 1002
         ef: 101

@@ -760,8 +760,8 @@ Max Edges\,16
 Ef\,100
 Construction Ef\,100
 MaxMemQueueSize*\,1000000
-Batch Max Records*\,100000
-Batch Interval*\,30s
+Batch Max Index Records*\,100000
+Batch Index Interval*\,30s
 Cache Max Entires*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
@@ -778,8 +778,8 @@ Max Edges\,16
 Ef\,100
 Construction Ef\,100
 MaxMemQueueSize*\,1000000
-Batch Max Records*\,100000
-Batch Interval*\,30s
+Batch Max Index Records*\,100000
+Batch Index Interval*\,30s
 Cache Max Entires*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000

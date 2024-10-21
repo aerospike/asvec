@@ -189,9 +189,9 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
 					// BatchingParams: &protos.HnswBatchingParams{},
-					CachingParams: &protos.HnswCachingParams{},
-					HealerParams:  &protos.HnswHealerParams{},
-					MergeParams:   &protos.HnswIndexMergeParams{},
+					IndexCachingParams: &protos.HnswCachingParams{},
+					HealerParams:       &protos.HnswHealerParams{},
+					MergeParams:        &protos.HnswIndexMergeParams{},
 				},
 			},
 		}
@@ -207,10 +207,10 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 			Storage:              &protos.IndexStorage{},
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
-					BatchingParams: &protos.HnswBatchingParams{},
-					CachingParams:  &protos.HnswCachingParams{},
-					HealerParams:   &protos.HnswHealerParams{},
-					MergeParams:    &protos.HnswIndexMergeParams{},
+					BatchingParams:     &protos.HnswBatchingParams{},
+					IndexCachingParams: &protos.HnswCachingParams{},
+					HealerParams:       &protos.HnswHealerParams{},
+					MergeParams:        &protos.HnswIndexMergeParams{},
 				},
 			},
 		}
@@ -246,11 +246,11 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	}
 
 	if idb.hnsfBatchingMaxRecord != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxRecords = idb.hnsfBatchingMaxRecord
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxIndexRecords = idb.hnsfBatchingMaxRecord
 	}
 
 	if idb.hnsfBatchingInterval != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Interval = idb.hnsfBatchingInterval
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.IndexInterval = idb.hnsfBatchingInterval
 	}
 
 	if idb.hnswMemQueueSize != nil {
@@ -258,11 +258,11 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	}
 
 	if idb.hnswCacheExpiry != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.Expiry = idb.hnswCacheExpiry
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.Expiry = idb.hnswCacheExpiry
 	}
 
 	if idb.hnswCacheMaxEntries != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.MaxEntries = idb.hnswCacheMaxEntries
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.MaxEntries = idb.hnswCacheMaxEntries
 	}
 
 	if idb.hnswHealerMaxScanPageSize != nil {

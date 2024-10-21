@@ -207,10 +207,12 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			name:           "test with hnsw batch params",
 			indexName:      "index3",
 			indexNamespace: "test",
-			cmd:            "index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			cmd:            "index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-index-interval 50s --hnsw-batch-max-index-records 10001 --hnsw-batch-reindex-interval 50s --hnsw-batch-max-reindex-records 10001",
 			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
-				WithHnswBatchingMaxRecord(10001).
-				WithHnswBatchingInterval(50000).
+				WithHnswBatchingMaxIndexRecord(10001).
+				WithHnswBatchingIndexInterval(50000).
+				WithHnswBatchingMaxReindexRecord(10001).
+				WithHnswBatchingReindexInterval(50000).
 				Build(),
 		},
 		{
@@ -257,8 +259,10 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswEfConstruction(102).
 				WithHnswM(103).
 				WithHnswMaxMemQueueSize(10004).
-				WithHnswBatchingInterval(30001).
-				WithHnswBatchingMaxRecord(100001).
+				WithHnswBatchingIndexInterval(30001).
+				WithHnswBatchingMaxIndexRecord(100001).
+				WithHnswBatchingReindexInterval(30002).
+				WithHnswBatchingMaxReindexRecord(100002).
 				WithHnswCacheMaxEntries(1001).
 				WithHnswCacheExpiry(1002).
 				WithHnswHealerParallelism(7).
@@ -499,10 +503,12 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			name:           "test with hnsw batch params",
 			indexName:      "successful-update",
 			indexNamespace: "test",
-			cmd:            "index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			cmd:            "index update -y -n test -i successful-update --hnsw-batch-index-interval 50s --hnsw-batch-max-index-records 10001 --hnsw-batch-reindex-interval 50s --hnsw-batch-max-reindex-records 10001",
 			expectedIndex: newBuilder().
-				WithHnswBatchingMaxRecord(10001).
-				WithHnswBatchingInterval(50000).
+				WithHnswBatchingMaxIndexRecord(10001).
+				WithHnswBatchingIndexInterval(50000).
+				WithHnswBatchingMaxReindexRecord(10001).
+				WithHnswBatchingReindexInterval(50000).
 				Build(),
 		},
 		{
@@ -736,7 +742,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 `,
 		},
 		{
-			name: "double index with set and verbose",
+			name: "double index with set, and verbose",
 			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
@@ -762,6 +768,8 @@ Construction Ef\,100
 MaxMemQueueSize*\,1000000
 Batch Max Index Records*\,100000
 Batch Index Interval*\,30s
+Batch Max Reindex Records*\,10000
+Batch Reindex Interval*\,30s
 Cache Max Entires*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
@@ -780,6 +788,8 @@ Construction Ef\,100
 MaxMemQueueSize*\,1000000
 Batch Max Index Records*\,100000
 Batch Index Interval*\,30s
+Batch Max Reindex Records*\,10000
+Batch Reindex Interval*\,30s
 Cache Max Entires*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
@@ -1778,13 +1788,13 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		},
 		{
 			name:           "test with bad hnsw-batch-interval",
-			cmd:            "index create -y --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
+			cmd:            "index create -y --hnsw-batch-index-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-index-interval\"",
 		},
 		{
 			name:           "test with bad hnsw-batch-max-records",
-			cmd:            "index create -y --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
+			cmd:            "index create -y --hnsw-batch-max-index-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-max-index-records\"",
 		},
 		{
 			name:           "test with bad hnsw-cache-max-entries",

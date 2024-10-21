@@ -69,7 +69,7 @@ For example:
 
 %s
 asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 --%s 16
-			`, HelpTxtSetupEnv, flags.BatchMaxRecords, flags.BatchInterval,
+			`, HelpTxtSetupEnv, flags.BatchMaxIndexRecords, flags.BatchIndexInterval,
 			flags.HnswCacheExpiry, flags.HnswHealerParallelism, flags.HnswMergeParallelism),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return checkSeedsAndHost()
@@ -98,10 +98,16 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 			defer client.Close()
 
 			var batchingParams *protos.HnswBatchingParams
-			if indexUpdateFlags.hnswBatch.MaxRecords.Val != nil || indexUpdateFlags.hnswBatch.Interval.Uint32() != nil {
+			if indexUpdateFlags.hnswBatch.MaxIndexRecords.Val != nil ||
+				indexUpdateFlags.hnswBatch.IndexInterval.Uint32() != nil ||
+				indexUpdateFlags.hnswBatch.MaxReindexRecords.Val != nil ||
+				indexUpdateFlags.hnswBatch.ReindexInterval.Uint32() != nil {
+
 				batchingParams = &protos.HnswBatchingParams{
-					MaxIndexRecords: indexUpdateFlags.hnswBatch.MaxRecords.Val,
-					IndexInterval:   indexUpdateFlags.hnswBatch.Interval.Uint32(),
+					MaxIndexRecords:   indexUpdateFlags.hnswBatch.MaxIndexRecords.Val,
+					IndexInterval:     indexUpdateFlags.hnswBatch.IndexInterval.Uint32(),
+					MaxReindexRecords: indexUpdateFlags.hnswBatch.MaxReindexRecords.Val,
+					ReindexInterval:   indexUpdateFlags.hnswBatch.ReindexInterval.Uint32(),
 				}
 			}
 

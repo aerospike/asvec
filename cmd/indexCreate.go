@@ -334,8 +334,10 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 			EfConstruction:  indexCreateFlags.hnswConstructionEf.Val,
 			MaxMemQueueSize: indexCreateFlags.hnswMaxMemQueueSize.Val,
 			BatchingParams: &protos.HnswBatchingParams{
-				MaxIndexRecords: indexCreateFlags.hnswBatch.MaxRecords.Val,
-				IndexInterval:   indexCreateFlags.hnswBatch.Interval.Uint32(),
+				MaxIndexRecords:   indexCreateFlags.hnswBatch.MaxIndexRecords.Val,
+				IndexInterval:     indexCreateFlags.hnswBatch.IndexInterval.Uint32(),
+				MaxReindexRecords: indexCreateFlags.hnswBatch.MaxReindexRecords.Val,
+				ReindexInterval:   indexCreateFlags.hnswBatch.ReindexInterval.Uint32(),
 			},
 			IndexCachingParams: &protos.HnswCachingParams{
 				MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,

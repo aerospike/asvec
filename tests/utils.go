@@ -41,8 +41,10 @@ type IndexDefinitionBuilder struct {
 	hnsfEfC                        *uint32
 	hnsfEf                         *uint32
 	hnswMemQueueSize               *uint32
-	hnsfBatchingMaxRecord          *uint32
-	hnsfBatchingInterval           *uint32
+	hnswBatchingMaxRecord          *uint32
+	hnswBatchingInterval           *uint32
+	hnswBatchingMaxReindexRecord   *uint32
+	hnswBatchingReindexInterval    *uint32
 	hnswCacheExpiry                *int64
 	hnswCacheMaxEntries            *uint64
 	hnswHealerMaxScanPageSize      *uint32
@@ -113,13 +115,23 @@ func (idb *IndexDefinitionBuilder) WithHnswMaxMemQueueSize(maxMemQueueSize uint3
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxRecord(maxRecord uint32) *IndexDefinitionBuilder {
-	idb.hnsfBatchingMaxRecord = &maxRecord
+func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxIndexRecord(maxRecord uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingMaxRecord = &maxRecord
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswBatchingInterval(interval uint32) *IndexDefinitionBuilder {
-	idb.hnsfBatchingInterval = &interval
+func (idb *IndexDefinitionBuilder) WithHnswBatchingIndexInterval(interval uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingInterval = &interval
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxReindexRecord(maxRecord uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingMaxReindexRecord = &maxRecord
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswBatchingReindexInterval(interval uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingReindexInterval = &interval
 	return idb
 }
 
@@ -241,16 +253,28 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EfConstruction = idb.hnsfEfC
 	}
 
-	if idb.hnsfBatchingInterval != nil || idb.hnsfBatchingMaxRecord != nil {
+	if idb.hnswBatchingInterval != nil || idb.hnswBatchingMaxRecord != nil || idb.hnswBatchingMaxReindexRecord != nil || idb.hnswBatchingReindexInterval != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams = &protos.HnswBatchingParams{}
 	}
 
-	if idb.hnsfBatchingMaxRecord != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxIndexRecords = idb.hnsfBatchingMaxRecord
+	if idb.hnswBatchingMaxRecord != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxIndexRecords = idb.hnswBatchingMaxRecord
 	}
 
-	if idb.hnsfBatchingInterval != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.IndexInterval = idb.hnsfBatchingInterval
+	if idb.hnswBatchingInterval != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.IndexInterval = idb.hnswBatchingInterval
+	}
+
+	if idb.hnswBatchingMaxReindexRecord != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxReindexRecords = idb.hnswBatchingMaxReindexRecord
+	}
+
+	if idb.hnswBatchingReindexInterval != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.ReindexInterval = idb.hnswBatchingReindexInterval
+	}
+
+	if idb.enableVectorIntegrityCheck != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EnableVectorIntegrityCheck = idb.enableVectorIntegrityCheck
 	}
 
 	if idb.hnswMemQueueSize != nil {

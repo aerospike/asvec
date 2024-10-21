@@ -5,6 +5,8 @@ indices:
         batchingParams:
             indexInterval: 30001
             maxIndexRecords: 100001
+            reindexInterval: 30002
+            maxReindexRecords: 100002
         indexCachingParams: 
           maxEntries: 1001
           expiry: 1002

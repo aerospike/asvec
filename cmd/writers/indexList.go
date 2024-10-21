@@ -104,6 +104,8 @@ func (itw *IndexTableWriter) AppendIndexRow(
 				{"MaxMemQueueSize*", v.HnswParams.GetMaxMemQueueSize()},
 				{"Batch Max Index Records*", v.HnswParams.BatchingParams.GetMaxIndexRecords()},
 				{"Batch Index Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetIndexInterval()))},
+				{"Batch Max Reindex Records*", v.HnswParams.BatchingParams.GetMaxReindexRecords()},
+				{"Batch Reindex Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetReindexInterval()))},
 				{"Cache Max Entires*", v.HnswParams.IndexCachingParams.GetMaxEntries()},
 				{"Cache Expiry*", convertMillisecondToDuration(v.HnswParams.IndexCachingParams.GetExpiry())},
 				{"Healer Max Scan Rate / Node*", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},

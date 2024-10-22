@@ -54,7 +54,7 @@ type IndexDefinitionBuilder struct {
 	HnswHealerSchedule             *string
 	hnswMergeIndexParallelism      *uint32
 	hnswMergeReIndexParallelism    *uint32
-	enableVectorIntegrityCheck     *bool
+	hnswVectorIntegrityCheck       *bool
 }
 
 func NewIndexDefinitionBuilder(
@@ -180,8 +180,8 @@ func (idb *IndexDefinitionBuilder) WithHnswMergeReIndexParallelism(mergeParallel
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithEnableVectorIntegrityCheck(enableVectorIntegrityCheck bool) *IndexDefinitionBuilder {
-	idb.enableVectorIntegrityCheck = &enableVectorIntegrityCheck
+func (idb *IndexDefinitionBuilder) WithHnswVectorIntegrityCheck(enableVectorIntegrityCheck bool) *IndexDefinitionBuilder {
+	idb.hnswVectorIntegrityCheck = &enableVectorIntegrityCheck
 	return idb
 }
 
@@ -273,8 +273,8 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.ReindexInterval = idb.hnswBatchingReindexInterval
 	}
 
-	if idb.enableVectorIntegrityCheck != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EnableVectorIntegrityCheck = idb.enableVectorIntegrityCheck
+	if idb.hnswVectorIntegrityCheck != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EnableVectorIntegrityCheck = idb.hnswVectorIntegrityCheck
 	}
 
 	if idb.hnswMemQueueSize != nil {

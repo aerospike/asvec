@@ -21,41 +21,41 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var indexCreateFlags = &struct {
-	clientFlags                *flags.ClientFlags
-	yes                        bool
-	inputFile                  string
-	namespace                  string
-	set                        flags.StringOptionalFlag
-	indexName                  string
-	vectorField                string
-	dimensions                 uint32
-	distanceMetric             flags.DistanceMetricFlag
-	indexLabels                map[string]string
-	storageNamespace           flags.StringOptionalFlag
-	storageSet                 flags.StringOptionalFlag
-	hnswMaxEdges               flags.Uint32OptionalFlag
-	hnswEf                     flags.Uint32OptionalFlag
-	hnswConstructionEf         flags.Uint32OptionalFlag
-	hnswMaxMemQueueSize        flags.Uint32OptionalFlag
-	hnswBatch                  flags.BatchingFlags
-	hnswCache                  flags.CachingFlags
-	hnswHealer                 flags.HealerFlags
-	hnswMerge                  flags.MergeFlags
-	enableVectorIntegrityCheck flags.BoolOptionalFlag
+	clientFlags              *flags.ClientFlags
+	yes                      bool
+	inputFile                string
+	namespace                string
+	set                      flags.StringOptionalFlag
+	indexName                string
+	vectorField              string
+	dimensions               uint32
+	distanceMetric           flags.DistanceMetricFlag
+	indexLabels              map[string]string
+	storageNamespace         flags.StringOptionalFlag
+	storageSet               flags.StringOptionalFlag
+	hnswMaxEdges             flags.Uint32OptionalFlag
+	hnswEf                   flags.Uint32OptionalFlag
+	hnswConstructionEf       flags.Uint32OptionalFlag
+	hnswMaxMemQueueSize      flags.Uint32OptionalFlag
+	hnswBatch                flags.BatchingFlags
+	hnswCache                flags.CachingFlags
+	hnswHealer               flags.HealerFlags
+	hnswMerge                flags.MergeFlags
+	hnswVectorIntegrityCheck flags.BoolOptionalFlag
 }{
-	clientFlags:                rootFlags.clientFlags,
-	set:                        flags.StringOptionalFlag{},
-	storageNamespace:           flags.StringOptionalFlag{},
-	storageSet:                 flags.StringOptionalFlag{},
-	hnswMaxEdges:               flags.Uint32OptionalFlag{},
-	hnswEf:                     flags.Uint32OptionalFlag{},
-	hnswConstructionEf:         flags.Uint32OptionalFlag{},
-	hnswMaxMemQueueSize:        flags.Uint32OptionalFlag{},
-	hnswBatch:                  *flags.NewHnswBatchingFlags(),
-	hnswCache:                  *flags.NewHnswCachingFlags(),
-	hnswHealer:                 *flags.NewHnswHealerFlags(),
-	hnswMerge:                  *flags.NewHnswMergeFlags(),
-	enableVectorIntegrityCheck: flags.BoolOptionalFlag{},
+	clientFlags:              rootFlags.clientFlags,
+	set:                      flags.StringOptionalFlag{},
+	storageNamespace:         flags.StringOptionalFlag{},
+	storageSet:               flags.StringOptionalFlag{},
+	hnswMaxEdges:             flags.Uint32OptionalFlag{},
+	hnswEf:                   flags.Uint32OptionalFlag{},
+	hnswConstructionEf:       flags.Uint32OptionalFlag{},
+	hnswMaxMemQueueSize:      flags.Uint32OptionalFlag{},
+	hnswBatch:                *flags.NewHnswBatchingFlags(),
+	hnswCache:                *flags.NewHnswCachingFlags(),
+	hnswHealer:               *flags.NewHnswHealerFlags(),
+	hnswMerge:                *flags.NewHnswMergeFlags(),
+	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
@@ -75,7 +75,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.Var(&indexCreateFlags.hnswConstructionEf, flags.HnswConstructionEf, "The number of candidate nearest neighbors shortlisted during index creation. Larger values provide better recall at the cost of longer index update times.")                                                                                                                      //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswEf, flags.HnswEf, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times.")                                                                                                                                                    //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")                                                                                                                                                                                                          //nolint:lll // For readability                                                                                                                                                                                                                      //nolint:lll // For readability
-	flagSet.Var(&indexCreateFlags.enableVectorIntegrityCheck, flags.EnableVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.")                                                                                                                                                                                                     //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.hnswVectorIntegrityCheck, flags.HnswVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.")                                                                                                                                                                                                         //nolint:lll // For readability
 	flagSet.AddFlagSet(indexCreateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
@@ -231,7 +231,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					slog.Any(flags.HnswEf, indexCreateFlags.hnswEf.Val),
 					slog.Any(flags.HnswConstructionEf, indexCreateFlags.hnswConstructionEf.Val),
 					slog.Any(flags.HnswMaxMemQueueSize, indexCreateFlags.hnswMaxMemQueueSize.Val),
-					slog.Any(flags.EnableVectorIntegrityCheck, indexCreateFlags.enableVectorIntegrityCheck.Val),
+					slog.Any(flags.HnswVectorIntegrityCheck, indexCreateFlags.hnswVectorIntegrityCheck.Val),
 				)...,
 			)
 
@@ -354,7 +354,7 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 				IndexParallelism:   indexCreateFlags.hnswMerge.IndexParallelism.Val,
 				ReIndexParallelism: indexCreateFlags.hnswMerge.ReIndexParallelism.Val,
 			},
-			EnableVectorIntegrityCheck: indexCreateFlags.enableVectorIntegrityCheck.Val,
+			EnableVectorIntegrityCheck: indexCreateFlags.hnswVectorIntegrityCheck.Val,
 		},
 	}
 

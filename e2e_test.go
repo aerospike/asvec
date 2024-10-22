@@ -280,14 +280,14 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			name:           "test with enable vector integrity check",
 			indexName:      "integidx",
 			indexNamespace: "test",
-			cmd:            "index create -y -n test -i integidx -d 256 -m COSINE --vector-field vector --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10 --enable-vector-integrity-check false",
+			cmd:            "index create -y -n test -i integidx -d 256 -m COSINE --vector-field vector --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10 --hnsw-vector-integrity-check false",
 			expectedIndex: tests.NewIndexDefinitionBuilder(false, "integidx", "test", 256, protos.VectorDistanceMetric_COSINE, "vector").
 				WithHnswHealerMaxScanRatePerNode(1000).
 				WithHnswHealerMaxScanPageSize(1000).
 				WithHnswHealerReindexPercent(10.10).
 				WithHnswHealerSchedule("0 0 0 ? * *").
 				WithHnswHealerParallelism(10).
-				WithEnableVectorIntegrityCheck(false).
+				WithHnswVectorIntegrityCheck(false).
 				Build(),
 		},
 	}
@@ -544,12 +544,12 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 				WithHnswMergeReIndexParallelism(11).
 				Build(),
 		},
-		// TODO enable this when it works in the server
+		// TODO enable this if the server enables vector integrity check changes on update
 		// {
 		// 	name:           "test with enable vector integrity check",
 		// 	indexName:      "successful-update",
 		// 	indexNamespace: "test",
-		// 	cmd:            "index update -y -n test -i successful-update --enable-vector-integrity-check false",
+		// 	cmd:            "index update -y -n test -i successful-update --hnsw-vector-integrity-check false",
 		// 	expectedIndex: newBuilder().
 		// 		WithEnableVectorIntegrityCheck(false).
 		// 		Build(),

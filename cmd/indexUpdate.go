@@ -13,35 +13,35 @@ import (
 
 //nolint:govet // Padding not a concern for a CLI
 var indexUpdateFlags = &struct {
-	clientFlags                *flags.ClientFlags
-	yes                        bool
-	namespace                  string
-	indexName                  string
-	indexLabels                map[string]string
-	hnswMaxMemQueueSize        flags.Uint32OptionalFlag
-	hnswBatch                  flags.BatchingFlags
-	hnswCache                  flags.CachingFlags
-	hnswHealer                 flags.HealerFlags
-	hnswMerge                  flags.MergeFlags
-	enableVectorIntegrityCheck flags.BoolOptionalFlag
+	clientFlags              *flags.ClientFlags
+	yes                      bool
+	namespace                string
+	indexName                string
+	indexLabels              map[string]string
+	hnswMaxMemQueueSize      flags.Uint32OptionalFlag
+	hnswBatch                flags.BatchingFlags
+	hnswCache                flags.CachingFlags
+	hnswHealer               flags.HealerFlags
+	hnswMerge                flags.MergeFlags
+	hnswVectorIntegrityCheck flags.BoolOptionalFlag
 }{
-	clientFlags:                rootFlags.clientFlags,
-	hnswMaxMemQueueSize:        flags.Uint32OptionalFlag{},
-	hnswBatch:                  *flags.NewHnswBatchingFlags(),
-	hnswCache:                  *flags.NewHnswCachingFlags(),
-	hnswHealer:                 *flags.NewHnswHealerFlags(),
-	hnswMerge:                  *flags.NewHnswMergeFlags(),
-	enableVectorIntegrityCheck: flags.BoolOptionalFlag{},
+	clientFlags:              rootFlags.clientFlags,
+	hnswMaxMemQueueSize:      flags.Uint32OptionalFlag{},
+	hnswBatch:                *flags.NewHnswBatchingFlags(),
+	hnswCache:                *flags.NewHnswCachingFlags(),
+	hnswHealer:               *flags.NewHnswHealerFlags(),
+	hnswMerge:                *flags.NewHnswMergeFlags(),
+	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
 }
 
 func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                                //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                                 //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                       //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, "The distance metric for the index.")                                     //nolint:lll // For readability
-	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")      //nolint:lll // For readability
-	flagSet.Var(&indexUpdateFlags.enableVectorIntegrityCheck, flags.EnableVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.") //nolint:lll // For readability
+	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                            //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                             //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                   //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, "The distance metric for the index.")                                 //nolint:lll // For readability
+	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")  //nolint:lll // For readability
+	flagSet.Var(&indexUpdateFlags.hnswVectorIntegrityCheck, flags.HnswVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswCache.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswHealer.NewFlagSet())
@@ -87,7 +87,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					slog.String(flags.IndexName, indexUpdateFlags.indexName),
 					slog.Any(flags.IndexLabels, indexUpdateFlags.indexLabels),
 					slog.String(flags.HnswMaxMemQueueSize, indexUpdateFlags.hnswMaxMemQueueSize.String()),
-					slog.String(flags.EnableVectorIntegrityCheck, indexUpdateFlags.enableVectorIntegrityCheck.String()),
+					slog.String(flags.HnswVectorIntegrityCheck, indexUpdateFlags.hnswVectorIntegrityCheck.String()),
 				)...,
 			)
 
@@ -128,7 +128,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					IndexParallelism:   indexUpdateFlags.hnswMerge.IndexParallelism.Val,
 					ReIndexParallelism: indexUpdateFlags.hnswMerge.ReIndexParallelism.Val,
 				},
-				EnableVectorIntegrityCheck: indexUpdateFlags.enableVectorIntegrityCheck.Val,
+				EnableVectorIntegrityCheck: indexUpdateFlags.hnswVectorIntegrityCheck.Val,
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)

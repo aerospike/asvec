@@ -231,7 +231,7 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 					slog.Any(flags.HnswEf, indexCreateFlags.hnswEf.Val),
 					slog.Any(flags.HnswConstructionEf, indexCreateFlags.hnswConstructionEf.Val),
 					slog.Any(flags.HnswMaxMemQueueSize, indexCreateFlags.hnswMaxMemQueueSize.Val),
-					slog.Any(flags.EnableVectorIntegrityCheck, indexCreateFlags.enableVectorIntegrityCheck),
+					slog.Any(flags.EnableVectorIntegrityCheck, indexCreateFlags.enableVectorIntegrityCheck.Val),
 				)...,
 			)
 

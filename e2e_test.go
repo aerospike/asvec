@@ -544,15 +544,16 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 				WithHnswMergeReIndexParallelism(11).
 				Build(),
 		},
-		{
-			name:           "test with enable vector integrity check",
-			indexName:      "successful-update",
-			indexNamespace: "test",
-			cmd:            "index update -y -n test -i successful-update --enable-vector-integrity-check false",
-			expectedIndex: newBuilder().
-				WithEnableVectorIntegrityCheck(false).
-				Build(),
-		},
+		// TODO enable this when it works in the server
+		// {
+		// 	name:           "test with enable vector integrity check",
+		// 	indexName:      "successful-update",
+		// 	indexNamespace: "test",
+		// 	cmd:            "index update -y -n test -i successful-update --enable-vector-integrity-check false",
+		// 	expectedIndex: newBuilder().
+		// 		WithEnableVectorIntegrityCheck(false).
+		// 		Build(),
+		// },
 	}
 
 	for _, tc := range testCases {

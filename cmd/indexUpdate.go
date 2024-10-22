@@ -87,7 +87,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					slog.String(flags.IndexName, indexUpdateFlags.indexName),
 					slog.Any(flags.IndexLabels, indexUpdateFlags.indexLabels),
 					slog.String(flags.HnswMaxMemQueueSize, indexUpdateFlags.hnswMaxMemQueueSize.String()),
-					slog.Any(flags.EnableVectorIntegrityCheck, indexUpdateFlags.enableVectorIntegrityCheck),
+					slog.String(flags.EnableVectorIntegrityCheck, indexUpdateFlags.enableVectorIntegrityCheck.String()),
 				)...,
 			)
 

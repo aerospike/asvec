@@ -114,7 +114,11 @@ func confirm(prompt string) bool {
 	var confirm string
 
 	fmt.Print(prompt + " (y/n): ")
-	fmt.Scanln(&confirm)
+
+	_, err := fmt.Scanln(&confirm)
+	if err != nil {
+		panic(err)
+	}
 
 	return strings.EqualFold(confirm, "y")
 }

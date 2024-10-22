@@ -83,9 +83,11 @@ func (itw *IndexTableWriter) AppendIndexRow(
 	}
 
 	if itw.verbose {
-		row = append(row, status.GetIndexHealerVectorRecordsIndexed())
-		row = append(row, status.GetIndexHealerVerticesValid())
-		row = append(row, index.Labels)
+		row = append(row,
+			status.GetIndexHealerVectorRecordsIndexed(),
+			status.GetIndexHealerVerticesValid(),
+			index.Labels,
+		)
 
 		tStorage := NewDefaultWriter(nil)
 		tStorage.AppendRow(table.Row{"Namespace", index.Storage.GetNamespace()})

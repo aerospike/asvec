@@ -102,7 +102,6 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				indexUpdateFlags.hnswBatch.IndexInterval.Uint32() != nil ||
 				indexUpdateFlags.hnswBatch.MaxReindexRecords.Val != nil ||
 				indexUpdateFlags.hnswBatch.ReindexInterval.Uint32() != nil {
-
 				batchingParams = &protos.HnswBatchingParams{
 					MaxIndexRecords:   indexUpdateFlags.hnswBatch.MaxIndexRecords.Val,
 					IndexInterval:     indexUpdateFlags.hnswBatch.IndexInterval.Uint32(),

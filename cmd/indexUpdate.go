@@ -87,7 +87,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					slog.String(flags.IndexName, indexUpdateFlags.indexName),
 					slog.Any(flags.IndexLabels, indexUpdateFlags.indexLabels),
 					slog.String(flags.HnswMaxMemQueueSize, indexUpdateFlags.hnswMaxMemQueueSize.String()),
-					slog.Any(flags.EnableVectorIntegrityCheck, indexCreateFlags.enableVectorIntegrityCheck),
+					slog.Any(flags.EnableVectorIntegrityCheck, indexUpdateFlags.enableVectorIntegrityCheck),
 				)...,
 			)
 
@@ -129,7 +129,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 					IndexParallelism:   indexUpdateFlags.hnswMerge.IndexParallelism.Val,
 					ReIndexParallelism: indexUpdateFlags.hnswMerge.ReIndexParallelism.Val,
 				},
-				EnableVectorIntegrityCheck: indexCreateFlags.enableVectorIntegrityCheck.Val,
+				EnableVectorIntegrityCheck: indexUpdateFlags.enableVectorIntegrityCheck.Val,
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)

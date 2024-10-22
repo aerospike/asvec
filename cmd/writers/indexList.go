@@ -22,7 +22,6 @@ type IndexTableWriter struct {
 func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *IndexTableWriter {
 	t := IndexTableWriter{NewDefaultWriter(writer), verbose, logger}
 
-	// type any because the table.Row type is a slice of interface{}
 	headings := table.Row{
 		"Name",
 		"Namespace",

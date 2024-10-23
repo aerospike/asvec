@@ -53,10 +53,11 @@ func NewHnswCachingFlags() *CachingFlags {
 	}
 }
 
+//nolint:lll // For readability
 func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, "Maximum number of entries to cache.")                                                       //nolint:lll // For readability
-	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache") //nolint:lll // For readability
+	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, "Maximum number of entries to cache.")
+	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache")
 
 	return flagSet
 }

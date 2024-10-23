@@ -771,7 +771,7 @@ Batch Max Index Records*\,100000
 Batch Index Interval*\,30s
 Batch Max Reindex Records*\,10000
 Batch Reindex Interval*\,30s
-Cache Max Entires*\,2000000
+Cache Max Entries*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
 Healer Max Page Size*\,10000
@@ -791,7 +791,7 @@ Batch Max Index Records*\,100000
 Batch Index Interval*\,30s
 Batch Max Reindex Records*\,10000
 Batch Reindex Interval*\,30s
-Cache Max Entires*\,2000000
+Cache Max Entries*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
 Healer Max Page Size*\,10000

@@ -18,19 +18,8 @@ import (
 	"github.com/aerospike/tools-common-go/client"
 )
 
-func GetStrPtr(str string) *string {
-	ptr := str
-	return &ptr
-}
-
-func GetUint32Ptr(i int) *uint32 {
-	ptr := uint32(i)
-	return &ptr
-}
-
-func GetBoolPtr(b bool) *bool {
-	ptr := b
-	return &ptr
+func Ptr[T any](v T) *T {
+	return &v
 }
 
 func CreateFlagStr(name, value string) string {
@@ -52,9 +41,11 @@ type IndexDefinitionBuilder struct {
 	hnsfEfC                        *uint32
 	hnsfEf                         *uint32
 	hnswMemQueueSize               *uint32
-	hnsfBatchingMaxRecord          *uint32
-	hnsfBatchingInterval           *uint32
-	hnswCacheExpiry                *uint64
+	hnswBatchingMaxRecord          *uint32
+	hnswBatchingInterval           *uint32
+	hnswBatchingMaxReindexRecord   *uint32
+	hnswBatchingReindexInterval    *uint32
+	hnswCacheExpiry                *int64
 	hnswCacheMaxEntries            *uint64
 	hnswHealerMaxScanPageSize      *uint32
 	hnswHealerMaxScanRatePerSecond *uint32
@@ -63,6 +54,7 @@ type IndexDefinitionBuilder struct {
 	HnswHealerSchedule             *string
 	hnswMergeIndexParallelism      *uint32
 	hnswMergeReIndexParallelism    *uint32
+	hnswVectorIntegrityCheck       *bool
 }
 
 func NewIndexDefinitionBuilder(
@@ -123,17 +115,27 @@ func (idb *IndexDefinitionBuilder) WithHnswMaxMemQueueSize(maxMemQueueSize uint3
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxRecord(maxRecord uint32) *IndexDefinitionBuilder {
-	idb.hnsfBatchingMaxRecord = &maxRecord
+func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxIndexRecord(maxRecord uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingMaxRecord = &maxRecord
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswBatchingInterval(interval uint32) *IndexDefinitionBuilder {
-	idb.hnsfBatchingInterval = &interval
+func (idb *IndexDefinitionBuilder) WithHnswBatchingIndexInterval(interval uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingInterval = &interval
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswCacheExpiry(expiry uint64) *IndexDefinitionBuilder {
+func (idb *IndexDefinitionBuilder) WithHnswBatchingMaxReindexRecord(maxRecord uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingMaxReindexRecord = &maxRecord
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswBatchingReindexInterval(interval uint32) *IndexDefinitionBuilder {
+	idb.hnswBatchingReindexInterval = &interval
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswCacheExpiry(expiry int64) *IndexDefinitionBuilder {
 	idb.hnswCacheExpiry = &expiry
 	return idb
 }
@@ -178,6 +180,11 @@ func (idb *IndexDefinitionBuilder) WithHnswMergeReIndexParallelism(mergeParallel
 	return idb
 }
 
+func (idb *IndexDefinitionBuilder) WithHnswVectorIntegrityCheck(enableVectorIntegrityCheck bool) *IndexDefinitionBuilder {
+	idb.hnswVectorIntegrityCheck = &enableVectorIntegrityCheck
+	return idb
+}
+
 func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	var indexDef *protos.IndexDefinition
 
@@ -188,16 +195,15 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				Namespace: idb.namespace,
 			},
 			Dimensions:           uint32(idb.dimension),
-			VectorDistanceMetric: idb.vectorDistanceMetric,
+			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
-			Type:                 protos.IndexType_HNSW,
 			// Storage:              ,
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
 					// BatchingParams: &protos.HnswBatchingParams{},
-					CachingParams: &protos.HnswCachingParams{},
-					HealerParams:  &protos.HnswHealerParams{},
-					MergeParams:   &protos.HnswIndexMergeParams{},
+					IndexCachingParams: &protos.HnswCachingParams{},
+					HealerParams:       &protos.HnswHealerParams{},
+					MergeParams:        &protos.HnswIndexMergeParams{},
 				},
 			},
 		}
@@ -208,16 +214,15 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				Namespace: idb.namespace,
 			},
 			Dimensions:           uint32(idb.dimension),
-			VectorDistanceMetric: idb.vectorDistanceMetric,
+			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
-			Type:                 protos.IndexType_HNSW,
 			Storage:              &protos.IndexStorage{},
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
-					BatchingParams: &protos.HnswBatchingParams{},
-					CachingParams:  &protos.HnswCachingParams{},
-					HealerParams:   &protos.HnswHealerParams{},
-					MergeParams:    &protos.HnswIndexMergeParams{},
+					BatchingParams:     &protos.HnswBatchingParams{},
+					IndexCachingParams: &protos.HnswCachingParams{},
+					HealerParams:       &protos.HnswHealerParams{},
+					MergeParams:        &protos.HnswIndexMergeParams{},
 				},
 			},
 		}
@@ -248,16 +253,28 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EfConstruction = idb.hnsfEfC
 	}
 
-	if idb.hnsfBatchingInterval != nil || idb.hnsfBatchingMaxRecord != nil {
+	if idb.hnswBatchingInterval != nil || idb.hnswBatchingMaxRecord != nil || idb.hnswBatchingMaxReindexRecord != nil || idb.hnswBatchingReindexInterval != nil {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams = &protos.HnswBatchingParams{}
 	}
 
-	if idb.hnsfBatchingMaxRecord != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxRecords = idb.hnsfBatchingMaxRecord
+	if idb.hnswBatchingMaxRecord != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxIndexRecords = idb.hnswBatchingMaxRecord
 	}
 
-	if idb.hnsfBatchingInterval != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.Interval = idb.hnsfBatchingInterval
+	if idb.hnswBatchingInterval != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.IndexInterval = idb.hnswBatchingInterval
+	}
+
+	if idb.hnswBatchingMaxReindexRecord != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.MaxReindexRecords = idb.hnswBatchingMaxReindexRecord
+	}
+
+	if idb.hnswBatchingReindexInterval != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.BatchingParams.ReindexInterval = idb.hnswBatchingReindexInterval
+	}
+
+	if idb.hnswVectorIntegrityCheck != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.EnableVectorIntegrityCheck = idb.hnswVectorIntegrityCheck
 	}
 
 	if idb.hnswMemQueueSize != nil {
@@ -265,11 +282,11 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	}
 
 	if idb.hnswCacheExpiry != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.Expiry = idb.hnswCacheExpiry
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.Expiry = idb.hnswCacheExpiry
 	}
 
 	if idb.hnswCacheMaxEntries != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.CachingParams.MaxEntries = idb.hnswCacheMaxEntries
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.MaxEntries = idb.hnswCacheMaxEntries
 	}
 
 	if idb.hnswHealerMaxScanPageSize != nil {

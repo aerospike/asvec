@@ -7,29 +7,37 @@ import (
 )
 
 type BatchingFlags struct {
-	MaxRecords Uint32OptionalFlag
-	Interval   DurationOptionalFlag
+	MaxIndexRecords   Uint32OptionalFlag
+	IndexInterval     DurationOptionalFlag
+	MaxReindexRecords Uint32OptionalFlag
+	ReindexInterval   DurationOptionalFlag
 }
 
 func NewHnswBatchingFlags() *BatchingFlags {
 	return &BatchingFlags{
-		MaxRecords: Uint32OptionalFlag{},
-		Interval:   DurationOptionalFlag{},
+		MaxIndexRecords:   Uint32OptionalFlag{},
+		IndexInterval:     DurationOptionalFlag{},
+		MaxReindexRecords: Uint32OptionalFlag{},
+		ReindexInterval:   DurationOptionalFlag{},
 	}
 }
 
 func (cf *BatchingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxRecords, BatchMaxRecords, "Maximum number of records to fit in a batch.")              //nolint:lll // For readability
-	flagSet.Var(&cf.Interval, BatchInterval, "The maximum amount of time to wait before finalizing a batch.") //nolint:lll // For readability
+	flagSet.Var(&cf.MaxIndexRecords, BatchMaxIndexRecords, "Maximum number of records to fit in a batch.")                           //nolint:lll // For readability
+	flagSet.Var(&cf.IndexInterval, BatchIndexInterval, "The maximum amount of time to wait before finalizing a batch.")              //nolint:lll // For readability
+	flagSet.Var(&cf.MaxReindexRecords, BatchMaxReindexRecords, "Maximum number of re-index records to fit in a batch.")              //nolint:lll // For readability
+	flagSet.Var(&cf.ReindexInterval, BatchReindexInterval, "The maximum amount of time to wait before finalizing a re-index batch.") //nolint:lll // For readability
 
 	return flagSet
 }
 
 func (cf *BatchingFlags) NewSLogAttr() []any {
 	return []any{
-		slog.Any(BatchMaxRecords, cf.MaxRecords.Val),
-		slog.Any(BatchInterval, cf.Interval.Val),
+		slog.Any(BatchMaxIndexRecords, cf.MaxIndexRecords.Val),
+		slog.Any(BatchIndexInterval, cf.IndexInterval.Val),
+		slog.Any(BatchMaxReindexRecords, cf.MaxIndexRecords.Val),
+		slog.Any(BatchReindexInterval, cf.IndexInterval.Val),
 	}
 }
 
@@ -45,10 +53,11 @@ func NewHnswCachingFlags() *CachingFlags {
 	}
 }
 
+//nolint:lll // For readability
 func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, "Maximum number of entries to cache.")                                                       //nolint:lll // For readability
-	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache") //nolint:lll // For readability
+	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, "Maximum number of entries to cache.")
+	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache")
 
 	return flagSet
 }

@@ -22,11 +22,29 @@ type IndexTableWriter struct {
 func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *IndexTableWriter {
 	t := IndexTableWriter{NewDefaultWriter(writer), verbose, logger}
 
+	headings := table.Row{
+		"Name",
+		"Namespace",
+		"Set",
+		"Field",
+		"Dimensions",
+		"Distance Metric",
+		"Unmerged",
+	}
+	verboseHeadings := append(table.Row{}, headings...)
+	verboseHeadings = append(
+		verboseHeadings,
+		"Vector Records",
+		"Vertices",
+		"Labels*",
+		"Storage",
+		"Index Parameters",
+	)
+
 	if verbose {
-		t.table.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions",
-			"Distance Metric", "Unmerged", "Labels*", "Storage", "Index Parameters"}, rowConfigAutoMerge)
+		t.table.AppendHeader(verboseHeadings, rowConfigAutoMerge)
 	} else {
-		t.table.AppendHeader(table.Row{"Name", "Namespace", "Set", "Field", "Dimensions", "Distance Metric", "Unmerged"})
+		t.table.AppendHeader(headings)
 	}
 
 	t.table.SetTitle("Indexes")
@@ -38,7 +56,6 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 	})
 	t.table.SetColumnConfigs([]table.ColumnConfig{
 		{
-
 			Number:      3,
 			Transformer: removeNil,
 		},
@@ -54,11 +71,22 @@ func (itw *IndexTableWriter) AppendIndexRow(
 	status *protos.IndexStatusResponse,
 	format int,
 ) {
-	row := table.Row{index.Id.Name, index.Id.Namespace, index.SetFilter, index.Field,
-		index.Dimensions, index.VectorDistanceMetric, status.GetUnmergedRecordCount()}
+	row := table.Row{
+		index.Id.Name,
+		index.Id.Namespace,
+		index.SetFilter,
+		index.Field,
+		index.Dimensions,
+		index.VectorDistanceMetric,
+		status.GetUnmergedRecordCount(),
+	}
 
 	if itw.verbose {
-		row = append(row, index.Labels)
+		row = append(row,
+			status.GetIndexHealerVectorRecordsIndexed(),
+			status.GetIndexHealerVerticesValid(),
+			index.Labels,
+		)
 
 		tStorage := NewDefaultWriter(nil)
 		tStorage.AppendRow(table.Row{"Namespace", index.Storage.GetNamespace()})
@@ -75,10 +103,12 @@ func (itw *IndexTableWriter) AppendIndexRow(
 				{"Ef", v.HnswParams.GetEf()},
 				{"Construction Ef", v.HnswParams.GetEfConstruction()},
 				{"MaxMemQueueSize*", v.HnswParams.GetMaxMemQueueSize()},
-				{"Batch Max Records*", v.HnswParams.BatchingParams.GetMaxRecords()},
-				{"Batch Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetInterval()))},
-				{"Cache Max Entires*", v.HnswParams.CachingParams.GetMaxEntries()},
-				{"Cache Expiry*", convertMillisecondToDuration(v.HnswParams.CachingParams.GetExpiry())},
+				{"Batch Max Index Records*", v.HnswParams.BatchingParams.GetMaxIndexRecords()},
+				{"Batch Index Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetIndexInterval()))},
+				{"Batch Max Reindex Records*", v.HnswParams.BatchingParams.GetMaxReindexRecords()},
+				{"Batch Reindex Interval*", convertMillisecondToDuration(uint64(v.HnswParams.BatchingParams.GetReindexInterval()))},
+				{"Cache Max Entries*", v.HnswParams.IndexCachingParams.GetMaxEntries()},
+				{"Cache Expiry*", convertMillisecondToDuration(v.HnswParams.IndexCachingParams.GetExpiry())},
 				{"Healer Max Scan Rate / Node*", v.HnswParams.HealerParams.GetMaxScanRatePerNode()},
 				{"Healer Max Page Size*", v.HnswParams.HealerParams.GetMaxScanPageSize()},
 				{"Healer Re-index % *", convertFloatToPercentStr(v.HnswParams.HealerParams.GetReindexPercent())},
@@ -86,6 +116,7 @@ func (itw *IndexTableWriter) AppendIndexRow(
 				{"Healer Parallelism*", v.HnswParams.HealerParams.GetParallelism()},
 				{"Merge Index Parallelism*", v.HnswParams.MergeParams.GetIndexParallelism()},
 				{"Merge Re-Index Parallelism*", v.HnswParams.MergeParams.GetReIndexParallelism()},
+				{"Enable Vector Integrity Check", v.HnswParams.GetEnableVectorIntegrityCheck()},
 			})
 
 			row = append(row, renderTable(tHNSW, format))
@@ -105,7 +136,7 @@ func (itw *IndexTableWriter) Render(renderFormat int) {
 	}
 }
 
-func convertMillisecondToDuration(m uint64) time.Duration {
+func convertMillisecondToDuration[T int64 | uint64 | uint32](m T) time.Duration {
 	return time.Millisecond * time.Duration(m)
 }
 

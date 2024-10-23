@@ -207,10 +207,12 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			name:           "test with hnsw batch params",
 			indexName:      "index3",
 			indexNamespace: "test",
-			cmd:            "index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			cmd:            "index create -y -n test -i index3 -d 256 -m COSINE --vector-field vector3 --hnsw-batch-index-interval 50s --hnsw-batch-max-index-records 10001 --hnsw-batch-reindex-interval 50s --hnsw-batch-max-reindex-records 10001",
 			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index3", "test", 256, protos.VectorDistanceMetric_COSINE, "vector3").
-				WithHnswBatchingMaxRecord(10001).
-				WithHnswBatchingInterval(50000).
+				WithHnswBatchingMaxIndexRecord(10001).
+				WithHnswBatchingIndexInterval(50000).
+				WithHnswBatchingMaxReindexRecord(10001).
+				WithHnswBatchingReindexInterval(50000).
 				Build(),
 		},
 		{
@@ -257,8 +259,10 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswEfConstruction(102).
 				WithHnswM(103).
 				WithHnswMaxMemQueueSize(10004).
-				WithHnswBatchingInterval(30001).
-				WithHnswBatchingMaxRecord(100001).
+				WithHnswBatchingIndexInterval(30001).
+				WithHnswBatchingMaxIndexRecord(100001).
+				WithHnswBatchingReindexInterval(30002).
+				WithHnswBatchingMaxReindexRecord(100002).
 				WithHnswCacheMaxEntries(1001).
 				WithHnswCacheExpiry(1002).
 				WithHnswHealerParallelism(7).
@@ -270,6 +274,20 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswMergeReIndexParallelism(5).
 				WithStorageNamespace("test").
 				WithStorageSet("name").
+				Build(),
+		},
+		{
+			name:           "test with enable vector integrity check",
+			indexName:      "integidx",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i integidx -d 256 -m COSINE --vector-field vector --hnsw-healer-max-scan-rate-per-node 1000 --hnsw-healer-max-scan-page-size 1000 --hnsw-healer-reindex-percent 10.10 --hnsw-healer-schedule \"0 0 0 ? * *\" --hnsw-healer-parallelism 10 --hnsw-vector-integrity-check false",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "integidx", "test", 256, protos.VectorDistanceMetric_COSINE, "vector").
+				WithHnswHealerMaxScanRatePerNode(1000).
+				WithHnswHealerMaxScanPageSize(1000).
+				WithHnswHealerReindexPercent(10.10).
+				WithHnswHealerSchedule("0 0 0 ? * *").
+				WithHnswHealerParallelism(10).
+				WithHnswVectorIntegrityCheck(false).
 				Build(),
 		},
 	}
@@ -485,10 +503,12 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			name:           "test with hnsw batch params",
 			indexName:      "successful-update",
 			indexNamespace: "test",
-			cmd:            "index update -y -n test -i successful-update --hnsw-batch-interval 50s --hnsw-batch-max-records 10001",
+			cmd:            "index update -y -n test -i successful-update --hnsw-batch-index-interval 50s --hnsw-batch-max-index-records 10001 --hnsw-batch-reindex-interval 50s --hnsw-batch-max-reindex-records 10001",
 			expectedIndex: newBuilder().
-				WithHnswBatchingMaxRecord(10001).
-				WithHnswBatchingInterval(50000).
+				WithHnswBatchingMaxIndexRecord(10001).
+				WithHnswBatchingIndexInterval(50000).
+				WithHnswBatchingMaxReindexRecord(10001).
+				WithHnswBatchingReindexInterval(50000).
 				Build(),
 		},
 		{
@@ -524,6 +544,16 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 				WithHnswMergeReIndexParallelism(11).
 				Build(),
 		},
+		// TODO enable this if the server enables vector integrity check changes on update
+		// {
+		// 	name:           "test with enable vector integrity check",
+		// 	indexName:      "successful-update",
+		// 	indexNamespace: "test",
+		// 	cmd:            "index update -y -n test -i successful-update --hnsw-vector-integrity-check false",
+		// 	expectedIndex: newBuilder().
+		// 		WithEnableVectorIntegrityCheck(false).
+		// 		Build(),
+		// },
 	}
 
 	for _, tc := range testCases {
@@ -713,7 +743,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 `,
 		},
 		{
-			name: "double index with set and verbose",
+			name: "double index with set, and verbose",
 			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
@@ -730,16 +760,18 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --verbose --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Labels*,Storage,Index Parameters
-1,list2,bar,barset,vector,256,HAMMING,0,map[],"Namespace\,bar
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Vertices,Labels*,Storage,Index Parameters
+1,list2,bar,barset,vector,256,HAMMING,0,0,0,map[],"Namespace\,bar
 Set\,list2","HNSW
 Max Edges\,16
 Ef\,100
 Construction Ef\,100
 MaxMemQueueSize*\,1000000
-Batch Max Records*\,100000
-Batch Interval*\,30s
-Cache Max Entires*\,2000000
+Batch Max Index Records*\,100000
+Batch Index Interval*\,30s
+Batch Max Reindex Records*\,10000
+Batch Reindex Interval*\,30s
+Cache Max Entries*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
 Healer Max Page Size*\,10000
@@ -747,16 +779,19 @@ Healer Re-index % *\,10.00%
 Healer Schedule*\,0 0/15 * ? * * *
 Healer Parallelism*\,1
 Merge Index Parallelism*\,80
-Merge Re-Index Parallelism*\,26"
-2,list1,test,,vector,256,COSINE,0,map[foo:bar],"Namespace\,test
+Merge Re-Index Parallelism*\,26
+Enable Vector Integrity Check\,true"
+2,list1,test,,vector,256,COSINE,0,0,0,map[foo:bar],"Namespace\,test
 Set\,list1","HNSW
 Max Edges\,16
 Ef\,100
 Construction Ef\,100
 MaxMemQueueSize*\,1000000
-Batch Max Records*\,100000
-Batch Interval*\,30s
-Cache Max Entires*\,2000000
+Batch Max Index Records*\,100000
+Batch Index Interval*\,30s
+Batch Max Reindex Records*\,10000
+Batch Reindex Interval*\,30s
+Cache Max Entries*\,2000000
 Cache Expiry*\,1h0m0s
 Healer Max Scan Rate / Node*\,1000
 Healer Max Page Size*\,10000
@@ -764,7 +799,8 @@ Healer Re-index % *\,10.00%
 Healer Schedule*\,0 0/15 * ? * * *
 Healer Parallelism*\,1
 Merge Index Parallelism*\,80
-Merge Re-Index Parallelism*\,26"
+Merge Re-Index Parallelism*\,26
+Enable Vector Integrity Check\,true"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},
@@ -1753,13 +1789,13 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 		},
 		{
 			name:           "test with bad hnsw-batch-interval",
-			cmd:            "index create -y --hnsw-batch-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-interval\"",
+			cmd:            "index create -y --hnsw-batch-index-interval foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-index-interval\"",
 		},
 		{
 			name:           "test with bad hnsw-batch-max-records",
-			cmd:            "index create -y --hnsw-batch-max-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-max-records\"",
+			cmd:            "index create -y --hnsw-batch-max-index-records foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-max-index-records\"",
 		},
 		{
 			name:           "test with bad hnsw-cache-max-entries",

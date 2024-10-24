@@ -43,13 +43,13 @@ func (cf *BatchingFlags) NewSLogAttr() []any {
 
 type CachingFlags struct {
 	MaxEntries Uint64OptionalFlag
-	Expiry     DurationOptionalFlag
+	Expiry     InfDurationOptionalFlag
 }
 
 func NewHnswCachingFlags() *CachingFlags {
 	return &CachingFlags{
 		MaxEntries: Uint64OptionalFlag{},
-		Expiry:     DurationOptionalFlag{},
+		Expiry:     InfDurationOptionalFlag{},
 	}
 }
 
@@ -57,7 +57,7 @@ func NewHnswCachingFlags() *CachingFlags {
 func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, "Maximum number of entries to cache.")
-	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache")
+	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or 'inf' to never expire.")
 
 	return flagSet
 }
@@ -65,7 +65,7 @@ func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
 func (cf *CachingFlags) NewSLogAttr() []any {
 	return []any{
 		slog.Any(HnswCacheMaxEntries, cf.MaxEntries.Val),
-		slog.Any(HnswCacheExpiry, cf.Expiry.Val),
+		slog.Any(HnswCacheExpiry, cf.Expiry.String()),
 	}
 }
 

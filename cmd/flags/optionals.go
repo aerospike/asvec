@@ -1,8 +1,10 @@
 package flags
 
 import (
+	"asvec/utils"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -205,4 +207,54 @@ func (f *DurationOptionalFlag) Int64() *int64 {
 	milli := f.Val.Milliseconds()
 
 	return &milli
+}
+
+// InfDurationOptionalFlag is a flag that can be either a time.duration or infinity.
+// It is used for flags like --hnsw-cache-expiry which can be set to "infinity"
+type InfDurationOptionalFlag struct {
+	duration   DurationOptionalFlag
+	isInfinite bool
+}
+
+func (f *InfDurationOptionalFlag) Set(val string) error {
+	err := f.duration.Set(val)
+	if err == nil {
+		return nil
+	}
+
+	val = strings.ToLower(val)
+
+	if val == "inf" || val == "infinity" || val == "-1" {
+		f.isInfinite = true
+	} else {
+		return fmt.Errorf("invalid duration %s", val)
+	}
+
+	return nil
+}
+
+func (f *InfDurationOptionalFlag) Type() string {
+	return "time.Duration"
+}
+
+func (f *InfDurationOptionalFlag) String() string {
+	if f.isInfinite {
+		return "infinity"
+	}
+
+	if f.duration.Val != nil {
+		return f.duration.String()
+	}
+
+	return optionalEmptyString
+}
+
+// Uint64 returns the duration as a uint64. If the duration is infinite, it returns -1.
+// The AVS server uses -1 for cache expiry to represent infinity or never expire.
+func (f *InfDurationOptionalFlag) Int64() *int64 {
+	if f.isInfinite {
+		return utils.Ptr(int64(Infinity))
+	}
+
+	return f.duration.Int64()
 }

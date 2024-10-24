@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"asvec/utils"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -17,10 +18,6 @@ import (
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/aerospike/tools-common-go/client"
 )
-
-func Ptr[T any](v T) *T {
-	return &v
-}
 
 func CreateFlagStr(name, value string) string {
 	return fmt.Sprintf("--%s %s", name, value)
@@ -195,7 +192,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				Namespace: idb.namespace,
 			},
 			Dimensions:           uint32(idb.dimension),
-			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
+			VectorDistanceMetric: utils.Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
 			// Storage:              ,
 			Params: &protos.IndexDefinition_HnswParams{
@@ -214,7 +211,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 				Namespace: idb.namespace,
 			},
 			Dimensions:           uint32(idb.dimension),
-			VectorDistanceMetric: Ptr(idb.vectorDistanceMetric),
+			VectorDistanceMetric: utils.Ptr(idb.vectorDistanceMetric),
 			Field:                idb.vectorField,
 			Storage:              &protos.IndexStorage{},
 			Params: &protos.IndexDefinition_HnswParams{

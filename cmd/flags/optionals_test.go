@@ -110,3 +110,43 @@ func (suite *OptionalFlagSuite) TestDurationOptionalFlag() {
 		suite.T().Errorf("Expected error, got nil")
 	}
 }
+
+func (suite *OptionalFlagSuite) TestInfDurationOptionalFlag() {
+	f := &InfDurationOptionalFlag{}
+
+	err := f.Set("inf")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	suite.Equal("infinity", f.String())
+	suite.Equal(int64(-1), *f.Int64())
+	f = &InfDurationOptionalFlag{}
+
+	err = f.Set("infinity")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	suite.Equal("infinity", f.String())
+	suite.Equal(int64(-1), *f.Int64())
+	f = &InfDurationOptionalFlag{}
+
+	err = f.Set("-1")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	suite.Equal("infinity", f.String())
+	suite.Equal(int64(-1), *f.Int64())
+	f = &InfDurationOptionalFlag{}
+
+	err = f.Set("20m")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	expectedDuration := time.Duration(20) * time.Minute
+	suite.Equal(expectedDuration.String(), f.String())
+	suite.Equal(expectedDuration.Milliseconds(), *f.Int64())
+}

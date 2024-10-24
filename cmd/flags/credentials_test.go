@@ -3,7 +3,7 @@
 package flags
 
 import (
-	"asvec/tests"
+	"asvec/utils"
 	"testing"
 )
 
@@ -47,8 +47,8 @@ func TestCredentialsFlag_Type(t *testing.T) {
 func TestCredentialsFlag_String(t *testing.T) {
 	// Test string representation with user and password
 	flag := CredentialsFlag{
-		User:     StringOptionalFlag{Val: tests.Ptr("username")},
-		Password: StringOptionalFlag{Val: tests.Ptr("password")},
+		User:     StringOptionalFlag{Val: utils.Ptr("username")},
+		Password: StringOptionalFlag{Val: utils.Ptr("password")},
 	}
 	str := flag.String()
 	expected := "username:password"
@@ -58,7 +58,7 @@ func TestCredentialsFlag_String(t *testing.T) {
 
 	// Test string representation with user only
 	flag = CredentialsFlag{
-		User:     StringOptionalFlag{Val: tests.Ptr("username")},
+		User:     StringOptionalFlag{Val: utils.Ptr("username")},
 		Password: StringOptionalFlag{},
 	}
 	str = flag.String()

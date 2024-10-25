@@ -30,11 +30,11 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 		"Dimensions",
 		"Distance Metric",
 		"Unmerged",
+		"Vector Records",
 	}
 	verboseHeadings := append(table.Row{}, headings...)
 	verboseHeadings = append(
 		verboseHeadings,
-		"Vector Records",
 		"Vertices",
 		"Labels*",
 		"Storage",
@@ -79,11 +79,11 @@ func (itw *IndexTableWriter) AppendIndexRow(
 		index.Dimensions,
 		index.VectorDistanceMetric,
 		status.GetUnmergedRecordCount(),
+		status.GetIndexHealerVectorRecordsIndexed(),
 	}
 
 	if itw.verbose {
 		row = append(row,
-			status.GetIndexHealerVectorRecordsIndexed(),
 			status.GetIndexHealerVerticesValid(),
 			index.Labels,
 		)

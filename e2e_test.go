@@ -751,8 +751,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged
-1,list,test,vector,256,COSINE,0
+,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged,Vector Records
+1,list,test,vector,256,COSINE,0,0
 `,
 		},
 		{
@@ -767,9 +767,9 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged
-1,list2,bar,barset,vector,256,HAMMING,0
-2,list1,test,,vector,256,COSINE,0
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records
+1,list2,bar,barset,vector,256,HAMMING,0,0
+2,list1,test,,vector,256,COSINE,0,0
 `,
 		},
 		{

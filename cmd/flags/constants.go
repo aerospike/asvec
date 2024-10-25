@@ -80,6 +80,8 @@ const (
 
 	DefaultIPv4 = "127.0.0.1"
 	DefaultPort = 5000
+
+	Infinity = -1
 )
 
 func AddFormatTestFlag(flagSet *pflag.FlagSet, val *int) error {

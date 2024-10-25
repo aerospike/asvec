@@ -65,7 +65,7 @@ func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
 func (cf *CachingFlags) NewSLogAttr() []any {
 	return []any{
 		slog.Any(HnswCacheMaxEntries, cf.MaxEntries.Val),
-		slog.Any(HnswCacheExpiry, cf.Expiry.String()),
+		slog.String(HnswCacheExpiry, cf.Expiry.String()),
 	}
 }
 

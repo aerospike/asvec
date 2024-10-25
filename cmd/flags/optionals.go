@@ -210,7 +210,7 @@ func (f *DurationOptionalFlag) Int64() *int64 {
 }
 
 // InfDurationOptionalFlag is a flag that can be either a time.duration or infinity.
-// It is used for flags like --hnsw-cache-expiry which can be set to "infinity"
+// It is used for flags like --hnsw-index-cache-expiry which can be set to "infinity"
 type InfDurationOptionalFlag struct {
 	duration   DurationOptionalFlag
 	isInfinite bool

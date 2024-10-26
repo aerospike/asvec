@@ -31,6 +31,8 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 		"Distance Metric",
 		"Unmerged",
 		"Vector Records",
+		"Size",
+		"Umerged %",
 	}
 	verboseHeadings := append(table.Row{}, headings...)
 	verboseHeadings = append(
@@ -80,6 +82,8 @@ func (itw *IndexTableWriter) AppendIndexRow(
 		index.VectorDistanceMetric,
 		status.GetUnmergedRecordCount(),
 		status.GetIndexHealerVectorRecordsIndexed(),
+		formatBytes(calculateIndexSize(index, status)),
+		getPercentUnmerged(status),
 	}
 
 	if itw.verbose {
@@ -144,4 +148,52 @@ func convertMillisecondToDuration[T int64 | uint64 | uint32](m T) time.Duration 
 
 func convertFloatToPercentStr(f float32) string {
 	return fmt.Sprintf("%.2f%%", f)
+}
+
+// calculateIndexSize calculates the size of the index in bytes
+func calculateIndexSize(index *protos.IndexDefinition, status *protos.IndexStatusResponse) int64 {
+	// Each dimension is a float32
+	vectorSize := int64(index.Dimensions) * 4
+	// Each index record has ~500 bytes of overhead + the vector size
+	indexRecSize := 500 + vectorSize
+	// The total size is the number of records times the size of each record
+	indexSize := indexRecSize * status.GetIndexHealerVerticesValid()
+	return indexSize
+}
+
+// formatBytes converts bytes to human readable string format
+func formatBytes(bytes int64) string {
+	const (
+		B  = 1
+		KB = 1024 * B
+		MB = 1024 * KB
+		GB = 1024 * MB
+		TB = 1024 * GB
+		PB = 1024 * TB
+	)
+
+	switch {
+	case bytes >= PB:
+		return fmt.Sprintf("%.2f PB", float64(bytes)/float64(PB))
+	case bytes >= TB:
+		return fmt.Sprintf("%.2f TB", float64(bytes)/float64(TB))
+	case bytes >= GB:
+		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
+}
+
+func getPercentUnmerged(status *protos.IndexStatusResponse) string {
+	unmergedCount := status.GetUnmergedRecordCount()
+	verticies := status.GetIndexHealerVerticesValid()
+	if verticies == 0 {
+		return "0%"
+	}
+
+	return fmt.Sprintf("%.2f%%", float64(unmergedCount)/float64(verticies)*100)
 }

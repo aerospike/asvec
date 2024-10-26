@@ -751,8 +751,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged,Vector Records
-1,list,test,vector,256,COSINE,0,0
+,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %
+1,list,test,vector,256,COSINE,0,0,0 B,0%
 `,
 		},
 		{
@@ -767,9 +767,9 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records
-1,list2,bar,barset,vector,256,HAMMING,0,0
-2,list1,test,,vector,256,COSINE,0,0
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %
+1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%
+2,list1,test,,vector,256,COSINE,0,0,0 B,0%
 `,
 		},
 		{
@@ -795,8 +795,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --verbose --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Vertices,Labels*,Storage,Index Parameters
-1,list2,bar,barset,vector,256,HAMMING,0,0,0,map[],"Namespace\,bar
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %,Vertices,Labels*,Storage,Index Parameters
+1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%,0,map[],"Namespace\,bar
 Set\,list2","HNSW
 Max Edges\,16
 Ef\,100
@@ -818,7 +818,7 @@ Healer Parallelism*\,1
 Merge Index Parallelism*\,80
 Merge Re-Index Parallelism*\,26
 Enable Vector Integrity Check\,true"
-2,list1,test,,vector,256,COSINE,0,0,0,map[foo:bar],"Namespace\,test
+2,list1,test,,vector,256,COSINE,0,0,0 B,0%,0,map[foo:bar],"Namespace\,test
 Set\,list1","HNSW
 Max Edges\,16
 Ef\,100

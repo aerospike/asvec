@@ -32,7 +32,7 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 		"Unmerged",
 		"Vector Records",
 		"Size",
-		"Umerged %",
+		"Unmerged %",
 	}
 	verboseHeadings := append(table.Row{}, headings...)
 	verboseHeadings = append(

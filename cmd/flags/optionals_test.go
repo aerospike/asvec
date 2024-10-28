@@ -114,30 +114,12 @@ func (suite *OptionalFlagSuite) TestDurationOptionalFlag() {
 func (suite *OptionalFlagSuite) TestInfDurationOptionalFlag() {
 	f := &InfDurationOptionalFlag{}
 
-	err := f.Set("inf")
+	err := f.Set("-1")
 	if err != nil {
 		suite.T().Errorf("Unexpected error: %v", err)
 	}
 
-	suite.Equal("infinity", f.String())
-	suite.Equal(int64(-1), *f.Int64())
-	f = &InfDurationOptionalFlag{}
-
-	err = f.Set("infinity")
-	if err != nil {
-		suite.T().Errorf("Unexpected error: %v", err)
-	}
-
-	suite.Equal("infinity", f.String())
-	suite.Equal(int64(-1), *f.Int64())
-	f = &InfDurationOptionalFlag{}
-
-	err = f.Set("-1")
-	if err != nil {
-		suite.T().Errorf("Unexpected error: %v", err)
-	}
-
-	suite.Equal("infinity", f.String())
+	suite.Equal("-1", f.String())
 	suite.Equal(int64(-1), *f.Int64())
 	f = &InfDurationOptionalFlag{}
 

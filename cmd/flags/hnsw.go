@@ -57,7 +57,7 @@ func NewHnswIndexCachingFlags() *IndexCachingFlags {
 func (cf *IndexCachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.Var(&cf.MaxEntries, HnswIndexCacheMaxEntries, "Maximum number of entries to cache.")
-	flagSet.Var(&cf.Expiry, HnswIndexCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or 'inf' to never expire.")
+	flagSet.Var(&cf.Expiry, HnswIndexCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or -1 to never expire.")
 
 	return flagSet
 }
@@ -85,7 +85,7 @@ func NewHnswRecordCachingFlags() *RecordCachingFlags {
 func (cf *RecordCachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
 	flagSet.Var(&cf.MaxEntries, HnswRecordCacheMaxEntries, "Maximum number of entries to cache.")
-	flagSet.Var(&cf.Expiry, HnswRecordCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or 'inf' to never expire.")
+	flagSet.Var(&cf.Expiry, HnswRecordCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or -1 to never expire.")
 
 	return flagSet
 }

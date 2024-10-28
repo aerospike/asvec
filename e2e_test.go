@@ -306,7 +306,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			name:           "test with infinite record cache expiry",
 			indexName:      "recinfidx",
 			indexNamespace: "test",
-			cmd:            "index create -y -n test -i recinfidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-record-cache-expiry inf",
+			cmd:            "index create -y -n test -i recinfidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-record-cache-expiry -1",
 			expectedIndex: tests.NewIndexDefinitionBuilder(false, "recinfidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
 				WithHnswRecordCacheExpiry(-1).
 				Build(),
@@ -315,7 +315,7 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			name:           "test with infinite index cache expiry",
 			indexName:      "idxinfidx",
 			indexNamespace: "test",
-			cmd:            "index create -y -n test -i idxinfidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-index-cache-expiry inf",
+			cmd:            "index create -y -n test -i idxinfidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-index-cache-expiry -1",
 			expectedIndex: tests.NewIndexDefinitionBuilder(false, "idxinfidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
 				WithHnswIndexCacheExpiry(-1).
 				Build(),

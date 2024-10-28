@@ -157,8 +157,7 @@ func calculateIndexSize(index *protos.IndexDefinition, status *protos.IndexStatu
 	// Each index record has ~500 bytes of overhead + the vector size
 	indexRecSize := 500 + vectorSize
 	// The total size is the number of records times the size of each record
-	indexSize := indexRecSize * status.GetIndexHealerVerticesValid()
-	return indexSize
+	return indexRecSize * status.GetIndexHealerVerticesValid()
 }
 
 // formatBytes converts bytes to human readable string format
@@ -190,6 +189,7 @@ func formatBytes(bytes int64) string {
 
 func getPercentUnmerged(status *protos.IndexStatusResponse) string {
 	unmergedCount := status.GetUnmergedRecordCount()
+
 	verticies := status.GetIndexHealerVerticesValid()
 	if verticies == 0 {
 		return "0%"

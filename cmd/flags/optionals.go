@@ -209,8 +209,8 @@ func (f *DurationOptionalFlag) Int64() *int64 {
 	return &milli
 }
 
-// InfDurationOptionalFlag is a flag that can be either a time.duration or infinity.
-// It is used for flags like --hnsw-index-cache-expiry which can be set to infinity (-1)
+// InfDurationOptionalFlag is a flag that can be either a time.duration or -1 (never expire).
+// It is used for flags like --hnsw-index-cache-expiry which can be set to never expire (-1)
 type InfDurationOptionalFlag struct {
 	duration   DurationOptionalFlag
 	isInfinite bool
@@ -224,7 +224,7 @@ func (f *InfDurationOptionalFlag) Set(val string) error {
 
 	val = strings.ToLower(val)
 
-	if val == "-1" {
+	if val == strconv.Itoa(Infinity) {
 		f.isInfinite = true
 	} else {
 		return fmt.Errorf("invalid duration %s", val)

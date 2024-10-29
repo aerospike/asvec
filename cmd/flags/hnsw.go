@@ -41,31 +41,59 @@ func (cf *BatchingFlags) NewSLogAttr() []any {
 	}
 }
 
-type CachingFlags struct {
+type IndexCachingFlags struct {
 	MaxEntries Uint64OptionalFlag
 	Expiry     InfDurationOptionalFlag
 }
 
-func NewHnswCachingFlags() *CachingFlags {
-	return &CachingFlags{
+func NewHnswIndexCachingFlags() *IndexCachingFlags {
+	return &IndexCachingFlags{
 		MaxEntries: Uint64OptionalFlag{},
 		Expiry:     InfDurationOptionalFlag{},
 	}
 }
 
 //nolint:lll // For readability
-func (cf *CachingFlags) NewFlagSet() *pflag.FlagSet {
+func (cf *IndexCachingFlags) NewFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.Var(&cf.MaxEntries, HnswCacheMaxEntries, "Maximum number of entries to cache.")
-	flagSet.Var(&cf.Expiry, HnswCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or 'inf' to never expire.")
+	flagSet.Var(&cf.MaxEntries, HnswIndexCacheMaxEntries, "Maximum number of entries to cache.")
+	flagSet.Var(&cf.Expiry, HnswIndexCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or -1 to never expire.")
 
 	return flagSet
 }
 
-func (cf *CachingFlags) NewSLogAttr() []any {
+func (cf *IndexCachingFlags) NewSLogAttr() []any {
 	return []any{
-		slog.Any(HnswCacheMaxEntries, cf.MaxEntries.Val),
-		slog.String(HnswCacheExpiry, cf.Expiry.String()),
+		slog.Any(HnswIndexCacheMaxEntries, cf.MaxEntries.Val),
+		slog.String(HnswIndexCacheExpiry, cf.Expiry.String()),
+	}
+}
+
+type RecordCachingFlags struct {
+	MaxEntries Uint64OptionalFlag
+	Expiry     InfDurationOptionalFlag
+}
+
+func NewHnswRecordCachingFlags() *RecordCachingFlags {
+	return &RecordCachingFlags{
+		MaxEntries: Uint64OptionalFlag{},
+		Expiry:     InfDurationOptionalFlag{},
+	}
+}
+
+//nolint:lll // For readability
+func (cf *RecordCachingFlags) NewFlagSet() *pflag.FlagSet {
+	flagSet := &pflag.FlagSet{}
+	flagSet.Var(&cf.MaxEntries, HnswRecordCacheMaxEntries, "Maximum number of entries to cache.")
+	flagSet.Var(&cf.Expiry, HnswRecordCacheExpiry, "A cache entry will expire after this amount of time has passed since the entry was added to cache, or -1 to never expire.")
+
+	return flagSet
+}
+
+func (cf *RecordCachingFlags) NewSLogAttr() []any {
+	return []any{
+		slog.Any(HnswRecordCacheMaxEntries, cf.MaxEntries.Val),
+		slog.String(HnswRecordCacheExpiry, cf.Expiry.String()),
 	}
 }
 

@@ -42,8 +42,10 @@ type IndexDefinitionBuilder struct {
 	hnswBatchingInterval           *uint32
 	hnswBatchingMaxReindexRecord   *uint32
 	hnswBatchingReindexInterval    *uint32
-	hnswCacheExpiry                *int64
-	hnswCacheMaxEntries            *uint64
+	hnswIndexCacheExpiry           *int64
+	hnswIndexCacheMaxEntries       *uint64
+	hnswRecordCacheExpiry          *int64
+	hnswRecordCacheMaxEntries      *uint64
 	hnswHealerMaxScanPageSize      *uint32
 	hnswHealerMaxScanRatePerSecond *uint32
 	hnswHealerParallelism          *uint32
@@ -132,13 +134,23 @@ func (idb *IndexDefinitionBuilder) WithHnswBatchingReindexInterval(interval uint
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswCacheExpiry(expiry int64) *IndexDefinitionBuilder {
-	idb.hnswCacheExpiry = &expiry
+func (idb *IndexDefinitionBuilder) WithHnswIndexCacheExpiry(expiry int64) *IndexDefinitionBuilder {
+	idb.hnswIndexCacheExpiry = &expiry
 	return idb
 }
 
-func (idb *IndexDefinitionBuilder) WithHnswCacheMaxEntries(maxEntries uint64) *IndexDefinitionBuilder {
-	idb.hnswCacheMaxEntries = &maxEntries
+func (idb *IndexDefinitionBuilder) WithHnswIndexCacheMaxEntries(maxEntries uint64) *IndexDefinitionBuilder {
+	idb.hnswIndexCacheMaxEntries = &maxEntries
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswRecordCacheExpiry(expiry int64) *IndexDefinitionBuilder {
+	idb.hnswRecordCacheExpiry = &expiry
+	return idb
+}
+
+func (idb *IndexDefinitionBuilder) WithHnswRecordCacheMaxEntries(maxEntries uint64) *IndexDefinitionBuilder {
+	idb.hnswRecordCacheMaxEntries = &maxEntries
 	return idb
 }
 
@@ -198,9 +210,10 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
 					// BatchingParams: &protos.HnswBatchingParams{},
-					IndexCachingParams: &protos.HnswCachingParams{},
-					HealerParams:       &protos.HnswHealerParams{},
-					MergeParams:        &protos.HnswIndexMergeParams{},
+					IndexCachingParams:  &protos.HnswCachingParams{},
+					RecordCachingParams: &protos.HnswCachingParams{},
+					HealerParams:        &protos.HnswHealerParams{},
+					MergeParams:         &protos.HnswIndexMergeParams{},
 				},
 			},
 		}
@@ -216,10 +229,11 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 			Storage:              &protos.IndexStorage{},
 			Params: &protos.IndexDefinition_HnswParams{
 				HnswParams: &protos.HnswParams{
-					BatchingParams:     &protos.HnswBatchingParams{},
-					IndexCachingParams: &protos.HnswCachingParams{},
-					HealerParams:       &protos.HnswHealerParams{},
-					MergeParams:        &protos.HnswIndexMergeParams{},
+					BatchingParams:      &protos.HnswBatchingParams{},
+					IndexCachingParams:  &protos.HnswCachingParams{},
+					RecordCachingParams: &protos.HnswCachingParams{},
+					HealerParams:        &protos.HnswHealerParams{},
+					MergeParams:         &protos.HnswIndexMergeParams{},
 				},
 			},
 		}
@@ -278,12 +292,20 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.MaxMemQueueSize = idb.hnswMemQueueSize
 	}
 
-	if idb.hnswCacheExpiry != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.Expiry = idb.hnswCacheExpiry
+	if idb.hnswIndexCacheExpiry != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.Expiry = idb.hnswIndexCacheExpiry
 	}
 
-	if idb.hnswCacheMaxEntries != nil {
-		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.MaxEntries = idb.hnswCacheMaxEntries
+	if idb.hnswIndexCacheMaxEntries != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.IndexCachingParams.MaxEntries = idb.hnswIndexCacheMaxEntries
+	}
+
+	if idb.hnswRecordCacheExpiry != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.RecordCachingParams.Expiry = idb.hnswRecordCacheExpiry
+	}
+
+	if idb.hnswRecordCacheMaxEntries != nil {
+		indexDef.Params.(*protos.IndexDefinition_HnswParams).HnswParams.RecordCachingParams.MaxEntries = idb.hnswRecordCacheMaxEntries
 	}
 
 	if idb.hnswHealerMaxScanPageSize != nil {

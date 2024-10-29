@@ -38,7 +38,8 @@ var indexCreateFlags = &struct {
 	hnswConstructionEf       flags.Uint32OptionalFlag
 	hnswMaxMemQueueSize      flags.Uint32OptionalFlag
 	hnswBatch                flags.BatchingFlags
-	hnswCache                flags.CachingFlags
+	hnswIndexCache           flags.IndexCachingFlags
+	hnswRecordCache          flags.RecordCachingFlags
 	hnswHealer               flags.HealerFlags
 	hnswMerge                flags.MergeFlags
 	hnswVectorIntegrityCheck flags.BoolOptionalFlag
@@ -52,7 +53,8 @@ var indexCreateFlags = &struct {
 	hnswConstructionEf:       flags.Uint32OptionalFlag{},
 	hnswMaxMemQueueSize:      flags.Uint32OptionalFlag{},
 	hnswBatch:                *flags.NewHnswBatchingFlags(),
-	hnswCache:                *flags.NewHnswCachingFlags(),
+	hnswIndexCache:           *flags.NewHnswIndexCachingFlags(),
+	hnswRecordCache:          *flags.NewHnswRecordCachingFlags(),
 	hnswHealer:               *flags.NewHnswHealerFlags(),
 	hnswMerge:                *flags.NewHnswMergeFlags(),
 	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
@@ -77,7 +79,8 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.Var(&indexCreateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")                                                                                                                                                                                                          //nolint:lll // For readability                                                                                                                                                                                                                      //nolint:lll // For readability
 	flagSet.Var(&indexCreateFlags.hnswVectorIntegrityCheck, flags.HnswVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.")                                                                                                                                                                                                         //nolint:lll // For readability
 	flagSet.AddFlagSet(indexCreateFlags.hnswBatch.NewFlagSet())
-	flagSet.AddFlagSet(indexCreateFlags.hnswCache.NewFlagSet())
+	flagSet.AddFlagSet(indexCreateFlags.hnswIndexCache.NewFlagSet())
+	flagSet.AddFlagSet(indexCreateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
 
@@ -212,7 +215,8 @@ asvec index create -i myindex -n test -s testset -d 256 -m COSINE --%s vector \
 		RunE: func(_ *cobra.Command, _ []string) error {
 			debugFlags := indexCreateFlags.clientFlags.NewSLogAttr()
 			debugFlags = append(debugFlags, indexCreateFlags.hnswBatch.NewSLogAttr()...)
-			debugFlags = append(debugFlags, indexCreateFlags.hnswCache.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexCreateFlags.hnswIndexCache.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexCreateFlags.hnswRecordCache.NewSLogAttr()...)
 			debugFlags = append(debugFlags, indexCreateFlags.hnswHealer.NewSLogAttr()...)
 			debugFlags = append(debugFlags, indexCreateFlags.hnswMerge.NewSLogAttr()...)
 			logger.Debug("parsed flags",
@@ -340,8 +344,12 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 				ReindexInterval:   indexCreateFlags.hnswBatch.ReindexInterval.Uint32(),
 			},
 			IndexCachingParams: &protos.HnswCachingParams{
-				MaxEntries: indexCreateFlags.hnswCache.MaxEntries.Val,
-				Expiry:     indexCreateFlags.hnswCache.Expiry.Int64(),
+				MaxEntries: indexCreateFlags.hnswIndexCache.MaxEntries.Val,
+				Expiry:     indexCreateFlags.hnswIndexCache.Expiry.Int64(),
+			},
+			RecordCachingParams: &protos.HnswCachingParams{
+				MaxEntries: indexCreateFlags.hnswRecordCache.MaxEntries.Val,
+				Expiry:     indexCreateFlags.hnswRecordCache.Expiry.Int64(),
 			},
 			HealerParams: &protos.HnswHealerParams{
 				MaxScanRatePerNode: indexCreateFlags.hnswHealer.MaxScanRatePerNode.Val,

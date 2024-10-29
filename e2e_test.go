@@ -219,10 +219,10 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 			name:           "test with hnsw cache params",
 			indexName:      "index4",
 			indexNamespace: "test",
-			cmd:            "index create -y -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
+			cmd:            "index create -y -n test -i index4 -d 256 -m COSINE --vector-field vector4 --hnsw-index-cache-max-entries 1000 --hnsw-index-cache-expiry 10s",
 			expectedIndex: tests.NewIndexDefinitionBuilder(false, "index4", "test", 256, protos.VectorDistanceMetric_COSINE, "vector4").
-				WithHnswCacheExpiry(10000).
-				WithHnswCacheMaxEntries(1000).
+				WithHnswIndexCacheExpiry(10000).
+				WithHnswIndexCacheMaxEntries(1000).
 				Build(),
 		},
 		{
@@ -263,8 +263,10 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswBatchingMaxIndexRecord(100001).
 				WithHnswBatchingReindexInterval(30002).
 				WithHnswBatchingMaxReindexRecord(100002).
-				WithHnswCacheMaxEntries(1001).
-				WithHnswCacheExpiry(1002).
+				WithHnswIndexCacheMaxEntries(1001).
+				WithHnswIndexCacheExpiry(1002).
+				WithHnswRecordCacheMaxEntries(1006).
+				WithHnswRecordCacheExpiry(1007).
 				WithHnswHealerParallelism(7).
 				WithHnswHealerMaxScanRatePerNode(1).
 				WithHnswHealerMaxScanPageSize(2).
@@ -288,6 +290,34 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswHealerSchedule("0 0 0 ? * *").
 				WithHnswHealerParallelism(10).
 				WithHnswVectorIntegrityCheck(false).
+				Build(),
+		},
+		{
+			name:           "test with record caching",
+			indexName:      "recidx",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i recidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-record-cache-max-entries 1001 --hnsw-record-cache-expiry 20s",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "recidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+				WithHnswRecordCacheMaxEntries(1001).
+				WithHnswRecordCacheExpiry(20000).
+				Build(),
+		},
+		{
+			name:           "test with infinite record cache expiry",
+			indexName:      "recinfidx",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i recinfidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-record-cache-expiry -1",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "recinfidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+				WithHnswRecordCacheExpiry(-1).
+				Build(),
+		},
+		{
+			name:           "test with infinite index cache expiry",
+			indexName:      "idxinfidx",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i idxinfidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --hnsw-index-cache-expiry -1",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "idxinfidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+				WithHnswIndexCacheExpiry(-1).
 				Build(),
 		},
 	}
@@ -515,10 +545,10 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 			name:           "test with hnsw cache params",
 			indexName:      "successful-update",
 			indexNamespace: "test",
-			cmd:            "index update -y -n test -i successful-update --hnsw-cache-max-entries 1000 --hnsw-cache-expiry 10s",
+			cmd:            "index update -y -n test -i successful-update --hnsw-index-cache-max-entries 1000 --hnsw-index-cache-expiry 10s",
 			expectedIndex: newBuilder().
-				WithHnswCacheExpiry(10000).
-				WithHnswCacheMaxEntries(1000).
+				WithHnswIndexCacheExpiry(10000).
+				WithHnswIndexCacheMaxEntries(1000).
 				Build(),
 		},
 		{
@@ -721,8 +751,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged
-1,list,test,vector,256,COSINE,0
+,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %
+1,list,test,vector,256,COSINE,0,0,0 B,0%
 `,
 		},
 		{
@@ -737,9 +767,9 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged
-1,list2,bar,barset,vector,256,HAMMING,0
-2,list1,test,,vector,256,COSINE,0
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %
+1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%
+2,list1,test,,vector,256,COSINE,0,0,0 B,0%
 `,
 		},
 		{
@@ -750,18 +780,23 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 				).WithLabels(map[string]string{"foo": "bar"}).
 					WithHnswMergeIndexParallelism(80).
 					WithHnswMergeReIndexParallelism(26).
+					WithHnswRecordCacheExpiry(20000).
+					WithHnswRecordCacheMaxEntries(1003).
 					Build(),
 				tests.NewIndexDefinitionBuilder(false,
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").
 					WithHnswMergeIndexParallelism(80).
 					WithHnswMergeReIndexParallelism(26).
+					// -1 means never expire
+					WithHnswRecordCacheExpiry(-1).
+					WithHnswRecordCacheMaxEntries(1002).
 					Build(),
 			},
 			cmd: "index list --verbose --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Vertices,Labels*,Storage,Index Parameters
-1,list2,bar,barset,vector,256,HAMMING,0,0,0,map[],"Namespace\,bar
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %,Vertices,Labels*,Storage,Index Parameters
+1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%,0,map[],"Namespace\,bar
 Set\,list2","HNSW
 Max Edges\,16
 Ef\,100
@@ -771,8 +806,10 @@ Batch Max Index Records*\,100000
 Batch Index Interval*\,30s
 Batch Max Reindex Records*\,10000
 Batch Reindex Interval*\,30s
-Cache Max Entries*\,2000000
-Cache Expiry*\,1h0m0s
+Index Cache Max Entries*\,2000000
+Index Cache Expiry*\,1h0m0s
+Record Cache Max Entries*\,1002
+Record Cache Expiry*\,-1ms
 Healer Max Scan Rate / Node*\,1000
 Healer Max Page Size*\,10000
 Healer Re-index % *\,10.00%
@@ -781,7 +818,7 @@ Healer Parallelism*\,1
 Merge Index Parallelism*\,80
 Merge Re-Index Parallelism*\,26
 Enable Vector Integrity Check\,true"
-2,list1,test,,vector,256,COSINE,0,0,0,map[foo:bar],"Namespace\,test
+2,list1,test,,vector,256,COSINE,0,0,0 B,0%,0,map[foo:bar],"Namespace\,test
 Set\,list1","HNSW
 Max Edges\,16
 Ef\,100
@@ -791,8 +828,10 @@ Batch Max Index Records*\,100000
 Batch Index Interval*\,30s
 Batch Max Reindex Records*\,10000
 Batch Reindex Interval*\,30s
-Cache Max Entries*\,2000000
-Cache Expiry*\,1h0m0s
+Index Cache Max Entries*\,2000000
+Index Cache Expiry*\,1h0m0s
+Record Cache Max Entries*\,1003
+Record Cache Expiry*\,20s
 Healer Max Scan Rate / Node*\,1000
 Healer Max Page Size*\,10000
 Healer Re-index % *\,10.00%
@@ -1798,14 +1837,24 @@ func (suite *CmdTestSuite) TestFailInvalidArg() {
 			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-batch-max-index-records\"",
 		},
 		{
-			name:           "test with bad hnsw-cache-max-entries",
-			cmd:            "index create -y --hnsw-cache-max-entries foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-cache-max-entries\"",
+			name:           "test with bad hnsw-index-cache-max-entries",
+			cmd:            "index create -y --hnsw-index-cache-max-entries foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-index-cache-max-entries\"",
 		},
 		{
-			name:           "test with bad hnsw-cache-expiry",
-			cmd:            "index create -y --hnsw-cache-expiry 10 --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
-			expectedErrStr: "Error: invalid argument \"10\" for \"--hnsw-cache-expiry\"",
+			name:           "test with bad hnsw-index-cache-expiry",
+			cmd:            "index create -y --hnsw-index-cache-expiry 10 --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"10\" for \"--hnsw-index-cache-expiry\"",
+		},
+		{
+			name:           "test with bad hnsw-record-cache-max-entries",
+			cmd:            "index create -y --hnsw-record-cache-max-entries foo --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"foo\" for \"--hnsw-record-cache-max-entries\"",
+		},
+		{
+			name:           "test with bad hnsw-record-cache-expiry",
+			cmd:            "index create -y --hnsw-record-cache-expiry 10 --host 1.1.1.1:3001  -n test -i index1 -d 10 -m SQUARED_EUCLIDEAN --vector-field vector1 --storage-namespace bar --storage-set testbar ",
+			expectedErrStr: "Error: invalid argument \"10\" for \"--hnsw-record-cache-expiry\"",
 		},
 		{
 			name:           "test with bad hnsw-healer-max-scan-rate-per-node",

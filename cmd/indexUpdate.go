@@ -20,7 +20,8 @@ var indexUpdateFlags = &struct {
 	indexLabels              map[string]string
 	hnswMaxMemQueueSize      flags.Uint32OptionalFlag
 	hnswBatch                flags.BatchingFlags
-	hnswCache                flags.CachingFlags
+	hnswIndexCache           flags.IndexCachingFlags
+	hnswRecordCache          flags.RecordCachingFlags
 	hnswHealer               flags.HealerFlags
 	hnswMerge                flags.MergeFlags
 	hnswVectorIntegrityCheck flags.BoolOptionalFlag
@@ -28,7 +29,8 @@ var indexUpdateFlags = &struct {
 	clientFlags:              rootFlags.clientFlags,
 	hnswMaxMemQueueSize:      flags.Uint32OptionalFlag{},
 	hnswBatch:                *flags.NewHnswBatchingFlags(),
-	hnswCache:                *flags.NewHnswCachingFlags(),
+	hnswIndexCache:           *flags.NewHnswIndexCachingFlags(),
+	hnswRecordCache:          *flags.NewHnswRecordCachingFlags(),
 	hnswHealer:               *flags.NewHnswHealerFlags(),
 	hnswMerge:                *flags.NewHnswMergeFlags(),
 	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
@@ -43,7 +45,8 @@ func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")  //nolint:lll // For readability
 	flagSet.Var(&indexUpdateFlags.hnswVectorIntegrityCheck, flags.HnswVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.") //nolint:lll // For readability
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
-	flagSet.AddFlagSet(indexUpdateFlags.hnswCache.NewFlagSet())
+	flagSet.AddFlagSet(indexUpdateFlags.hnswIndexCache.NewFlagSet())
+	flagSet.AddFlagSet(indexUpdateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswMerge.NewFlagSet())
 
@@ -70,14 +73,15 @@ For example:
 %s
 asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 --%s 16
 			`, HelpTxtSetupEnv, flags.BatchMaxIndexRecords, flags.BatchIndexInterval,
-			flags.HnswCacheExpiry, flags.HnswHealerParallelism, flags.HnswMergeParallelism),
+			flags.HnswIndexCacheExpiry, flags.HnswHealerParallelism, flags.HnswMergeParallelism),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return checkSeedsAndHost()
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			debugFlags := indexUpdateFlags.clientFlags.NewSLogAttr()
 			debugFlags = append(debugFlags, indexUpdateFlags.hnswBatch.NewSLogAttr()...)
-			debugFlags = append(debugFlags, indexUpdateFlags.hnswCache.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexUpdateFlags.hnswIndexCache.NewSLogAttr()...)
+			debugFlags = append(debugFlags, indexUpdateFlags.hnswRecordCache.NewSLogAttr()...)
 			debugFlags = append(debugFlags, indexUpdateFlags.hnswHealer.NewSLogAttr()...)
 			debugFlags = append(debugFlags, indexUpdateFlags.hnswMerge.NewSLogAttr()...)
 			logger.Debug("parsed flags",
@@ -114,8 +118,12 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				MaxMemQueueSize: indexUpdateFlags.hnswMaxMemQueueSize.Val,
 				BatchingParams:  batchingParams,
 				IndexCachingParams: &protos.HnswCachingParams{
-					MaxEntries: indexUpdateFlags.hnswCache.MaxEntries.Val,
-					Expiry:     indexUpdateFlags.hnswCache.Expiry.Int64(),
+					MaxEntries: indexUpdateFlags.hnswIndexCache.MaxEntries.Val,
+					Expiry:     indexUpdateFlags.hnswIndexCache.Expiry.Int64(),
+				},
+				RecordCachingParams: &protos.HnswCachingParams{
+					MaxEntries: indexUpdateFlags.hnswRecordCache.MaxEntries.Val,
+					Expiry:     indexUpdateFlags.hnswRecordCache.Expiry.Int64(),
 				},
 				HealerParams: &protos.HnswHealerParams{
 					MaxScanRatePerNode: indexUpdateFlags.hnswHealer.MaxScanRatePerNode.Val,

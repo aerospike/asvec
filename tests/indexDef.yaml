@@ -10,6 +10,9 @@ indices:
         indexCachingParams: 
           maxEntries: 1001
           expiry: 1002
+        recordCachingParams: 
+          maxEntries: 1006
+          expiry: 1007
         ef: 101
         efConstruction: 102
         healerParams:

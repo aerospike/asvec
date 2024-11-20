@@ -1,6 +1,6 @@
 module asvec
 
-go 1.22.5
+go 1.22
 
 require (
 	github.com/aerospike/avs-client-go v0.0.0-20241025173655-4553b2b412f8

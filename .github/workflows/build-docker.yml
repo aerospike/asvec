@@ -1,0 +1,145 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - VEC-413*
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build and deploy'
+        required: false
+
+env:
+  REPO: 'artifact.aerospike.io/ecosystem-container-dev-local'
+  JFROG_CLI_BUILD_NAME: 'asvec'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v3
+        with:
+          version: 'latest'
+
+      - name: Login to Artifact Aerospike Docker Registry
+        run: |
+            jf docker login artifact.aerospike.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+            docker pull artifact.aerospike.io/ecosystem-container-dev-local/asvec:latest || true
+            docker push artifact.aerospike.io/ecosystem-container-dev-local/asvec:latest || true
+        env:
+            JFROG_CLI_OFFER_CONFIG: 'false'
+  
+      - name: Configure JFrog CLI
+        run: |
+          jf c add \
+            --url https://artifact.aerospike.io/ \
+            --user ${{ secrets.JFROG_USERNAME }} \
+            --access-token ${{ secrets.JFROG_ACCESS_TOKEN }} \
+            artifact
+
+          jf c use artifact
+        env:
+          JFROG_CLI_OFFER_CONFIG: 'false'
+
+      - name: Set Version
+        run: |
+            if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+                VERSION_ARG="${{ github.event.inputs.version }}"
+            elif [ "${{ github.event_name }}" == "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+                VERSION_ARG="${GITHUB_REF#refs/tags/}"
+            else
+                VERSION_ARG=$(cat RELEASE)
+            fi
+            BUILD_ID=${GITHUB_RUN_NUMBER}
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+                VERSION="${VERSION_ARG}"
+            else
+                VERSION="${VERSION_ARG}-${BUILD_ID}"
+            fi
+            echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Build Docker Image (No Push)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "WE ARE PUSHING BUT JUST FOR DEV TEST"
+          jf docker buildx bake \
+            --set asvec.args.VERSION_ARG=${{ env.VERSION }} \
+            --set asvec.args.REPO=${{ env.REPO }} \
+            --set asvec.tags.0=asvec:test-${{ github.run_id }} \
+            --file docker/asvec.docker/bake.hcl \
+            
+        env:
+          DOCKER_BUILDKIT: '1'
+          
+      - name: Build and Push Docker Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          jf docker buildx bake \
+            --set asvec.args.VERSION_ARG=${{ env.VERSION }} \
+            --set asvec.args.REPO=${{ env.REPO }} \
+            --set asvec.tags.0=${{ env.REPO }}/asvec:${{ env.VERSION }} \
+            --file docker/asvec.docker/bake.hcl \
+            --push \
+            --metadata-file=build-metadata
+        env:
+          DOCKER_BUILDKIT: '1'
+
+      - name: Build and Push Docker Image with 'latest' Tag (Release)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          jf docker buildx bake \
+            --set asvec.args.VERSION_ARG=${{ env.VERSION }} \
+            --set asvec.args.REPO=${{ env.REPO }} \
+            --set asvec.tags.0=${{ env.REPO }}/asvec:${{ env.VERSION }} \
+            --set asvec.tags.1=${{ env.REPO }}/asvec:latest \
+            --file docker/asvec.docker/bake.hcl \
+            --push \
+            --metadata-file=build-metadata
+        env:
+          DOCKER_BUILDKIT: '1'
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Extract Image Name and Digest
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        run: |
+          jq -r '.[] | {digest: .["containerimage.digest"], names: .["image.name"] | split(",")} | "\(.names[0])@\(.digest)"' build-metadata > meta-info
+
+      - name: Create Docker Build Info
+        if: github.event_name == 'push'  && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+
+        run: |
+          jf rt build-docker-create \
+            --build-name "${{ env.JFROG_CLI_BUILD_NAME }}" \
+            --build-number "${{ env.VERSION }}" \
+            --image-file ./meta-info \
+            --project ecosystem \
+            ecosystem-container-dev-local
+      - name: Publish Build Info
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        run: |
+          jf rt build-publish \
+            --detailed-summary \
+            --project ecosystem \
+            "${{ env.JFROG_CLI_BUILD_NAME }}" "${{ env.VERSION }}"

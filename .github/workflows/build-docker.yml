@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - VEC-413*
     tags:
       - 'v*.*.*'
   pull_request:

@@ -81,7 +81,6 @@ jobs:
       - name: Build Docker Image (No Push)
         if: github.event_name == 'pull_request'
         run: |
-          echo "WE ARE PUSHING BUT JUST FOR DEV TEST"
           jf docker buildx bake \
             --set asvec.args.VERSION_ARG=${{ env.VERSION }} \
             --set asvec.args.REPO=${{ env.REPO }} \
@@ -90,7 +89,7 @@ jobs:
             
         env:
           DOCKER_BUILDKIT: '1'
-          
+
       - name: Build and Push Docker Image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |

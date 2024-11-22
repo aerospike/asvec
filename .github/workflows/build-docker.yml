@@ -43,6 +43,7 @@ jobs:
       - name: Login to Artifact Aerospike Docker Registry
         run: |
             jf docker login artifact.aerospike.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+            # needed these to get the docker cache working
             docker pull artifact.aerospike.io/ecosystem-container-dev-local/asvec:latest || true
             docker push artifact.aerospike.io/ecosystem-container-dev-local/asvec:latest || true
         env:

@@ -5,3 +5,6 @@ tmp
 /coverage
 VERSION.md
 /.vscode
+build-metadata
+bin/asvec-linux-amd64
+docker/asvec.docker/meta-info

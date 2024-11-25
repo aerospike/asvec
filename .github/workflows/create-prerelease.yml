@@ -35,6 +35,12 @@ jobs:
               uses: actions/checkout@v3
               with:
                 fetch-depth: 0
+
+            - name: "Install JFrog CLI"
+              uses: jfrog/setup-jfrog-cli@v4
+              with:
+                version: 'latest'
+        
             - name: "Install Homebrew"
               run: /bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
             - name: "Install Dependencies"

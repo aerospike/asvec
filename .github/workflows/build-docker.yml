@@ -23,6 +23,9 @@ on:
 env:
   REPO: 'artifact.aerospike.io/ecosystem-container-dev-local'
   JFROG_CLI_BUILD_NAME: 'asvec'
+  JFROG_CLI_LOG_LEVEL: DEBUG 
+  JFROG_CLI_BUILD_PROJECT: 'ecosystem'
+  
 
 jobs:
   build-and-push:
@@ -102,6 +105,7 @@ jobs:
           jf docker buildx bake \
             --set asvec.tags.0=asvec:test-${{ github.run_id }} \
             --file docker/asvec.docker/bake.hcl \
+            --project ecosystem
             
         env:
           DOCKER_BUILDKIT: '1'
@@ -114,6 +118,8 @@ jobs:
             --file docker/asvec.docker/bake.hcl \
             --push \
             --metadata-file=build-metadata
+            --project ecosystem \
+
         env:
           DOCKER_BUILDKIT: '1'
 

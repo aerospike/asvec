@@ -142,6 +142,8 @@ jobs:
       - name: Publish Build Info
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
         run: |
+          jf rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}" --project ecosystem 
+          jf rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}" --project ecosystem
 
           jf rt build-publish \
             --detailed-summary \ 

@@ -117,12 +117,6 @@ jobs:
         env:
           DOCKER_BUILDKIT: '1'
 
-      - name: Tag a release with latest (Release)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
-        run: |
-          jf docker buildx imagetools create --tag ${{ env.REPO }}/asvec:latest ${{ env.REPO }}/asvec:${{ env.VERSION }}
-        env:
-          DOCKER_BUILDKIT: '1'
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -157,27 +151,36 @@ jobs:
             --project ecosystem \
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
 
-      - name: Create Docker Build Info for latest
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push'  && (startsWith(github.ref, 'refs/tags/')))
-        run: |
 
-            jf rt build-docker-create \
-            --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" \
-            --build-number "${{ env.VERSION }}" \
-            --image-file ./meta-info \
-            --project ecosystem \
-            ecosystem-container-dev-local
+# All of the following steps are commented out because they are just to handle "latest" tag and it is typically not desired in a release bundle
+    #   - name: Tag a release with latest (Release)
+    #     if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+    #     run: |
+    #       jf docker buildx imagetools create --tag ${{ env.REPO }}/asvec:latest ${{ env.REPO }}/asvec:${{ env.VERSION }}
+    #     env:
+    #       DOCKER_BUILDKIT: '1'
+
+    #   - name: Create Docker Build Info for latest
+    #     if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push'  && (startsWith(github.ref, 'refs/tags/')))
+    #     run: |
+
+    #         jf rt build-docker-create \
+    #         --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" \
+    #         --build-number "${{ env.VERSION }}" \
+    #         --image-file ./meta-info \
+    #         --project ecosystem \
+    #         ecosystem-container-dev-local
         
-      - name: Publish Build Info for latest
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' &&  startsWith(github.ref, 'refs/tags/'))
-        run: |
-            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
-            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
-            jfrog rt build-add-dependencies "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}".
-            jf rt build-publish \
-            --detailed-summary \
-            --project ecosystem \
-            "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
+    #   - name: Publish Build Info for latest
+    #     if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' &&  startsWith(github.ref, 'refs/tags/'))
+    #     run: |
+    #         jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
+    #         jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
+    #         jfrog rt build-add-dependencies "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}".
+    #         jf rt build-publish \
+    #         --detailed-summary \
+    #         --project ecosystem \
+    #         "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
             
       - name: Create Release Bundle
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true'|| (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/')))
@@ -192,10 +195,6 @@ jobs:
                   "project": "ecosystem",
                   "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-container"
                 },
-                {
-                  "project": "ecosystem",
-                  "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest"
-                }
               ]
             }' > release-bundle-spec.json
             cat release-bundle-spec.json

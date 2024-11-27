@@ -149,7 +149,7 @@ jobs:
           jf rt build-add-git --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}" 
 
           jf rt build-publish \
-            --detailed-summary \ 
+            --detailed-summary \
             --project ecosystem \
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
 

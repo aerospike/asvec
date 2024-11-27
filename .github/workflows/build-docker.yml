@@ -148,6 +148,10 @@ jobs:
       - name: Publish Build Info
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
         run: |
+          jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
+          jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
+          jfrog rt build-add-dependencies "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}".
+
           jf rt build-publish \
             --detailed-summary \
             --project ecosystem \
@@ -167,6 +171,9 @@ jobs:
       - name: Publish Build Info for latest
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' &&  startsWith(github.ref, 'refs/tags/'))
         run: |
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
+            jfrog rt build-add-dependencies "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}".
             jf rt build-publish \
             --detailed-summary \
             --project ecosystem \

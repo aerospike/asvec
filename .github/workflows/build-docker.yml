@@ -196,7 +196,7 @@ jobs:
                 {
                   "project": "ecosystem",
                   "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-container"
-                },
+                }
               ]
             }' > release-bundle-spec.json
             cat release-bundle-spec.json

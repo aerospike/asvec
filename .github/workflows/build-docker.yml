@@ -144,7 +144,7 @@ jobs:
         run: |
           jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
           jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
-          jfrog rt build-add-dependencies "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}".
+          jfrog rt build-add-dependencies "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
 
           jf rt build-publish \
             --detailed-summary \ 

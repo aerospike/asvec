@@ -118,7 +118,7 @@ jobs:
           DOCKER_BUILDKIT: '1'
 
       - name: Tag a release with latest (Release)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
         run: |
           jf docker buildx imagetools create --tag ${{ env.REPO }}/asvec:latest ${{ env.REPO }}/asvec:${{ env.VERSION }}
         env:
@@ -154,7 +154,7 @@ jobs:
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ env.VERSION }}"
 
       - name: Create Docker Build Info for latest
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release || (github.event_name == 'push'  && (startsWith(github.ref, 'refs/tags/')))
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push'  && (startsWith(github.ref, 'refs/tags/')))
         run: |
 
             jf rt build-docker-create \
@@ -165,7 +165,7 @@ jobs:
             ecosystem-container-dev-local
         
       - name: Publish Build Info for latest
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release|| (github.event_name == 'push' &&  startsWith(github.ref, 'refs/tags/'))
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true' || (github.event_name == 'push' &&  startsWith(github.ref, 'refs/tags/'))
         run: |
             jf rt build-publish \
             --detailed-summary \
@@ -173,7 +173,7 @@ jobs:
             "${{ env.JFROG_CLI_BUILD_NAME }}-container-latest" "${{ env.VERSION }}"
             
       - name: Create Release Bundle
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release|| (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/')))
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_release == 'true'|| (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/')))
         run: |
           echo '{
           

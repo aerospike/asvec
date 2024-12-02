@@ -53,6 +53,20 @@ func formatEndpoints(nodeID uint64, nodeEndpoints map[uint64]*protos.ServerEndpo
 	return strings.Join(nodeToEndpointsStr, "\n")
 }
 
+func formatRoles(roles []protos.NodeRole) []string {
+	formattedRoles := []string{}
+
+	for _, role := range roles {
+		formattedRoles = append(formattedRoles, formatRole(role))
+	}
+
+	return formattedRoles
+}
+
+func formatRole(role protos.NodeRole) string {
+	return role.String()
+}
+
 func renderTable(t table.Writer, format int) string {
 	if format == 0 {
 		return t.Render()

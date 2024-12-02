@@ -27,7 +27,17 @@ func NewNodeTableWriter(writer io.Writer, isLB bool, logger *slog.Logger) *NodeT
 	t := NodeTableWriter{NewDefaultWriter(writer), isLB, logger}
 
 	t.table.SetTitle("Nodes")
-	t.table.AppendHeader(table.Row{"Node", "Roles", "Endpoint", "Cluster ID", "Version", "Visible Nodes"}, rowConfigAutoMerge)
+	t.table.AppendHeader(
+		table.Row{
+			"Node",
+			"Roles",
+			"Endpoint",
+			"Cluster ID",
+			"Version",
+			"Visible Nodes",
+		},
+		rowConfigAutoMerge,
+	)
 	t.table.SetAutoIndex(true)
 	t.table.SortBy([]table.SortBy{
 		{Name: "Node", Mode: table.Asc},
@@ -59,8 +69,10 @@ func (itw *NodeTableWriter) AppendNodeRow(node *NodeInfo) {
 		row = append(row, id)
 	}
 
-	row = append(row, formatRoles(node.About.GetRoles()))
-	row = append(row, formatEndpoint(node.ConnectedEndpoint))
+	row = append(row,
+		formatRoles(node.About.GetRoles()),
+		formatEndpoint(node.ConnectedEndpoint),
+	)
 
 	if node.State != nil {
 		row = append(row, node.State.ClusterId.GetId())

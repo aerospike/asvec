@@ -52,7 +52,13 @@ func Test_formatRoles(t *testing.T) {
 	}{
 		{
 			name: "TestMultipleRoles",
-			args: args{roles: []protos.NodeRole{protos.NodeRole_INDEX_QUERY, protos.NodeRole_INDEX_UPDATE, protos.NodeRole_KV_READ}},
+			args: args{
+				roles: []protos.NodeRole{
+					protos.NodeRole_INDEX_QUERY,
+					protos.NodeRole_INDEX_UPDATE,
+					protos.NodeRole_KV_READ,
+				},
+			},
 			want: []string{"INDEX_QUERY", "INDEX_UPDATE", "KV_READ"},
 		},
 		{

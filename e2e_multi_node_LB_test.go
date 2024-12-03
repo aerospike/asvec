@@ -61,7 +61,7 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
 			true,
 			`Nodes
 ,Node,Roles,Endpoint,Cluster ID,Version,Visible Nodes
-1,LB,N/A,127.0.0.1:10000,7975277036330396396,1.0.0,"{
+1,Seed,[INDEX_QUERY INDEX_UPDATE],127.0.0.1:10000,7975277036330396396,1.0.0,"{
     1103823447824: [1.1.1.1:10000]
     2207646885648: [2.2.2.2:10000]
     3311470323472: [3.3.3.3:10000]

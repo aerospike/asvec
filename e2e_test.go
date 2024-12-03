@@ -1,4 +1,4 @@
-//go:build integration || integration_large
+//go:build integration
 
 package main
 

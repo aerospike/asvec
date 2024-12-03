@@ -5,7 +5,9 @@ services:
     #   - "3000:3000"
     volumes:
       - ./config/aerospike.conf:/opt/aerospike/etc/aerospike/aerospike.conf
-      - ./config/features.conf:/opt/aerospike/etc/aerospike/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /opt/aerospike/etc/aerospike/features.conf
     command:
       - "--config-file"
       - "/opt/aerospike/etc/aerospike/aerospike.conf"
@@ -23,7 +25,9 @@ services:
     image: aerospike/aerospike-vector-search:1.0.0
     volumes:
       - ./config/aerospike-vector-search-1.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
-      - ./config/features.conf:/etc/aerospike-vector-search/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /etc/aerospike-vector-search/features.conf
     healthcheck:
       test: ["CMD", "curl", "-f", "http://avs-1:5040/manage/rest/v1"]
       interval: 1s
@@ -38,7 +42,9 @@ services:
     image: aerospike/aerospike-vector-search:1.0.0
     volumes:
       - ./config/aerospike-vector-search-2.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
-      - ./config/features.conf:/etc/aerospike-vector-search/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /etc/aerospike-vector-search/features.conf
     healthcheck:
       test: ["CMD", "curl", "-f", "http://avs-2:5040/manage/rest/v1"]
       interval: 1s
@@ -53,7 +59,9 @@ services:
     image: aerospike/aerospike-vector-search:1.0.0
     volumes:
       - ./config/aerospike-vector-search-3.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
-      - ./config/features.conf:/etc/aerospike-vector-search/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /etc/aerospike-vector-search/features.conf
     healthcheck:
       test: ["CMD", "curl", "-f", "http://avs-3:5040/manage/rest/v1"]
       interval: 1s

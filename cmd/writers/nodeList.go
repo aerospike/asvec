@@ -69,10 +69,14 @@ func (itw *NodeTableWriter) AppendNodeRow(node *NodeInfo) {
 		row = append(row, id)
 	}
 
-	row = append(row,
-		formatRoles(node.About.GetRoles()),
-		formatEndpoint(node.ConnectedEndpoint),
-	)
+	// If the node is a load balancer, it does not have roles.
+	if !itw.isLB {
+		row = append(row, formatRoles(node.About.GetRoles()))
+	} else {
+		row = append(row, "N/A")
+	}
+
+	row = append(row, formatEndpoint(node.ConnectedEndpoint))
 
 	if node.State != nil {
 		row = append(row, node.State.ClusterId.GetId())

@@ -8,3 +8,4 @@ VERSION.md
 build-metadata
 bin/asvec-linux-amd64
 docker/asvec.docker/meta-info
+meta-info

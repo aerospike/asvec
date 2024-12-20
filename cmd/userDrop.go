@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
+
+	"github.com/aerospike/asvec/cmd/flags"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

@@ -1,10 +1,11 @@
 package flags
 
 import (
-	"asvec/cmd/writers"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/aerospike/asvec/cmd/writers"
 )
 
 // A cobra PFlag to parse and store a vector of floats or booleans.

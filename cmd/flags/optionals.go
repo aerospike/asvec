@@ -1,11 +1,12 @@
 package flags
 
 import (
-	"asvec/utils"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aerospike/asvec/utils"
 )
 
 const optionalEmptyString = "<nil>"

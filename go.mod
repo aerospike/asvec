@@ -1,4 +1,4 @@
-module asvec
+module github.com/aerospike/asvec
 
 go 1.22.0
 

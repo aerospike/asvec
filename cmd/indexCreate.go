@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"asvec/cmd/flags"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/aerospike/asvec/cmd/flags"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

@@ -3,8 +3,9 @@
 package cmd
 
 import (
-	"asvec/cmd/flags"
 	"testing"
+
+	"github.com/aerospike/asvec/cmd/flags"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/stretchr/testify/assert"

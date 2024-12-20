@@ -1,6 +1,6 @@
 package main
 
-import "asvec/cmd"
+import "github.com/aerospike/asvec/cmd"
 
 func main() {
 	cmd.Execute()

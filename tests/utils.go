@@ -3,7 +3,6 @@
 package tests
 
 import (
-	"asvec/utils"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/aerospike/asvec/utils"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

@@ -3,8 +3,6 @@
 package main
 
 import (
-	"asvec/cmd/flags"
-	"asvec/tests"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -18,6 +16,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aerospike/asvec/tests"
+
+	"github.com/aerospike/asvec/cmd/flags"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

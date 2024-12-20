@@ -3,11 +3,12 @@
 package main
 
 import (
-	"asvec/tests"
 	"context"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/aerospike/asvec/tests"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/stretchr/testify/suite"

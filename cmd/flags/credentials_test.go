@@ -3,8 +3,9 @@
 package flags
 
 import (
-	"asvec/utils"
 	"testing"
+
+	"github.com/aerospike/asvec/utils"
 )
 
 func TestCredentialsFlag_Set(t *testing.T) {

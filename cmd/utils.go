@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/aerospike/asvec/cmd/flags"
 
 	"golang.org/x/term"
 

@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"asvec/cmd/flags"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/aerospike/asvec/cmd/flags"
 
 	"github.com/aerospike/tools-common-go/config"
 	common "github.com/aerospike/tools-common-go/flags"
@@ -63,7 +64,7 @@ asvec --help
 		}
 
 		cmd.SilenceUsage = true
-		config.SetDefaultConfName("asvec")
+		config.SetDefaultConfName("module asvec")
 		config.BindPFlags(cmd.Flags(), rootFlags.clusterName)
 
 		configFile, err := config.InitConfig(rootFlags.confFile, "", cmd.Flags())

@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"asvec/cmd/writers"
 	"fmt"
 	"io"
 	"log/slog"
 	"sync/atomic"
+
+	"github.com/aerospike/asvec/cmd/writers"
 
 	tableColor "github.com/jedib0t/go-pretty/v6/text"
 

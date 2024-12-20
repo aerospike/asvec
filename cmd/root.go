@@ -64,7 +64,7 @@ asvec --help
 		}
 
 		cmd.SilenceUsage = true
-		config.SetDefaultConfName("module asvec")
+		config.SetDefaultConfName("asvec")
 		config.BindPFlags(cmd.Flags(), rootFlags.clusterName)
 
 		configFile, err := config.InitConfig(rootFlags.confFile, "", cmd.Flags())

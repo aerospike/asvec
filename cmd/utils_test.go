@@ -5,7 +5,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/stretchr/testify/assert"

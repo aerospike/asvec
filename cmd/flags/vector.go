@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aerospike/asvec/cmd/writers"
+	"github.com/aerospike/asvec/module-rename/cmd/writers"
 )
 
 // A cobra PFlag to parse and store a vector of floats or booleans.

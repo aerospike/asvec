@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"reflect"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	"github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

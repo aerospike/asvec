@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/spf13/cobra"

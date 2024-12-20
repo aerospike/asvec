@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aerospike/asvec/cmd/writers"
+	"github.com/aerospike/asvec/module-rename/cmd/writers"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	"github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

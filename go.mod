@@ -1,4 +1,4 @@
-module github.com/aerospike/asvec
+module github.com/aerospike/asvec/module-rename
 
 go 1.22.0
 

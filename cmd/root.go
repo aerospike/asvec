@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	"github.com/aerospike/tools-common-go/config"
 	common "github.com/aerospike/tools-common-go/flags"

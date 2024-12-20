@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aerospike/asvec/tests"
+	"github.com/aerospike/asvec/module-rename/tests"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/stretchr/testify/suite"

@@ -5,7 +5,7 @@ package flags
 import (
 	"testing"
 
-	"github.com/aerospike/asvec/utils"
+	"github.com/aerospike/asvec/module-rename/utils"
 )
 
 func TestCredentialsFlag_Set(t *testing.T) {

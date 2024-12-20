@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/asvec/utils"
+	"github.com/aerospike/asvec/module-rename/utils"
 )
 
 const optionalEmptyString = "<nil>"

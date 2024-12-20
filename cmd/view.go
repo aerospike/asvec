@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"github.com/aerospike/asvec/cmd/writers"
+	"github.com/aerospike/asvec/module-rename/cmd/writers"
 
 	tableColor "github.com/jedib0t/go-pretty/v6/text"
 

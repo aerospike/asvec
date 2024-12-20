@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aerospike/asvec/cmd/flags"
+	"github.com/aerospike/asvec/module-rename/cmd/flags"
 
 	"golang.org/x/term"
 

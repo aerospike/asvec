@@ -13,7 +13,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/aerospike/asvec/utils"
+	"github.com/aerospike/asvec/module-rename/utils"
 
 	avs "github.com/aerospike/avs-client-go"
 	"github.com/aerospike/avs-client-go/protos"

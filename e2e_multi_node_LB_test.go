@@ -60,8 +60,8 @@ func (suite *MultiNodeLBCmdTestSuite) TestNodeListCmd() {
 			fmt.Sprintf("node ls --format 1 --no-color --seeds %s", suite.AvsHostPort.String()),
 			true,
 			`Nodes
-,Node,Endpoint,Cluster ID,Version,Visible Nodes
-1,Seed,localhost:10000,<cluster-id>,<version>,"{
+,Node,Roles,Endpoint,Cluster ID,Version,Visible Nodes
+1,Seed,[INDEX_QUERY INDEX_UPDATE],localhost:10000,<cluster-id>,<version>,"{
     1103823447824: [1.1.1.1:10000]
     2207646885648: [2.2.2.2:10000]
     3311470323472: [3.3.3.3:10000]
@@ -79,8 +79,8 @@ Possible scenarios:
 			fmt.Sprintf("node ls --format 1 --no-color --host %s", suite.AvsHostPort.String()),
 			false,
 			`Nodes
-,Node,Endpoint,Cluster ID,Version,Visible Nodes
-1,LB,localhost:10000,<cluster-id>,<version>,"{
+,Node,Roles,Endpoint,Cluster ID,Version,Visible Nodes
+1,LB,N/A,localhost:10000,<cluster-id>,<version>,"{
     1103823447824: [1.1.1.1:10000]
     2207646885648: [2.2.2.2:10000]
     3311470323472: [3.3.3.3:10000]

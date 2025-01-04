@@ -5,7 +5,9 @@ services:
     #   - "3000:3000"
     volumes:
       - ./config/aerospike.conf:/opt/aerospike/etc/aerospike/aerospike.conf
-      - ./config/features.conf:/opt/aerospike/etc/aerospike/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /opt/aerospike/etc/aerospike/features.conf
     command:
       - "--config-file"
       - "/opt/aerospike/etc/aerospike/aerospike.conf"
@@ -20,12 +22,14 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search:0.11.1
+    image: aerospike/aerospike-vector-search:1.0.0
     ports:
       - "10000:10000"
     volumes:
       - ./config/aerospike-vector-search-1.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
-      - ./config/features.conf:/etc/aerospike-vector-search/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /etc/aerospike-vector-search/features.conf
     healthcheck:
       test: ["CMD", "curl", "-f", "http://avs-1:5040/manage/rest/v1"]
       interval: 5s
@@ -37,12 +41,14 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search:0.11.1
+    image: aerospike/aerospike-vector-search:1.0.0
     ports:
       - "10001:10001"
     volumes:
       - ./config/aerospike-vector-search-2.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
-      - ./config/features.conf:/etc/aerospike-vector-search/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /etc/aerospike-vector-search/features.conf
     healthcheck:
       test: ["CMD", "curl", "-f", "http://avs-2:5040/manage/rest/v1"]
       interval: 5s
@@ -54,12 +60,14 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search:0.11.1
+    image: aerospike/aerospike-vector-search:1.0.0
     ports:
       - "10002:10002"
     volumes:
       - ./config/aerospike-vector-search-3.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
-      - ./config/features.conf:/etc/aerospike-vector-search/features.conf
+      - type: bind
+        source: ./config/features.conf
+        target: /etc/aerospike-vector-search/features.conf
     healthcheck:
       test: ["CMD", "curl", "-f", "http://avs-3:5040/manage/rest/v1"]
       interval: 5s

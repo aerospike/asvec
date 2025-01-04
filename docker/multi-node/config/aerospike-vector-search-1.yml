@@ -6,6 +6,9 @@ cluster:
   # Unique identifier for this cluster.
   cluster-name: multi-node-avs
 
+  node-roles:
+    - INDEX_QUERY
+
 # The Proximus service listening ports, TLS and network interface.
 service:
   ports:

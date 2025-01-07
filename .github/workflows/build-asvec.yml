@@ -1,26 +1,32 @@
-name: Build and Create Pre-Release
+name: Build asvec
 
 on:
-    workflow_dispatch:
-        inputs:
-            version:
-              description: 'If this is a release what version is this for? If this is a pre-release what version are you developing toward?'
-              required: true
-              type: string
-            preRelease:
-                description: 'Create Pre-release? -SNAPSHOT-{COMMIT} will be appended to the version above.'
-                required: false
-                type: boolean
-            deletePrevBuild:
-              description: 'Cleanup existing pre-releases?'
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+      inputs:
+          version:
+            description: 'If this is a release what version is this for? If this is a pre-release what version are you developing toward?'
+            required: true
+            type: string
+          preRelease:
+              description: 'Create Pre-release? -SNAPSHOT-{COMMIT} will be appended to the version above.'
               required: false
               type: boolean
+          deletePrevBuild:
+            description: 'Cleanup existing pre-releases?'
+            required: false
+            type: boolean
 
 
 jobs:
     build:
         outputs:
-          version: ${{ steps.save-version.outputs.version }}
+          version: ${{ steps.parse-version.outputs.version }}
+          is-snapshot: ${{ steps.parse-version.outputs.is-snapshot }}
           rpm-version: ${{ steps.save-version.outputs.rpm-version }}
           artifacts: ${{ steps.save-version.outputs.artifacts }}
           rpm-artifacts: ${{ steps.save-version.outputs.rpm-artifacts }}
@@ -35,6 +41,40 @@ jobs:
               uses: actions/checkout@v3
               with:
                 fetch-depth: 0
+
+            - name: "Extract Version and Snapshot"
+              id: parse-version
+              run: |
+                # Default to version from workflow_dispatch or tag
+                if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+                  # Manual build: Use version input
+                  TAG="${{ inputs.version }}"
+                  echo "Triggered manually with version: ${TAG}"
+                elif [[ "${{ github.event_name }}" == "push" ]]; then
+                  # Push event: Extract tag from GITHUB_REF
+                  TAG=${GITHUB_REF#refs/tags/}
+                  echo "Triggered by push with tag: ${TAG}"
+                else
+                  echo "Unsupported event: ${{ github.event_name }}"
+                  exit 1
+                fi
+      
+                # Remove "v" prefix to get the version
+                VERSION=${TAG#v}
+      
+                # Check if it's a snapshot
+                if [[ "$VERSION" == *-SNAPSHOT-* ]]; then
+                  SNAPSHOT="true"
+                else
+                  SNAPSHOT="false"
+                fi
+      
+                # Output the results
+                echo "VERSION=${VERSION}" >> $GITHUB_ENV
+                echo "SNAPSHOT=${SNAPSHOT}" >> $GITHUB_ENV
+                # Some argument here about uppoer case for env and lower case for output ¯\_(ツ)_/¯ 
+                echo "version=${VERSION}" >> $GITHUB_OUTPUT
+                echo "is-snapshot=${SNAPSHOT}" >> $GITHUB_OUTPUT
 
             - name: "Install JFrog CLI"
               uses: jfrog/setup-jfrog-cli@v4
@@ -67,44 +107,19 @@ jobs:
                 hdiutil attach -mountpoint /Volumes/Packages Packages.dmg
                 cd /Volumes/Packages
                 sudo installer -pkg Install\ Packages.pkg -target /
-            - name: Tag Before Building
-              id: tag
-              if: inputs.version != ''
-              env:
-                TAG: ${{ inputs.version }}
-                SNAPSHOT: ${{ inputs.preRelease }}
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                echo "Tagging the repository with ${TAG}"
-                git config --global user.email "actions@github.com"
-                git config --global user.name "GitHub Actions"
-
-                if [ "${SNAPSHOT}" = "true" ]; then
-                  COMMIT=$(git rev-parse --short HEAD)
-                  TAG="${TAG}-SNAPSHOT-${COMMIT}"
-                fi
-                
-                # Ensure the tag does not already exist
-                if ! gh release view "${TAG}" > /dev/null 2>&1; then
-                  git tag -a "${TAG}" -m "Release ${TAG}"
-                  git push origin "${TAG}"
-                  
-                  echo "Tag ${TAG} created and pushed successfully."
-                else
-                  echo "Tag ${TAG} already exists."
-                fi
                 
             - name: "Compile"
               env:
-                  ADDCOMMIT: ${{ inputs.preRelease }}
+                  ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
               run: |
+                # Question for Dylan @dwelschspike when he reviews this. What was Jesse doing with this build-prelease and build-official? I can't see it being used anywhere...
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
                 export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
                 cd ~/work/asvec/asvec && make cleanall && make ${buildcmd}
             - name: "Create linux packages"
               env:
-                  ADDCOMMIT: ${{ inputs.preRelease }}
+                ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
               run: |
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
@@ -112,7 +127,7 @@ jobs:
                 cd ~/work/asvec/asvec && make pkg-linux
             - name: "Create windows zips"
               env:
-                  ADDCOMMIT: ${{ inputs.preRelease }}
+                  ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
               run: |
                 buildcmd="build-prerelease"
                 [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"

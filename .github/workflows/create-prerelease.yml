@@ -336,7 +336,7 @@ jobs:
           JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
       - name: "Upload deb builds to JFrog"
         run: |
-          cd asvec-artifacts
+          find .
           for file in ${{needs.build.outputs.deb-artifacts}}; do
             if [[ "$file" == *.deb ]]; then
                 arch=$(dpkg --info "$file" | grep 'Architecture' | awk '{print $2}')

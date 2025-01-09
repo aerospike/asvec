@@ -353,7 +353,6 @@ jobs:
         
       - name: "Upload rpm builds to JFrog"
         run: |
-            cd asvec-artifacts
             for file in *; do
                 if [[ "$file" == *.rpm ]]; then
                     arch=$(rpm -q --qf "%{ARCH}" -p "$file")

@@ -128,7 +128,7 @@ jobs:
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
         run: |
-          ./go-setup.sh
+          ~/go-setup.sh
           buildcmd="build-prerelease"
           [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
           export PATH=$PATH:/usr/local/bin:/usr/local/go/bin

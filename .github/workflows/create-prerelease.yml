@@ -205,7 +205,7 @@ jobs:
           echo version=${VER} >> $GITHUB_OUTPUT
 
           RPM_VER=$(echo ${VER} | sed 's/-/_/g')
-          echo rpm-verion=${RPM_VER} >> $GITHUB_OUTPUT
+          echo rpm-version=${RPM_VER} >> $GITHUB_OUTPUT
 
           ARTIFACTS="asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip"
           echo "artifacts=${ARTIFACTS}" >> $GITHUB_OUTPUT

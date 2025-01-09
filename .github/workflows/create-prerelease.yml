@@ -1,6 +1,26 @@
 name: Build asvec
+name: Build asvec
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'If this is a release what version is this for? If this is a pre-release what version are you developing toward?'
+        required: true
+        type: string
+      preRelease:
+        description: 'Create Pre-release? -SNAPSHOT-{COMMIT} will be appended to the version above.'
+        required: false
+        type: boolean
+      deletePrevBuild:
+        description: 'Cleanup existing pre-releases?'
+        required: false
+        type: boolean
+env:
+  JFROG_CLI_BUILD_NAME: 'asvec'
+  JFROG_CLI_LOG_LEVEL: DEBUG
+  JFROG_CLI_BUILD_PROJECT: 'ecosystem'
+  ARTIFACT_NAME: 'asvec'
   workflow_dispatch:
     inputs:
       version:
@@ -201,25 +221,45 @@ jobs:
 
           RPM_VER=$(echo ${VER} | sed 's/-/_/g')
           echo rpm-verion=${RPM_VER} >> $GITHUB_OUTPUT
+          RPM_VER=$(echo ${VER} | sed 's/-/_/g')
+          echo rpm-verion=${RPM_VER} >> $GITHUB_OUTPUT
 
+          ARTIFACTS="asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip"
+          echo "artifacts=${ARTIFACTS}" >> $GITHUB_OUTPUT
           ARTIFACTS="asvec-linux-amd64-${VER}.deb asvec-linux-amd64-${RPM_VER}.rpm asvec-linux-amd64-${VER}.zip asvec-linux-arm64-${VER}.deb asvec-linux-arm64-${RPM_VER}.rpm asvec-linux-arm64-${VER}.zip asvec-macos-${VER}.pkg asvec-macos-amd64-${VER}.zip asvec-macos-arm64-${VER}.zip asvec-windows-amd64-${VER}.zip asvec-windows-arm64-${VER}.zip"
           echo "artifacts=${ARTIFACTS}" >> $GITHUB_OUTPUT
 
           RPM_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.rpm$' | tr '\n' ' ')
           echo "rpm-artifacts=${RPM_ARTIFACTS}" >> $GITHUB_OUTPUT
+          RPM_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.rpm$' | tr '\n' ' ')
+          echo "rpm-artifacts=${RPM_ARTIFACTS}" >> $GITHUB_OUTPUT
 
+          DEB_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.deb$' | tr '\n' ' ')
+          echo "deb-artifacts=${DEB_ARTIFACTS}" >> $GITHUB_OUTPUT
           DEB_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.deb$' | tr '\n' ' ')
           echo "deb-artifacts=${DEB_ARTIFACTS}" >> $GITHUB_OUTPUT
 
           ZIP_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.zip$' | tr '\n' ' ')
           echo "zip-artifacts=${ZIP_ARTIFACTS}" >> $GITHUB_OUTPUT
+          ZIP_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.zip$' | tr '\n' ' ')
+          echo "zip-artifacts=${ZIP_ARTIFACTS}" >> $GITHUB_OUTPUT
 
+          PKG_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.pkg$' | tr '\n' ' ')
+          echo "pkg-artifacts=${PKG_ARTIFACTS}" >> $GITHUB_OUTPUT
           PKG_ARTIFACTS=$(echo "${ARTIFACTS}" | tr ' ' '\n' | grep '\.pkg$' | tr '\n' ' ')
           echo "pkg-artifacts=${PKG_ARTIFACTS}" >> $GITHUB_OUTPUT
 
           SHA256_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.sha256"; done | tr '\n' ' ')
           echo "sha-artifacts=${SHA256_FILES}" >> $GITHUB_OUTPUT
+          SHA256_FILES=$(for pkg in ${ARTIFACTS}; do echo "${pkg}.sha256"; done | tr '\n' ' ')
+          echo "sha-artifacts=${SHA256_FILES}" >> $GITHUB_OUTPUT
 
+          ASC_FILES=$(for pkg in ${ARTIFACTS} ${SHA256_FILES}; do
+            if [[ ! "${pkg}" =~ \.rpm$ && ! "${pkg}" =~ \.deb$ ]]; then
+            echo "${pkg}.asc"
+            fi
+          done | tr '\n' ' ')
+          echo "asc-artifacts=${ASC_FILES}" >> $GITHUB_OUTPUT
           ASC_FILES=$(for pkg in ${ARTIFACTS} ${SHA256_FILES}; do
             if [[ ! "${pkg}" =~ \.rpm$ && ! "${pkg}" =~ \.deb$ ]]; then
             echo "${pkg}.asc"
@@ -232,7 +272,31 @@ jobs:
         with:
           name: asvec-artifacts
           path: ~/work/asvec/asvec/bin/packages/asvec-*
+      - name: 'Upload Artifacts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: asvec-artifacts
+          path: ~/work/asvec/asvec/bin/packages/asvec-*
 
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Git checkout'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: 'Download Artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          name: asvec-artifacts
+      - name: setup GPG
+        uses: aerospike/shared-workflows/devops/setup-gpg@main
+        with:
+          gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+          gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+          gpg-key-pass: ${{ secrets.GPG_PASS }}
+          gpg-key-name: 'aerospike-inc'
   sign:
     needs: build
     runs-on: ubuntu-latest
@@ -260,10 +324,23 @@ jobs:
         run: |
           rpm --addsign ${{needs.build.outputs.rpm-artifacts}}
           rpm --checksig ${{needs.build.outputs.rpm-artifacts}}
+      - name: GPG Sign All Files
+        env:
+          GPG_TTY: no-tty
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
+        run: |
+          rpm --addsign ${{needs.build.outputs.rpm-artifacts}}
+          rpm --checksig ${{needs.build.outputs.rpm-artifacts}}
 
           dpkg-sig --sign builder ${{needs.build.outputs.deb-artifacts}}
           dpkg-sig --verify ${{needs.build.outputs.deb-artifacts}}
+          dpkg-sig --sign builder ${{needs.build.outputs.deb-artifacts}}
+          dpkg-sig --verify ${{needs.build.outputs.deb-artifacts}}
 
+          for file in ${{needs.build.outputs.zip-artifacts}} ${{needs.build.outputs.pkg-artifacts}}; do
+            gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+            gpg --verify "${file}.asc" "${file}"
+          done
           for file in ${{needs.build.outputs.zip-artifacts}} ${{needs.build.outputs.pkg-artifacts}}; do
             gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
             gpg --verify "${file}.asc" "${file}"
@@ -274,7 +351,22 @@ jobs:
           for pkg in ${{needs.build.outputs.artifacts}}; do
             shasum -a 256 $pkg > ${pkg}.sha256
           done
+      - name: Create Checksums
+        run: |
+          for pkg in ${{needs.build.outputs.artifacts}}; do
+            shasum -a 256 $pkg > ${pkg}.sha256
+          done
 
+          for file in ${{needs.build.outputs.sha-artifacts}}; do
+            gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+            gpg --verify "${file}.asc" "${file}"
+          done
+      - name: 'Upload Artifacts'
+        uses: actions/upload-artifact@v4
+        with:
+          name: asvec-artifacts
+          path: asvec-*
+          overwrite: true
           for file in ${{needs.build.outputs.sha-artifacts}}; do
             gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
             gpg --verify "${file}.asc" "${file}"

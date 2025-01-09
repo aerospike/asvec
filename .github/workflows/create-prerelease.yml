@@ -62,7 +62,7 @@ jobs:
           VERSION=${TAG#v}
 
           # Check if it's a snapshot
-          if [[ "$VERSION" == *-SNAPSHOT-* ]]; then
+          if [[ "$VERSION" == *-SNAPSHOT-* || ${{ inputs.preRelease }} == true ]]; then
             SNAPSHOT="true"
           else
             SNAPSHOT="false"
@@ -73,6 +73,8 @@ jobs:
           echo "SNAPSHOT=${SNAPSHOT}" >> $GITHUB_ENV
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "is-snapshot=${SNAPSHOT}" >> $GITHUB_OUTPUT
+
+          echo "Version: ${VERSION} Snapshot: ${SNAPSHOT} version=${VERSION} is-snapshot=${SNAPSHOT}"
 
       - name: setup jfrog
         uses: jfrog/setup-jfrog-cli@v4

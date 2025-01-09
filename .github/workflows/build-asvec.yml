@@ -1,11 +1,6 @@
 name: Build asvec
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:

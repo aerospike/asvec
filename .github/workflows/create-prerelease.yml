@@ -1,5 +1,4 @@
 name: Build asvec
-
 on:
   push:
     branches:

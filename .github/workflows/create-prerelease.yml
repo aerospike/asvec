@@ -48,6 +48,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             # Manual build: Use version input
             TAG="${{ inputs.version }}"
+
             echo "Triggered manually with version: ${TAG}"
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             # Push event: Extract tag from GITHUB_REF
@@ -62,11 +63,17 @@ jobs:
           VERSION=${TAG#v}
 
           # Check if it's a snapshot
-          if [[ "$VERSION" == *-SNAPSHOT-* || ${{ inputs.preRelease }} == true ]]; then
+          if [[ "$VERSION" == *-SNAPSHOT-* ]]; then
             SNAPSHOT="true"
+          elif [[ ${{ inputs.preRelease }} == true ]]; then
+            SNAPSHOT="true"
+            COMMIT=$(git rev-parse --short HEAD)
+            VERSION="${VERSION}-SNAPSHOT-${COMMIT}"
           else
             SNAPSHOT="false"
           fi
+
+
 
           # Output the results
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
@@ -82,23 +89,25 @@ jobs:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
           JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
-      - name: 'Alias go to jf go'
-        run: |
-          # This will set up jf go build instead of go build. This lets us also include build number and build name
-          # for jfrog builds.
-          # Write the function to a script using a heredoc
-          cat << EOF > ~/go-setup.sh
-          #!/bin/bash
-          go() {
-              if [[ "\$1" == "build" ]]; then
-                  shift
-                  jf go build --build-name=$JFROG_CLI_BUILD_NAME --build-number=$VERSION --project=$JFROG_CLI_BUILD_PROJECT "\$@"
-              else
-                  command go "\$@"
-              fi
-          }
-          EOF
-          chmod +x ~/go-setup.sh
+      # Enable when we can use jf from makefiles differentiating between deb, rpm, pkg etc. 
+      # Each of those types should be in a different jfrog build. Also will need to run go-setup.sh before build steps are called.
+      # - name: 'Alias go to jf go'
+      #   run: |
+      #     # This will set up jf go build instead of go build. This lets us also include build number and build name
+      #     # for jfrog builds.
+      #     # Write the function to a script using a heredoc
+      #     cat << EOF > ~/go-setup.sh
+      #     #!/bin/bash
+      #     go() {
+      #         if [[ "\$1" == "build" ]]; then
+      #             shift
+      #             jf go build --build-name=$JFROG_CLI_BUILD_NAME --build-number=$VERSION --project=$JFROG_CLI_BUILD_PROJECT "\$@"
+      #         else
+      #             command go "\$@"
+      #         fi
+      #     }
+      #     EOF
+      #     chmod +x ~/go-setup.sh
       - name: 'Install Homebrew'
         run: /bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       - name: 'Install Dependencies'
@@ -130,7 +139,6 @@ jobs:
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
         run: |
-          ~/go-setup.sh
           buildcmd="build-prerelease"
           [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
           export PATH=$PATH:/usr/local/bin:/usr/local/go/bin

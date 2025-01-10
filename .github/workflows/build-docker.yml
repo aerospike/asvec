@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build Docker
 on:
   push:
     branches:
@@ -123,21 +123,19 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Extract Image Name and Digest
-        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
         run: |
           jq -r '.[] | {digest: .["containerimage.digest"], names: .["image.name"] | split(",")} | "(.digest)"' build-metadata > sha
           echo ${{ env.REPO }}/asvec:${{ env.VERSION }}@$(cat sha) > meta-info
           echo ${{ env.REPO }}/asvec:${{ env.VERSION }}@$(cat sha) > meta-info-latest
 
       - name: Create Docker Build Info
-        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push'  && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
         run: |
 
           jf rt build-docker-create \
             --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-container" \
             --build-number "${{ env.VERSION }}" \
             --image-file ./meta-info \
-            --project ecosystem \
+            --project ${{env.JFROG_CLI_BUILD_PROJECT}} \
             ecosystem-container-dev-local
       
       - name: Publish Build Info

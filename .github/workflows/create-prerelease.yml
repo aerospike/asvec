@@ -328,7 +328,77 @@ jobs:
             fi
             done
           fi
-  jfrog-release-bundle: 
+  build-docker:
+    needs:
+      - sign
+      - build
+    runs-on: ubuntu-latest
+    steps: 
+      - name: 'Git checkout'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Artifact Aerospike Docker Registry
+        run: |
+            jf docker login artifact.aerospike.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+        env:
+            JFROG_CLI_OFFER_CONFIG: 'false'
+
+      - name: 'Download Artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          name: asvec-artifacts
+      - name: setup jfrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: https://aerospike.jfrog.io
+          JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+          JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
+      - name: Build and Push Docker Image
+        run: |
+          jf docker buildx bake \
+            --set asvec.tags=${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }} \
+            --file docker/asvec.docker/bake.hcl \
+            --push \
+            --metadata-file=build-metadata
+        env:
+          DOCKER_BUILDKIT: '1'
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+  
+      - name: Extract Image Name and Digest
+        run: |
+            jq -r '.[] | {digest: .["containerimage.digest"], names: .["image.name"] | split(",")} | "(.digest)"' build-metadata > sha
+            echo ${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }}@$(cat sha) > meta-info
+            echo ${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }}@$(cat sha) > meta-info-latest
+      - name: Create Docker Build Info
+        run: |
+          jf rt build-docker-create \
+            --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-container" \
+            --build-number "${{ needs.build.outputs.version }}" \
+            --image-file ./meta-info \
+            --project ${{env.JFROG_CLI_BUILD_PROJECT}} \
+            ecosystem-container-dev-local
+          
+      - name: Publish Build Info
+        run: |
+          export JFROG_CLI_LOG_LEVEL=DEBUG 
+          jf rt build-collect-env --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"  
+          jf rt build-add-git --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}" 
+
+          jf rt build-publish \
+            --detailed-summary \
+            --project ecosystem \
+            "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"
+    
+  publish-asvec-build: 
     needs: 
       - sign
       - build
@@ -367,17 +437,65 @@ jobs:
         
       - name: "Upload rpm builds to JFrog"
         run: |
-            for file in *; do
-                if [[ "$file" == *.rpm ]]; then
-                    arch=$(rpm -q --qf "%{ARCH}" -p "$file")
-                    jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-rpm-dev-local/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
-                      --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-rpm" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
-                      --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
-                else 
-                  echo "Skipping upload of $file as it does not match *.rpm"
-              fi
-              done
-              jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
-              jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
-              jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+          for file in *; do
+              if [[ "$file" == *.rpm ]]; then
+                  arch=$(rpm -q --qf "%{ARCH}" -p "$file")
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-rpm-dev-local/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-rpm" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
+                    --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
+              else 
+                echo "Skipping upload of $file as it does not match *.rpm"
+            fi
+            done
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
+            jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
 # Our repositories currently don't support generic which would be needed for pkg and zip
+
+  publish-release-bundle: 
+    needs: 
+      - sign
+      - build
+      - build-docker
+      - publish-asvec-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Git checkout'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: setup jfrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: https://aerospike.jfrog.io
+          JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+          JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
+      - name: Create Release Bundle
+        run: |
+            echo '{
+            
+                "name": "${{ env.JFROG_CLI_BUILD_NAME }}",
+                "version": "${{ needs.build.outputs.version }}",
+                "description": "Release bundle for ${{github.repository}} version ${{ needs.build.outputs.version }}",
+                "files": [
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-container"
+                  },
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-deb"
+                  },
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-rpm"
+                  }
+                ]
+              }' > release-bundle-spec.json
+              cat release-bundle-spec.json
+  
+            jf release-bundle-create \
+              "${{ env.JFROG_CLI_BUILD_NAME }}" "${{ needs.build.outputs.version }}"\
+              --project ecosystem \
+              --spec release-bundle-spec.json \
+              --signing-key aerospike --sync

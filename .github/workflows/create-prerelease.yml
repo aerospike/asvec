@@ -382,7 +382,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           jf docker buildx bake \
-            --set asvec.tags=${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }} \
+            --set asvec.tags=artifact.aerospike.io/${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }} \
             --file docker/asvec.docker/bake.hcl \
             --push \
             --metadata-file=build-metadata
@@ -395,8 +395,8 @@ jobs:
       - name: Extract Image Name and Digest
         run: |
             jq -r '.[] | {digest: .["containerimage.digest"], names: .["image.name"] | split(",")} | "(.digest)"' build-metadata > sha
-            echo ${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }}@$(cat sha) > meta-info
-            echo ${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }}@$(cat sha) > meta-info-latest
+            echo artifact.aerospike.io/${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }}@$(cat sha) > meta-info
+            echo artifact.aerospike.io/${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local/asvec:${{ needs.build.outputs.version }}@$(cat sha) > meta-info-latest
       - name: Create Docker Build Info
         run: |
           jf rt build-docker-create \

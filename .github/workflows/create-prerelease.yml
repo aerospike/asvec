@@ -1,8 +1,6 @@
 name: Build and publish asvec
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*.*.*'  
   workflow_dispatch:

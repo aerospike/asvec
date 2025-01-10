@@ -1,4 +1,4 @@
-name: Build asvec
+name: Build and publish asvec
 on:
   push:
     branches:
@@ -13,10 +13,6 @@ on:
         type: string
       preRelease:
         description: 'Create Pre-release? -SNAPSHOT-{COMMIT} will be appended to the version above.'
-        required: false
-        type: boolean
-      deletePrevBuild:
-        description: 'Cleanup existing pre-releases?'
         required: false
         type: boolean
 env:

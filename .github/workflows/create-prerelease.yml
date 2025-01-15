@@ -63,7 +63,7 @@ jobs:
           # Check if it's a snapshot
           if [[ "$VERSION" == *-SNAPSHOT-* ]]; then
             SNAPSHOT="true"
-          elif [[ ${{ inputs.preRelease }} == true ]]; then
+          elif [[ "${{ inputs.preRelease }}" == true ]]; then
             SNAPSHOT="true"
             COMMIT=$(git rev-parse --short HEAD)
             VERSION="${VERSION}-SNAPSHOT-${COMMIT}"

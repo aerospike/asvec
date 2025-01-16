@@ -478,7 +478,7 @@ jobs:
     needs:
       - sign
       - build
-      - publish-asvec-build
+      - publish-release-bundle
     runs-on: ubuntu-latest
     steps:
       - name: 'Git checkout'

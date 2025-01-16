@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 )
@@ -12,6 +13,10 @@ func (f *UnixTimestampFlag) Set(val string) error {
 	timestamp, err := strconv.ParseUint(val, 0, 64)
 	if err != nil {
 		return fmt.Errorf("invalid timestamp: %w", err)
+	}
+
+	if timestamp > math.MaxInt64 {
+		return fmt.Errorf("timestamp is larger than the maximum 64 bit integer")
 	}
 
 	*f = UnixTimestampFlag(time.Unix(int64(timestamp), 0))

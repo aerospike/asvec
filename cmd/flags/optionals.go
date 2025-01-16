@@ -3,6 +3,7 @@ package flags
 import (
 	"asvec/utils"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -184,7 +185,13 @@ func (f *DurationOptionalFlag) Uint64() *uint64 {
 		return nil
 	}
 
-	milli := uint64(f.Val.Milliseconds())
+	mili := f.Val.Milliseconds()
+
+	if mili < 0 {
+		panic("duration is negative, cannot convert to uint64")
+	}
+
+	milli := uint64(mili)
 
 	return &milli
 }
@@ -194,9 +201,19 @@ func (f *DurationOptionalFlag) Uint32() *uint32 {
 		return nil
 	}
 
-	milli := uint32(f.Val.Milliseconds())
+	milli := f.Val.Milliseconds()
 
-	return &milli
+	if milli < 0 {
+		panic("duration is negative, cannot convert to uint32")
+	}
+
+	if milli > math.MaxUint32 {
+		panic("duration is too large, cannot convert to uint32")
+	}
+
+	res := uint32(milli)
+
+	return &res
 }
 
 func (f *DurationOptionalFlag) Int64() *int64 {

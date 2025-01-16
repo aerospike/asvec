@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"reflect"
 
 	"github.com/aerospike/avs-client-go"
@@ -185,6 +186,23 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 				queryFlags.maxDataKeys = 0
 			}
 
+			if queryFlags.maxDataKeys > math.MaxInt {
+				err := fmt.Errorf("maxDataKeys value is larger than the maximum integer: %d", queryFlags.maxDataKeys)
+				logger.ErrorContext(ctx, "unable to convert maxDataKeys to int", slog.Any("error", err))
+				view.Errorf("Failed to get index definition: %s", err)
+
+				return
+			}
+
+			if queryFlags.maxDataColWidth > math.MaxInt {
+				err := fmt.Errorf("maxDataColWidth value is larger than the maximum integer: %d", queryFlags.maxDataColWidth)
+				logger.ErrorContext(ctx, "unable to convert maxDataColWidth to int", slog.Any("error", err))
+				view.Errorf("Failed to get index definition: %s", err)
+
+				return
+			}
+
+			//nolint:gosec // Overflow is checked above
 			view.PrintQueryResults(neighbors, queryFlags.format, int(queryFlags.maxDataKeys), int(queryFlags.maxDataColWidth))
 
 			if !viper.IsSet(flags.MaxResults) {

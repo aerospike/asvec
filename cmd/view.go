@@ -73,16 +73,19 @@ func (v *View) Warning(f string) {
 
 func (v *View) Warningf(f string, a ...any) {
 	errCode.Store(1)
+	//nolint:govet // these need to be dynamic
 	v.PrintfErr(v.yellowString("Warning: "+f, a...))
 }
 
 func (v *View) Error(f string) {
 	errCode.Store(1)
+	//nolint:govet // these need to be dynamic
 	v.PrintfErr(v.redString("Error: %s", f))
 }
 
 func (v *View) Errorf(f string, a ...any) {
 	errCode.Store(1)
+	//nolint:govet // these need to be dynamic
 	v.PrintfErr(v.redString("Error: "+f, a...))
 }
 

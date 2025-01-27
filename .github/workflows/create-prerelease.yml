@@ -463,7 +463,7 @@ jobs:
             jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
             jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
-# Our repositories currently don't support generic which would be needed for pkg and zip
+# TODO - add builds for macos and windows (likely need generic repo support in jfrog)
 
   publish-release-bundle: 
     needs: 

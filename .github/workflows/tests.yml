@@ -12,7 +12,7 @@ jobs:
   tests:
     runs-on: aerospike_large_runners_8
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Get go version from go.mod
       run: |
         echo "GO_VERSION=$(grep '^go ' go.mod | cut -d " " -f 2)" >> $GITHUB_ENV

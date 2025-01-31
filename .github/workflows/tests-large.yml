@@ -32,7 +32,7 @@ jobs:
         echo "$FEATURES_CONF" > docker/multi-node-LB/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
-        docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+        echo "${{ secrets.JFROG_PASSWORD }}" | docker login aerospike.jfrog.io -u "${{ secrets.JFROG_USERNAME }}" --password-stdin        docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
     - name: Run tests
       run: |
         make coverage

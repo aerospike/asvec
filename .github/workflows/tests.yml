@@ -30,7 +30,7 @@ jobs:
         echo "$FEATURES_CONF" > docker/auth/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
-        docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+        echo "${{ secrets.JFROG_ACCESS_TOKEN }}" | docker login aerospike.jfrog.io -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
     - name: Run tests
       run: |
         FAIL_FAST=true make test

@@ -32,12 +32,12 @@ jobs:
         echo "$FEATURES_CONF" > docker/multi-node-LB/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
-        docker login aerospike.jfrog.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+        echo "${{ secrets.JFROG_ACCESS_TOKEN }}" | docker login aerospike.jfrog.io -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
     - name: Run tests
       run: |
         make coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         files: ./coverage/total.cov

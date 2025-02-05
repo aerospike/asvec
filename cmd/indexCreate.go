@@ -44,7 +44,7 @@ var indexCreateFlags = &struct {
 	hnswHealer               flags.HealerFlags
 	hnswMerge                flags.MergeFlags
 	hnswVectorIntegrityCheck flags.BoolOptionalFlag
-	mode                     flags.IndexModeOptionalFlag
+	indexMode                flags.IndexModeOptionalFlag
 }{
 	clientFlags:              rootFlags.clientFlags,
 	set:                      flags.StringOptionalFlag{},
@@ -60,7 +60,7 @@ var indexCreateFlags = &struct {
 	hnswHealer:               *flags.NewHnswHealerFlags(),
 	hnswMerge:                *flags.NewHnswMergeFlags(),
 	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
-	mode:                     flags.IndexModeOptionalFlag{},
+	indexMode:                flags.IndexModeOptionalFlag{},
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
@@ -86,7 +86,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexCreateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
-	flagSet.Var(&indexCreateFlags.mode, flags.IndexMode, "The index mode. Valid values: 'distributed' or 'standalone'. Defaults to 'distributed'.") //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.indexMode, flags.IndexMode, "The index mode. Valid values: 'distributed' or 'standalone'. Defaults to 'distributed'.") //nolint:lll // For readability
 
 	// For backwards compatibility
 	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")
@@ -330,8 +330,8 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 	}
 
 	var indexMode *protos.IndexMode = nil
-	if indexCreateFlags.mode.Val != nil {
-		indexMode = utils.Ptr(protos.IndexMode(protos.IndexMode_value[indexCreateFlags.mode.String()]))
+	if indexCreateFlags.indexMode.Val != nil {
+		indexMode = utils.Ptr(protos.IndexMode(protos.IndexMode_value[indexCreateFlags.indexMode.String()]))
 	}
 
 	indexOpts := &avs.IndexCreateOpts{

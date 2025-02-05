@@ -8,6 +8,8 @@ github.com/aerospike/avs-client-go v0.0.0-20250204222627-586938000ded h1:7+HKs37
 github.com/aerospike/avs-client-go v0.0.0-20250204222627-586938000ded/go.mod h1:0riEidKjJYiYw4Gcqcq0GgEniHhP7VK9CWqJqlPq538=
 github.com/aerospike/avs-client-go v0.0.0-20250204234549-d2286453d4ab h1:FQCHhgPnLQPOilHz5zMBIeSIwepkmg/QKjFV4HWxuNc=
 github.com/aerospike/avs-client-go v0.0.0-20250204234549-d2286453d4ab/go.mod h1:0riEidKjJYiYw4Gcqcq0GgEniHhP7VK9CWqJqlPq538=
+github.com/aerospike/avs-client-go v0.0.0-20250205232720-f1b040b743da h1:FG7F+gKX75SHvb8u2el2C10UgFX+h87arkrE7pfsUTY=
+github.com/aerospike/avs-client-go v0.0.0-20250205232720-f1b040b743da/go.mod h1:0riEidKjJYiYw4Gcqcq0GgEniHhP7VK9CWqJqlPq538=
 github.com/aerospike/tools-common-go v0.2.0 h1:gHDhB9lY7gSZjjBw1MxqNSub0dREAAfiZ4+eW82B4Ks=
 github.com/aerospike/tools-common-go v0.2.0/go.mod h1:WuOnuTjoVd9DnpJHrw82zJl3e+FZNTP/i30V1ObSVXI=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=

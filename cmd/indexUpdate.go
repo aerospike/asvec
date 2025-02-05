@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
+	"asvec/utils"
 	"context"
 	"fmt"
 	"log/slog"
@@ -25,6 +26,7 @@ var indexUpdateFlags = &struct {
 	hnswHealer               flags.HealerFlags
 	hnswMerge                flags.MergeFlags
 	hnswVectorIntegrityCheck flags.BoolOptionalFlag
+	indexMode                flags.IndexModeOptionalFlag
 }{
 	clientFlags:              rootFlags.clientFlags,
 	hnswMaxMemQueueSize:      flags.Uint32OptionalFlag{},
@@ -34,6 +36,7 @@ var indexUpdateFlags = &struct {
 	hnswHealer:               *flags.NewHnswHealerFlags(),
 	hnswMerge:                *flags.NewHnswMergeFlags(),
 	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
+	indexMode:                flags.IndexModeOptionalFlag{},
 }
 
 func newIndexUpdateFlagSet() *pflag.FlagSet {
@@ -49,6 +52,7 @@ func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexUpdateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswMerge.NewFlagSet())
+	flagSet.Var(&indexUpdateFlags.indexMode, flags.IndexMode, "The index mode. Valid values: 'distributed' or 'standalone'. Defaults to 'distributed'.") //nolint:lll // For readability
 
 	return flagSet
 }
@@ -139,6 +143,11 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				EnableVectorIntegrityCheck: indexUpdateFlags.hnswVectorIntegrityCheck.Val,
 			}
 
+			var indexMode *protos.IndexMode = nil
+			if indexUpdateFlags.indexMode.Val != nil {
+				indexMode = utils.Ptr(protos.IndexMode(protos.IndexMode_value[indexUpdateFlags.indexMode.String()]))
+			}
+
 			ctx, cancel := context.WithTimeout(context.Background(), indexUpdateFlags.clientFlags.Timeout)
 			defer cancel()
 
@@ -148,6 +157,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				indexUpdateFlags.indexName,
 				indexUpdateFlags.indexLabels,
 				hnswParams,
+				indexMode,
 			)
 			if err != nil {
 				logger.Error("unable to update index", slog.Any("error", err))

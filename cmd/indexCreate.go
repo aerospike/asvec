@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
+	"asvec/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,6 +44,7 @@ var indexCreateFlags = &struct {
 	hnswHealer               flags.HealerFlags
 	hnswMerge                flags.MergeFlags
 	hnswVectorIntegrityCheck flags.BoolOptionalFlag
+	mode                     flags.IndexModeOptionalFlag
 }{
 	clientFlags:              rootFlags.clientFlags,
 	set:                      flags.StringOptionalFlag{},
@@ -58,6 +60,7 @@ var indexCreateFlags = &struct {
 	hnswHealer:               *flags.NewHnswHealerFlags(),
 	hnswMerge:                *flags.NewHnswMergeFlags(),
 	hnswVectorIntegrityCheck: flags.BoolOptionalFlag{},
+	mode:                     flags.IndexModeOptionalFlag{},
 }
 
 func newIndexCreateFlagSet() *pflag.FlagSet {
@@ -83,6 +86,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexCreateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
+	flagSet.Var(&indexCreateFlags.mode, flags.IndexMode, "The index mode. Valid values: 'distributed' or 'standalone'. Defaults to 'distributed'.") //nolint:lll // For readability
 
 	// For backwards compatibility
 	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")
@@ -325,6 +329,11 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 		sets = append(sets, *indexCreateFlags.set.Val)
 	}
 
+	var indexMode *protos.IndexMode = nil
+	if indexCreateFlags.mode.Val != nil {
+		indexMode = utils.Ptr(protos.IndexMode(protos.IndexMode_value[indexCreateFlags.mode.String()]))
+	}
+
 	indexOpts := &avs.IndexCreateOpts{
 		Sets:   sets,
 		Labels: indexCreateFlags.indexLabels,
@@ -364,6 +373,7 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 			},
 			EnableVectorIntegrityCheck: indexCreateFlags.hnswVectorIntegrityCheck.Val,
 		},
+		Mode: indexMode,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), indexCreateFlags.clientFlags.Timeout)

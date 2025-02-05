@@ -4,9 +4,12 @@ import (
 	"asvec/utils"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aerospike/avs-client-go/protos"
 )
 
 const optionalEmptyString = "<nil>"
@@ -274,4 +277,47 @@ func (f *InfDurationOptionalFlag) Int64() *int64 {
 	}
 
 	return f.duration.Int64()
+}
+
+type IndexModeOptionalFlag struct {
+	Val *string
+}
+
+// This is just a set of valid indexMode values. The value does not have meaning
+var indexModeSet = protos.IndexMode_value
+
+func (f *IndexModeOptionalFlag) Set(val string) error {
+	val = strings.ToUpper(val)
+	if _, ok := indexModeSet[val]; ok {
+		f.Val = &val
+		return nil
+	}
+
+	return fmt.Errorf("unrecognized index mode")
+}
+
+func (f *IndexModeOptionalFlag) Type() string {
+	return "enum"
+}
+
+func (f *IndexModeOptionalFlag) String() string {
+	val := f.Val
+
+	if val != nil {
+		return *val
+	}
+
+	return optionalEmptyString
+}
+
+func IndexModeFlagEnum() []string {
+	names := []string{}
+
+	for key := range indexModeSet {
+		names = append(names, key)
+	}
+
+	slices.Sort(names)
+
+	return names
 }

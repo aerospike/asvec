@@ -16,7 +16,7 @@ services:
       timeout: 20s
       retries: 20
   avs:
-    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     depends_on:
       aerospike:
         condition: service_healthy

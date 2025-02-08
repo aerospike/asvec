@@ -22,7 +22,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     volumes:
       - ./config/aerospike-vector-search-1.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
       - type: bind
@@ -39,7 +39,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     volumes:
       - ./config/aerospike-vector-search-2.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
       - type: bind
@@ -56,7 +56,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     volumes:
       - ./config/aerospike-vector-search-3.yml:/etc/aerospike-vector-search/aerospike-vector-search.yml
       - type: bind

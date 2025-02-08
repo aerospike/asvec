@@ -22,7 +22,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     ports:
       - "10000:10000"
     volumes:
@@ -41,7 +41,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     ports:
       - "10001:10001"
     volumes:
@@ -60,7 +60,7 @@ services:
     depends_on:
       aerospike:
         condition: service_healthy
-    image: aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: artifact.aerospike.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
     ports:
       - "10002:10002"
     volumes:

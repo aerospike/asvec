@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/aerospike/avs-client-go/protos"
 	"github.com/spf13/cobra"
@@ -52,7 +53,7 @@ func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexUpdateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswMerge.NewFlagSet())
-	flagSet.Var(&indexUpdateFlags.indexMode, flags.IndexMode, "The index mode. Valid values: 'distributed' or 'standalone'. Defaults to 'distributed'.") //nolint:lll // For readability
+	flagSet.Var(&indexUpdateFlags.indexMode, flags.IndexMode, fmt.Sprintf("The index mode. Valid values: %s", strings.Join(flags.IndexModeFlagEnum(), ", "))) //nolint:lll // For readability
 
 	return flagSet
 }

@@ -54,6 +54,7 @@ type IndexDefinitionBuilder struct {
 	hnswMergeIndexParallelism      *uint32
 	hnswMergeReIndexParallelism    *uint32
 	hnswVectorIntegrityCheck       *bool
+	mode                           *protos.IndexMode
 }
 
 func NewIndexDefinitionBuilder(
@@ -194,6 +195,11 @@ func (idb *IndexDefinitionBuilder) WithHnswVectorIntegrityCheck(enableVectorInte
 	return idb
 }
 
+func (idb *IndexDefinitionBuilder) WithIndexMode(indexMode protos.IndexMode) *IndexDefinitionBuilder {
+	idb.mode = &indexMode
+	return idb
+}
+
 func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 	var indexDef *protos.IndexDefinition
 
@@ -216,6 +222,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 					MergeParams:         &protos.HnswIndexMergeParams{},
 				},
 			},
+			Mode: idb.mode,
 		}
 	} else {
 		indexDef = &protos.IndexDefinition{
@@ -236,6 +243,7 @@ func (idb *IndexDefinitionBuilder) Build() *protos.IndexDefinition {
 					MergeParams:         &protos.HnswIndexMergeParams{},
 				},
 			},
+			Mode: idb.mode,
 		}
 	}
 

@@ -218,6 +218,7 @@ func getAllNodesInfo(ctx context.Context, client *avs.Client) []*writers.NodeInf
 			go func() {
 				defer wg.Done()
 
+				fmt.Println("nodeId ", nodeId.GetId())
 				about, err := client.About(ctx, nodeId)
 				if err != nil {
 					l.ErrorContext(ctx,

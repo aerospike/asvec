@@ -86,7 +86,7 @@ func newIndexCreateFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(indexCreateFlags.hnswRecordCache.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswHealer.NewFlagSet())
 	flagSet.AddFlagSet(indexCreateFlags.hnswMerge.NewFlagSet())
-	flagSet.Var(&indexCreateFlags.indexMode, flags.IndexMode, "The index mode. Valid values: 'distributed' or 'standalone'. Defaults to 'distributed'.") //nolint:lll // For readability
+	flagSet.Var(&indexCreateFlags.indexMode, flags.IndexMode, fmt.Sprintf("The index mode. Valid values: %s", strings.Join(flags.IndexModeFlagEnum(), ", "))) //nolint:lll // For readability
 
 	// For backwards compatibility
 	flagSet.Var(&indexCreateFlags.set, "sets", "The sets for the index.")

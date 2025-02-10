@@ -81,6 +81,9 @@ const (
 	MaxDataColWidthShort = "w"
 	YesShort             = "y"
 
+	// Flag types
+	FlagTypeEnum = "enum"
+
 	DefaultIPv4 = "127.0.0.1"
 	DefaultPort = 5000
 

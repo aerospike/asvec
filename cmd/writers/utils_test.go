@@ -23,6 +23,7 @@ func Test_formatRole(t *testing.T) {
 		},
 		{
 			name: "TestRoleSecondary",
+			//nolint:staticcheck // This value is deprecated but is still returned by the server as a default node role
 			args: args{role: protos.NodeRole_INDEX_UPDATE},
 			want: "INDEX_UPDATE",
 		},
@@ -55,6 +56,7 @@ func Test_formatRoles(t *testing.T) {
 			args: args{
 				roles: []protos.NodeRole{
 					protos.NodeRole_INDEX_QUERY,
+					//nolint:staticcheck // This value is deprecated but is still returned by the server as a default node role
 					protos.NodeRole_INDEX_UPDATE,
 					protos.NodeRole_KV_READ,
 				},

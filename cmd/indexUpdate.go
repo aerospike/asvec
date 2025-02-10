@@ -144,7 +144,7 @@ asvec index update -i myindex -n test --%s 10000 --%s 10000ms --%s 10s --%s 16 -
 				EnableVectorIntegrityCheck: indexUpdateFlags.hnswVectorIntegrityCheck.Val,
 			}
 
-			var indexMode *protos.IndexMode = nil
+			var indexMode *protos.IndexMode
 			if indexUpdateFlags.indexMode.Val != nil {
 				indexMode = utils.Ptr(protos.IndexMode(protos.IndexMode_value[indexUpdateFlags.indexMode.String()]))
 			}

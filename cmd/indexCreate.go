@@ -329,7 +329,7 @@ func runCreateIndexFromFlags(client *avs.Client) error {
 		sets = append(sets, *indexCreateFlags.set.Val)
 	}
 
-	var indexMode *protos.IndexMode = nil
+	var indexMode *protos.IndexMode
 	if indexCreateFlags.indexMode.Val != nil {
 		indexMode = utils.Ptr(protos.IndexMode(protos.IndexMode_value[indexCreateFlags.indexMode.String()]))
 	}

@@ -297,7 +297,7 @@ func (f *IndexModeOptionalFlag) Set(val string) error {
 }
 
 func (f *IndexModeOptionalFlag) Type() string {
-	return "enum"
+	return FlagTypeEnum
 }
 
 func (f *IndexModeOptionalFlag) String() string {

@@ -24,7 +24,7 @@ func (f *DistanceMetricFlag) Set(val string) error {
 }
 
 func (f *DistanceMetricFlag) Type() string {
-	return "enum"
+	return FlagTypeEnum
 }
 
 func (f *DistanceMetricFlag) String() string {

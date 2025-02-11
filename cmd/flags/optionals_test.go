@@ -132,3 +132,21 @@ func (suite *OptionalFlagSuite) TestInfDurationOptionalFlag() {
 	suite.Equal(expectedDuration.String(), f.String())
 	suite.Equal(expectedDuration.Milliseconds(), *f.Int64())
 }
+
+func (suite *OptionalFlagSuite) TestIndexModeOptionalFlag() {
+	f := &IndexModeOptionalFlag{}
+
+	err := f.Set("standalone")
+	if err != nil {
+		suite.T().Errorf("Unexpected error: %v", err)
+	}
+
+	if f.Val == nil || *f.Val != "STANDALONE" {
+		suite.T().Errorf("Expected 'approx', got %v", f.Val)
+	}
+
+	err = f.Set("not a mode")
+	if err == nil {
+		suite.T().Errorf("Expected error, got nil")
+	}
+}

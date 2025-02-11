@@ -35,7 +35,7 @@ func (f *LogLevelFlag) Set(val string) error {
 }
 
 func (f *LogLevelFlag) Type() string {
-	return "enum"
+	return FlagTypeEnum
 }
 
 func (f *LogLevelFlag) String() string {

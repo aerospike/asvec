@@ -7,7 +7,7 @@ cluster:
   cluster-name: multi-node-avs
 
   node-roles:
-    - INDEX_QUERY
+    - standalone-indexer
 
 # The Proximus service listening ports, TLS and network interface.
 service:

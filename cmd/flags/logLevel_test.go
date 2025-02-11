@@ -37,7 +37,7 @@ func (suite *LogLevelSuite) TestSet() {
 
 func (suite *LogLevelSuite) TestType() {
 	flag := LogLevelFlag("")
-	suite.Equal("enum", flag.Type())
+	suite.Equal(FlagTypeEnum, flag.Type())
 }
 
 func (suite *LogLevelSuite) TestString() {

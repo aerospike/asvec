@@ -12,6 +12,21 @@ import (
 	"github.com/aerospike/avs-client-go/protos"
 )
 
+var indexModeSet = protos.IndexMode_value
+var indexModeNames []string
+
+// sort the index mode names
+// other optionals that require name sets should follow this pattern
+func init() {
+	indexModeNames = make([]string, 0, len(indexModeSet))
+
+	for key := range indexModeSet {
+		indexModeNames = append(indexModeNames, key)
+	}
+
+	slices.Sort(indexModeNames)
+}
+
 const optionalEmptyString = "<nil>"
 
 type StringOptionalFlag struct {
@@ -283,9 +298,6 @@ type IndexModeOptionalFlag struct {
 	Val *string
 }
 
-// This is just a set of valid indexMode values. The value does not have meaning
-var indexModeSet = protos.IndexMode_value
-
 func (f *IndexModeOptionalFlag) Set(val string) error {
 	val = strings.ToUpper(val)
 	if _, ok := indexModeSet[val]; ok {
@@ -311,13 +323,5 @@ func (f *IndexModeOptionalFlag) String() string {
 }
 
 func IndexModeFlagEnum() []string {
-	names := []string{}
-
-	for key := range indexModeSet {
-		names = append(names, key)
-	}
-
-	slices.Sort(names)
-
-	return names
+	return indexModeNames
 }

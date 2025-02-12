@@ -59,6 +59,7 @@ const (
 	HnswMergeParallelism         = "hnsw-merge-index-parallelism"
 	HnswMergeReIndexParallelism  = "hnsw-merge-reindex-parallelism"
 	HnswVectorIntegrityCheck     = "hnsw-vector-integrity-check"
+	IndexMode                    = "index-mode"
 	TLSProtocols                 = "tls-protocols"
 	TLSCaFile                    = "tls-cafile"
 	TLSCaPath                    = "tls-capath"
@@ -79,6 +80,9 @@ const (
 	KeyIntShort          = "t"
 	MaxDataColWidthShort = "w"
 	YesShort             = "y"
+
+	// Flag types
+	FlagTypeEnum = "enum"
 
 	DefaultIPv4 = "127.0.0.1"
 	DefaultPort = 5000

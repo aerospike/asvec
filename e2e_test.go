@@ -320,6 +320,24 @@ func (suite *CmdTestSuite) TestSuccessfulCreateIndexCmd() {
 				WithHnswIndexCacheExpiry(-1).
 				Build(),
 		},
+		{
+			name:           "test with standalone index mode",
+			indexName:      "stdaloneidx",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i stdaloneidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-mode STANDALONE",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "stdaloneidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+				WithIndexMode(protos.IndexMode_STANDALONE).
+				Build(),
+		},
+		{
+			name:           "test with distributed index mode",
+			indexName:      "distributedidx",
+			indexNamespace: "test",
+			cmd:            "index create -y -n test -i distributedidx -d 256 -m SQUARED_EUCLIDEAN --vector-field vector0 --index-mode DISTRIBUTED",
+			expectedIndex: tests.NewIndexDefinitionBuilder(false, "distributedidx", "test", 256, protos.VectorDistanceMetric_SQUARED_EUCLIDEAN, "vector0").
+				WithIndexMode(protos.IndexMode_DISTRIBUTED).
+				Build(),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -583,6 +601,24 @@ func (suite *CmdTestSuite) TestSuccessfulUpdateIndexCmd() {
 				WithHnswVectorIntegrityCheck(false).
 				Build(),
 		},
+		{
+			name:           "test with standalone index mode",
+			indexName:      "successful-update",
+			indexNamespace: "test",
+			cmd:            "index update -y -n test -i successful-update --index-mode STANDALONE",
+			expectedIndex: newBuilder().
+				WithIndexMode(protos.IndexMode_STANDALONE).
+				Build(),
+		},
+		{
+			name:           "test with distributed index mode",
+			indexName:      "successful-update",
+			indexNamespace: "test",
+			cmd:            "index update -y -n test -i successful-update --index-mode DISTRIBUTED",
+			expectedIndex: newBuilder().
+				WithIndexMode(protos.IndexMode_DISTRIBUTED).
+				Build(),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -750,8 +786,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %
-1,list,test,vector,256,COSINE,0,0,0 B,0%
+,Name,Namespace,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %,Mode*,Status
+1,list,test,vector,256,COSINE,0,0,0 B,0%,DISTRIBUTED,READY
 `,
 		},
 		{
@@ -759,20 +795,20 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
-				).Build(),
+				).WithIndexMode(protos.IndexMode_STANDALONE).Build(),
 				tests.NewIndexDefinitionBuilder(false,
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
 				).WithSet("barset").Build(),
 			},
 			cmd: "index list --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %
-1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%
-2,list1,test,,vector,256,COSINE,0,0,0 B,0%
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %,Mode*,Status
+1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%,DISTRIBUTED,READY
+2,list1,test,,vector,256,COSINE,0,0,0 B,0%,STANDALONE,NOT_READY
 `,
 		},
 		{
-			name: "double index with set, and verbose",
+			name: "double index with set, standalone index mode, and verbose",
 			indexes: []*protos.IndexDefinition{
 				tests.NewIndexDefinitionBuilder(false,
 					"list1", "test", 256, protos.VectorDistanceMetric_COSINE, "vector",
@@ -781,6 +817,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					WithHnswMergeReIndexParallelism(26).
 					WithHnswRecordCacheExpiry(20000).
 					WithHnswRecordCacheMaxEntries(1003).
+					WithIndexMode(protos.IndexMode_STANDALONE).
 					Build(),
 				tests.NewIndexDefinitionBuilder(false,
 					"list2", "bar", 256, protos.VectorDistanceMetric_HAMMING, "vector",
@@ -794,8 +831,8 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 			},
 			cmd: "index list --verbose --no-color --format 1",
 			expectedTable: `Indexes
-,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %,Vertices,Labels*,Storage,Index Parameters
-1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%,0,map[],"Namespace\,bar
+,Name,Namespace,Set,Field,Dimensions,Distance Metric,Unmerged,Vector Records,Size,Unmerged %,Mode*,Status,Vertices,Labels*,Storage,Index Parameters,Standalone Index Metrics
+1,list2,bar,barset,vector,256,HAMMING,0,0,0 B,0%,DISTRIBUTED,READY,0,map[],"Namespace\,bar
 Set\,list2","HNSW
 Max Edges\,16
 Ef\,100
@@ -816,8 +853,8 @@ Healer Schedule*\,0 0/15 * ? * * *
 Healer Parallelism*\,1
 Merge Index Parallelism*\,80
 Merge Re-Index Parallelism*\,26
-Enable Vector Integrity Check\,true"
-2,list1,test,,vector,256,COSINE,0,0,0 B,0%,0,map[foo:bar],"Namespace\,test
+Enable Vector Integrity Check\,true",
+2,list1,test,,vector,256,COSINE,0,0,0 B,0%,STANDALONE,NOT_READY,0,map[foo:bar],"Namespace\,test
 Set\,list1","HNSW
 Max Edges\,16
 Ef\,100
@@ -838,7 +875,9 @@ Healer Schedule*\,0 0/15 * ? * * *
 Healer Parallelism*\,1
 Merge Index Parallelism*\,80
 Merge Re-Index Parallelism*\,26
-Enable Vector Integrity Check\,true"
+Enable Vector Integrity Check\,true","Standalone Index Metrics
+State\,CREATING
+Inserted Records\,0"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},
@@ -864,6 +903,7 @@ Values ending with * can be dynamically configured using the 'asvec index update
 						HnswParams: index.GetHnswParams(),
 						Labels:     index.GetLabels(),
 						Storage:    index.GetStorage(),
+						Mode:       index.Mode,
 					},
 				)
 				if err != nil {

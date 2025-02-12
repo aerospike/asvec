@@ -33,6 +33,8 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 		"Vector Records",
 		"Size",
 		"Unmerged %",
+		"Mode*",
+		"Status",
 	}
 	verboseHeadings := append(table.Row{}, headings...)
 	verboseHeadings = append(
@@ -41,6 +43,7 @@ func NewIndexTableWriter(writer io.Writer, verbose bool, logger *slog.Logger) *I
 		"Labels*",
 		"Storage",
 		"Index Parameters",
+		"Standalone Index Metrics",
 	)
 
 	if verbose {
@@ -84,6 +87,8 @@ func (itw *IndexTableWriter) AppendIndexRow(
 		status.GetIndexHealerVectorRecordsIndexed(),
 		formatBytes(calculateIndexSize(index, status)),
 		getPercentUnmerged(status),
+		index.Mode,
+		status.Status,
 	}
 
 	if itw.verbose {
@@ -128,6 +133,17 @@ func (itw *IndexTableWriter) AppendIndexRow(
 			row = append(row, renderTable(tHNSW, format))
 		default:
 			itw.logger.Warn("the server returned unrecognized index type params. recognized index param types are: HNSW")
+		}
+
+		if *index.Mode == protos.IndexMode_STANDALONE {
+			tStandaloneIndexMetrics := NewDefaultWriter(nil)
+			tStandaloneIndexMetrics.SetTitle("Standalone Index Metrics")
+			tStandaloneIndexMetrics.AppendRows([]table.Row{
+				{"State", status.StandaloneIndexMetrics.GetState()},
+				{"Inserted Records", status.StandaloneIndexMetrics.GetInsertedRecordCount()},
+			})
+
+			row = append(row, renderTable(tStandaloneIndexMetrics, format))
 		}
 	}
 

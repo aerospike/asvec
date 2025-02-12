@@ -56,15 +56,15 @@ func (suite *MultiNodeCmdTestSuite) TestNodeListCmd() {
 			fmt.Sprintf("node ls --format 1 --no-color --seeds %s", suite.AvsHostPort.String()),
 			`Nodes
 ,Node,Roles,Endpoint,Cluster ID,Version,Visible Nodes
-1,139637976803088,[INDEX_QUERY],127.0.0.1:10000,<cluster-id>,<version>,"{
+1,139637976803088,[STANDALONE_INDEXER],127.0.0.1:10000,<cluster-id>,<version>,"{
     139637976803089: [127.0.0.1:10001]
     139637976803090: [127.0.0.1:10002]
 }"
-2,139637976803089,[INDEX_QUERY INDEX_UPDATE],127.0.0.1:10001,<cluster-id>,<version>,"{
+2,139637976803089,[INDEX_QUERY INDEX_UPDATE INDEXER],127.0.0.1:10001,<cluster-id>,<version>,"{
     139637976803088: [127.0.0.1:10000]
     139637976803090: [127.0.0.1:10002]
 }"
-3,139637976803090,[INDEX_QUERY INDEX_UPDATE],127.0.0.1:10002,<cluster-id>,<version>,"{
+3,139637976803090,[INDEX_QUERY INDEX_UPDATE INDEXER],127.0.0.1:10002,<cluster-id>,<version>,"{
     139637976803088: [127.0.0.1:10000]
     139637976803089: [127.0.0.1:10001]
 }"

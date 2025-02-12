@@ -4,10 +4,28 @@ import (
 	"asvec/utils"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aerospike/avs-client-go/protos"
 )
+
+var indexModeSet = protos.IndexMode_value
+var indexModeNames []string
+
+// sort the index mode names
+// other optionals that require name sets should follow this pattern
+func init() {
+	indexModeNames = make([]string, 0, len(indexModeSet))
+
+	for key := range indexModeSet {
+		indexModeNames = append(indexModeNames, key)
+	}
+
+	slices.Sort(indexModeNames)
+}
 
 const optionalEmptyString = "<nil>"
 
@@ -274,4 +292,36 @@ func (f *InfDurationOptionalFlag) Int64() *int64 {
 	}
 
 	return f.duration.Int64()
+}
+
+type IndexModeOptionalFlag struct {
+	Val *string
+}
+
+func (f *IndexModeOptionalFlag) Set(val string) error {
+	val = strings.ToUpper(val)
+	if _, ok := indexModeSet[val]; ok {
+		f.Val = &val
+		return nil
+	}
+
+	return fmt.Errorf("unrecognized index mode")
+}
+
+func (f *IndexModeOptionalFlag) Type() string {
+	return FlagTypeEnum
+}
+
+func (f *IndexModeOptionalFlag) String() string {
+	val := f.Val
+
+	if val != nil {
+		return *val
+	}
+
+	return optionalEmptyString
+}
+
+func IndexModeFlagEnum() []string {
+	return indexModeNames
 }

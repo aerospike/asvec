@@ -62,7 +62,7 @@ func (suite *DistanceMetricFlagTestSuite) TestSet() {
 
 func (suite *DistanceMetricFlagTestSuite) TestType() {
 	flag := DistanceMetricFlag("")
-	suite.Equal("enum", flag.Type())
+	suite.Equal(FlagTypeEnum, flag.Type())
 }
 
 func (suite *DistanceMetricFlagTestSuite) TestString() {

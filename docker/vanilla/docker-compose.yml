@@ -16,7 +16,7 @@ services:
       timeout: 20s
       retries: 20
   avs:
-    image: aerospike.jfrog.io/docker/aerospike/aerospike-vector-search-private:1.0.1-SNAPSHOT
+    image: aerospike/aerospike-vector-search:1.1.0-RC
     depends_on:
       aerospike:
         condition: service_healthy

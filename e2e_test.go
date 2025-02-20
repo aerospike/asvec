@@ -817,6 +817,7 @@ func (suite *CmdTestSuite) TestSuccessfulListIndexCmd() {
 					WithHnswMergeReIndexParallelism(26).
 					WithHnswRecordCacheExpiry(20000).
 					WithHnswRecordCacheMaxEntries(1003).
+					WithHnswHealerParallelism(32).
 					WithIndexMode(protos.IndexMode_STANDALONE).
 					Build(),
 				tests.NewIndexDefinitionBuilder(false,
@@ -868,11 +869,11 @@ Index Cache Max Entries*\,2000000
 Index Cache Expiry*\,1h0m0s
 Record Cache Max Entries*\,1003
 Record Cache Expiry*\,20s
-Healer Max Scan Rate / Node*\,1000
-Healer Max Page Size*\,10000
-Healer Re-index % *\,10.00%
+Healer Max Scan Rate / Node*\,20000
+Healer Max Page Size*\,40000
+Healer Re-index % *\,100.00%
 Healer Schedule*\,0 0/15 * ? * * *
-Healer Parallelism*\,1
+Healer Parallelism*\,32
 Merge Index Parallelism*\,80
 Merge Re-Index Parallelism*\,26
 Enable Vector Integrity Check\,true","Standalone Index Metrics

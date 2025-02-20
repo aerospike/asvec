@@ -18,7 +18,6 @@ var lvl = new(slog.LevelVar)
 var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 var view = NewView(os.Stdout, os.Stderr, logger)
 var Version = "development" // Overwritten at build time by ld_flags
-var defaultConfigFile = "asvec.yml"
 
 var rootFlags = &struct {
 	clientFlags *flags.ClientFlags
@@ -136,7 +135,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().Var(&rootFlags.logLevel, flags.LogLevel, fmt.Sprintf("Log level for additional details and debugging. Valid values: %s", strings.Join(flags.LogLevelEnum(), ", "))) //nolint:lll // For readability
 	rootCmd.PersistentFlags().BoolVar(&rootFlags.noColor, flags.NoColor, false, "Disable color in output")                                                                                        //nolint:lll // For readability
-	rootCmd.PersistentFlags().StringVar(&rootFlags.confFile, flags.ConfigFile, "", fmt.Sprintf("Config file (default is %s/%s)", config.DefaultConfDir, defaultConfigFile))                       //nolint:lll // For readability
+	rootCmd.PersistentFlags().StringVar(&rootFlags.confFile, flags.ConfigFile, "", fmt.Sprintf("Config file (default is %s/%s)", config.DefaultConfDir, flags.DefaultConfigFile))                 //nolint:lll // For readability
 	rootCmd.PersistentFlags().StringVar(&rootFlags.clusterName, flags.ClusterName, "default", "Cluster name to use as defined in your configuration file")                                        //nolint:lll // For readability
 	rootCmd.PersistentFlags().AddFlagSet(rootFlags.clientFlags.NewClientFlagSet())
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)

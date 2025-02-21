@@ -42,12 +42,12 @@ var indexUpdateFlags = &struct {
 
 func newIndexUpdateFlagSet() *pflag.FlagSet {
 	flagSet := &pflag.FlagSet{}
-	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                            //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                             //nolint:lll // For readability
-	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                   //nolint:lll // For readability
-	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, "The distance metric for the index.")                                 //nolint:lll // For readability
-	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records.")  //nolint:lll // For readability
-	flagSet.Var(&indexUpdateFlags.hnswVectorIntegrityCheck, flags.HnswVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.") //nolint:lll // For readability
+	flagSet.BoolVarP(&indexUpdateFlags.yes, flags.Yes, "y", false, "When true do not prompt for confirmation.")                                                                         //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.namespace, flags.Namespace, flags.NamespaceShort, "", "The namespace for the index.")                                                          //nolint:lll // For readability
+	flagSet.StringVarP(&indexUpdateFlags.indexName, flags.IndexName, flags.IndexNameShort, "", "The name of the index.")                                                                //nolint:lll // For readability
+	flagSet.StringToStringVar(&indexUpdateFlags.indexLabels, flags.IndexLabels, nil, "Optional labels to assign to the index. Example: \"model=all-MiniLM-L6-v2,foo=bar\"")             //nolint:lll // For readability
+	flagSet.Var(&indexUpdateFlags.hnswMaxMemQueueSize, flags.HnswMaxMemQueueSize, "Maximum size of in-memory queue for inserted/updated vector records. Defaults to 1_000_000 records") //nolint:lll // For readability
+	flagSet.Var(&indexUpdateFlags.hnswVectorIntegrityCheck, flags.HnswVectorIntegrityCheck, "Enable/disable vector integrity check. Defaults to enabled.")                              //nolint:lll // For readability
 	flagSet.AddFlagSet(indexUpdateFlags.hnswBatch.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswIndexCache.NewFlagSet())
 	flagSet.AddFlagSet(indexUpdateFlags.hnswRecordCache.NewFlagSet())

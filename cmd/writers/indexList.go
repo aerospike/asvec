@@ -214,14 +214,17 @@ func calculateTotalGraphNodes(m, numValidVertices int64) int64 {
 	}
 
 	pow := 0
+
 	for {
 		nodes := numValidVertices / int64(math.Pow(float64(m), float64(pow)))
 		if nodes == 0 {
 			break
 		}
+
 		pow++
 		totalGraphNodes += nodes
 	}
+
 	return totalGraphNodes
 }
 

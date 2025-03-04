@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/aerospike/avs-client-go/protos"
@@ -166,14 +167,62 @@ func convertFloatToPercentStr(f float32) string {
 	return fmt.Sprintf("%.2f%%", f)
 }
 
-// calculateIndexSize calculates the size of the index in bytes
+// calculateIndexSize approximates the size of the index in bytes
 func calculateIndexSize(index *protos.IndexDefinition, status *protos.IndexStatusResponse) int64 {
+	// the "m" parameter in the Hnsw index.
+	var m uint32
+	switch v := index.Params.(type) {
+	case *protos.IndexDefinition_HnswParams:
+		m = v.HnswParams.GetM()
+	default:
+		panic("unrecognized index type params")
+	}
+
+	// TODO make sure this is the correct stat to use here
+	validVertices := status.GetIndexHealerVerticesValid()
+	// The total number of graph nodes in the Hnsw index.
+	numGraphNodes := calculateTotalGraphNodes(int64(m), validVertices)
+
+	// The unique id/digest of the graph node in the Hnsw index graph.
+	var graphNodeIDBytes int64 = 20
+	// The unique id/digest of the Aerospike record corresponding to this graph node in the Hnsw index graph.
+	var vectorIDBytes int64 = 20
+	// The graph layer of this node in the Hnsw index.
+	var graphLayerBytes int64 = 20
+	// 20 bytes per neighbor
+	var neighborBytes int64 = 20
+
 	// Each dimension is a float32
-	vectorSize := int64(index.Dimensions) * 4
-	// Each index record has ~500 bytes of overhead + the vector size
-	indexRecSize := 500 + vectorSize
-	// The total size is the number of records times the size of each record
-	return indexRecSize * status.GetIndexHealerVerticesValid()
+	vectorBytes := int64(int(index.Dimensions) * 4)
+	// Approximate number of neighbors per graph node.
+	numNeighbors := 1.5 * float64(m) // Multiplying by 1.5 is as per experiments.
+
+	totalNeighborBytes := int64(math.Round(numNeighbors * float64(neighborBytes)))
+	graphNodeBytes := graphNodeIDBytes + vectorIDBytes + graphLayerBytes + totalNeighborBytes + vectorBytes
+	indexBytes := numGraphNodes * graphNodeBytes
+
+	return indexBytes
+}
+
+func calculateTotalGraphNodes(m, numValidVertices int64) int64 {
+	var totalGraphNodes int64 // Total graph nodes.
+
+	// If m is 1, then int(math.Pow(float64(m), float64(pow)) will always be 1.
+	// So, we can return the number of valid vertices as the total graph nodes.
+	if m == 1 {
+		return numValidVertices
+	}
+
+	pow := 0
+	for {
+		nodes := numValidVertices / int64(math.Pow(float64(m), float64(pow)))
+		if nodes == 0 {
+			break
+		}
+		pow++
+		totalGraphNodes += nodes
+	}
+	return totalGraphNodes
 }
 
 // formatBytes converts bytes to human readable string format

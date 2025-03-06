@@ -878,7 +878,8 @@ Merge Index Parallelism*\,80
 Merge Re-Index Parallelism*\,26
 Enable Vector Integrity Check\,true","Standalone Index Metrics
 State\,CREATING
-Inserted Records\,0"
+Scanned Vector Records\,0
+Indexed Vector Records\,0"
 Values ending with * can be dynamically configured using the 'asvec index update' command.
 `,
 		},

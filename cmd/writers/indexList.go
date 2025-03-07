@@ -216,7 +216,7 @@ func calculateTotalGraphNodes(m, numValidVertices int64) int64 {
 	var (
 		totalGraphNodes int64 // Total graph nodes.
 		mPow            int64 = 1
-		nodes           int64 = numValidVertices
+		nodes                 = numValidVertices
 	)
 
 	for nodes > 0 {

@@ -175,7 +175,7 @@ func calculateIndexSize(index *protos.IndexDefinition, status *protos.IndexStatu
 	case *protos.IndexDefinition_HnswParams:
 		m = v.HnswParams.GetM()
 	default:
-		panic("unrecognized index type params")
+		panic(fmt.Sprintf("unrecognized index params type: %T", index.Params))
 	}
 
 	// TODO make sure this is the correct stat to use here
@@ -183,14 +183,16 @@ func calculateIndexSize(index *protos.IndexDefinition, status *protos.IndexStatu
 	// The total number of graph nodes in the Hnsw index.
 	numGraphNodes := calculateTotalGraphNodes(int64(m), validVertices)
 
-	// The unique id/digest of the graph node in the Hnsw index graph.
-	var graphNodeIDBytes int64 = 20
-	// The unique id/digest of the Aerospike record corresponding to this graph node in the Hnsw index graph.
-	var vectorIDBytes int64 = 20
-	// The graph layer of this node in the Hnsw index.
-	var graphLayerBytes int64 = 20
-	// 20 bytes per neighbor
-	var neighborBytes int64 = 20
+	var (
+		// The unique id/digest of the graph node in the Hnsw index graph.
+		graphNodeIDBytes int64 = 20
+		// The unique id/digest of the Aerospike record corresponding to this graph node in the Hnsw index graph.
+		vectorIDBytes int64 = 20
+		// The graph layer of this node in the Hnsw index.
+		graphLayerBytes int64 = 20
+		// 20 bytes per neighbor
+		neighborBytes int64 = 20
+	)
 
 	// Each dimension is a float32
 	vectorBytes := int64(int(index.Dimensions) * 4)
@@ -205,24 +207,22 @@ func calculateIndexSize(index *protos.IndexDefinition, status *protos.IndexStatu
 }
 
 func calculateTotalGraphNodes(m, numValidVertices int64) int64 {
-	var totalGraphNodes int64 // Total graph nodes.
-
 	// If m is 1, then int(math.Pow(float64(m), float64(pow)) will always be 1.
 	// So, we can return the number of valid vertices as the total graph nodes.
 	if m == 1 {
 		return numValidVertices
 	}
 
-	pow := 0
+	var (
+		totalGraphNodes int64 // Total graph nodes.
+		mPow            int64 = 1
+		nodes           int64 = numValidVertices
+	)
 
-	for {
-		nodes := numValidVertices / int64(math.Pow(float64(m), float64(pow)))
-		if nodes == 0 {
-			break
-		}
-
-		pow++
+	for nodes > 0 {
+		nodes = numValidVertices / mPow
 		totalGraphNodes += nodes
+		mPow *= m
 	}
 
 	return totalGraphNodes

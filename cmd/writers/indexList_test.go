@@ -1,42 +1,11 @@
 package writers
 
 import (
+	"asvec/utils"
 	"testing"
 
 	"github.com/aerospike/avs-client-go/protos"
 )
-
-func Test_calculateIndexSize(t *testing.T) {
-	type args struct {
-		index  *protos.IndexDefinition
-		status *protos.IndexStatusResponse
-	}
-	tests := []struct {
-		name string
-		args args
-		want int64
-	}{
-		{
-			name: "positive simple",
-			args: args{
-				index: &protos.IndexDefinition{
-					Dimensions: 100,
-				},
-				status: &protos.IndexStatusResponse{
-					IndexHealerVerticesValid: 10,
-				},
-			},
-			want: 9000,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := calculateIndexSize(tt.args.index, tt.args.status); got != tt.want {
-				t.Errorf("calculateIndexSize() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func Test_formatBytes(t *testing.T) {
 	type args struct {
@@ -169,6 +138,154 @@ func Test_getPercentUnmerged(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getPercentUnmerged(tt.args.status); got != tt.want {
 				t.Errorf("getPercentUnmerged() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_calculateIndexSizeDetailed(t *testing.T) {
+	type args struct {
+		index  *protos.IndexDefinition
+		status *protos.IndexStatusResponse
+	}
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{
+			name: "positive simple",
+			args: args{
+				index: &protos.IndexDefinition{
+					Dimensions: 100,
+					Params: &protos.IndexDefinition_HnswParams{
+						HnswParams: &protos.HnswParams{
+							M: utils.Ptr(uint32(10)),
+						},
+					},
+				},
+				status: &protos.IndexStatusResponse{
+					IndexHealerVerticesValid: 100,
+				},
+			},
+			want: 84360,
+		},
+		{
+			name: "zero vertices",
+			args: args{
+				index: &protos.IndexDefinition{
+					Dimensions: 100,
+					Params: &protos.IndexDefinition_HnswParams{
+						HnswParams: &protos.HnswParams{
+							M: utils.Ptr(uint32(10)),
+						},
+					},
+				},
+				status: &protos.IndexStatusResponse{
+					IndexHealerVerticesValid: 0,
+				},
+			},
+			want: 0,
+		},
+		{
+			name: "different dimension and vertices",
+			args: args{
+				index: &protos.IndexDefinition{
+					Dimensions: 200,
+					Params: &protos.IndexDefinition_HnswParams{
+						HnswParams: &protos.HnswParams{
+							M: utils.Ptr(uint32(15)),
+						},
+					},
+				},
+				status: &protos.IndexStatusResponse{
+					IndexHealerVerticesValid: 800_000,
+				},
+			},
+			want: 1122854710,
+		},
+		{
+			name: "different m value",
+			args: args{
+				index: &protos.IndexDefinition{
+					Dimensions: 100,
+					Params: &protos.IndexDefinition_HnswParams{
+						HnswParams: &protos.HnswParams{
+							M: utils.Ptr(uint32(20)),
+						},
+					},
+				},
+				status: &protos.IndexStatusResponse{
+					IndexHealerVerticesValid: 10,
+				},
+			},
+			want: 10600,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateIndexSize(tt.args.index, tt.args.status); got != tt.want {
+				t.Errorf("calculateIndexSizeDetailed() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_calculateTotalGraphNodes(t *testing.T) {
+	type args struct {
+		m                int64
+		numValidVertices int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{
+			name: "simple case",
+			args: args{
+				m:                2,
+				numValidVertices: 8,
+			},
+			want: 15,
+		},
+		{
+			name: "m is 1",
+			args: args{
+				m:                1,
+				numValidVertices: 10,
+			},
+			want: 10,
+		},
+		{
+			name: "numValidVertices is 0",
+			args: args{
+				m:                2,
+				numValidVertices: 0,
+			},
+			want: 0,
+		},
+		{
+			name: "m is greater than numValidVertices",
+			args: args{
+				m:                10,
+				numValidVertices: 5,
+			},
+			want: 5,
+		},
+		{
+			name: "large values",
+			args: args{
+				m:                3,
+				numValidVertices: 1000,
+			},
+			want: 1498,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateTotalGraphNodes(tt.args.m, tt.args.numValidVertices); got != tt.want {
+				t.Errorf("calculateTotalGraphNodes() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -43,7 +43,7 @@ For example:
 %s
 asvec --help
 	`, HelpTxtSetupEnv),
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging
 		} else {

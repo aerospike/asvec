@@ -103,7 +103,7 @@ func TestRunWithWatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
 			runCount := 0
-			runFunc := func(cmd *cobra.Command, args []string) error {
+			runFunc := func(_ *cobra.Command, _ []string) error {
 				runCount++
 
 				if tt.shouldError {
@@ -117,7 +117,7 @@ func TestRunWithWatch(t *testing.T) {
 						// Give a little time for the current run to complete
 						time.Sleep(100 * time.Millisecond)
 						p, _ := os.FindProcess(os.Getpid())
-						p.Signal(os.Interrupt)
+						_ = p.Signal(os.Interrupt)
 					}()
 				}
 
@@ -173,7 +173,7 @@ func TestWrapCommandWithWatch(t *testing.T) {
 	runCalled := false
 	cmdWithRun := &cobra.Command{
 		Use: "test-run",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			runCalled = true
 		},
 	}
@@ -182,7 +182,7 @@ func TestWrapCommandWithWatch(t *testing.T) {
 	runECalled := false
 	cmdWithRunE := &cobra.Command{
 		Use: "test-rune",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			runECalled = true
 			return nil
 		},

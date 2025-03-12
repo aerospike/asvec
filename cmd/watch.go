@@ -33,8 +33,10 @@ func NewWatchFlags() *WatchFlags {
 
 // AddWatchFlagSet adds watch flags to the provided flag set
 func AddWatchFlagSet(flagSet *pflag.FlagSet, watchFlags *WatchFlags) {
-	flagSet.BoolVar(&watchFlags.Watch, flags.Watch, false, "Watch mode: continuously rerun the command at a set interval")
-	flagSet.IntVar(&watchFlags.WatchInterval, flags.WatchInterval, flags.DefaultWatchInterval, "Interval in seconds for watch mode")
+	flagSet.BoolVar(&watchFlags.Watch, flags.Watch,
+		false, "Watch mode: continuously rerun the command at a set interval")
+	flagSet.IntVar(&watchFlags.WatchInterval, flags.WatchInterval,
+		flags.DefaultWatchInterval, "Interval in seconds for watch mode")
 }
 
 // LineCountingWriter is a writer that counts the number of lines written
@@ -47,11 +49,13 @@ type LineCountingWriter struct {
 func (w *LineCountingWriter) Write(p []byte) (n int, err error) {
 	n, err = w.Writer.Write(p)
 	w.LineCount += bytes.Count(p, []byte{'\n'})
+
 	return n, err
 }
 
 // RunWithWatch wraps a command's RunE function with watch functionality
-func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags, runFunc func(cmd *cobra.Command, args []string) error) error {
+func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags,
+	runFunc func(cmd *cobra.Command, args []string) error) error {
 	if !watchFlags.Watch {
 		// If watch mode is not enabled, just run the command once
 		return runFunc(cmd, args)
@@ -67,6 +71,7 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags, run
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
 		<-sigCh
 		cancel()
@@ -95,14 +100,18 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags, run
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	headerText := fmt.Sprintf("Watch mode: refresh every %d seconds (press Ctrl+C to exit) - Last update: %s",
 		watchFlags.WatchInterval, timestamp)
+
 	view.Print(headerText)
+
 	headerLineCount++
 
 	view.Print(fmt.Sprintf("> %s", strings.Join(cmdArgs, " ")))
+
 	headerLineCount++
 
 	// Add a blank line after the command for better readability
 	view.Print("")
+
 	headerLineCount++
 
 	// Set the line counter as the output
@@ -119,6 +128,7 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags, run
 		// Restore original stdout/stderr
 		view.out = originalOut
 		view.err = originalErr
+
 		return err
 	}
 
@@ -171,7 +181,9 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags, run
 				// Restore original stdout/stderr
 				view.out = originalOut
 				view.err = originalErr
+
 				logger.Error("Error executing command in watch mode", slog.Any("error", err))
+
 				return err
 			}
 

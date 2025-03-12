@@ -36,7 +36,7 @@ func AddWatchFlagSet(flagSet *pflag.FlagSet, watchFlags *WatchFlags) {
 	flagSet.BoolVar(&watchFlags.Watch, flags.Watch,
 		false, "Watch mode: continuously rerun the command at a set interval")
 	flagSet.IntVar(&watchFlags.WatchInterval, flags.WatchInterval,
-		flags.DefaultWatchInterval, "Interval in seconds for watch mode")
+		flags.DefaultWatchInterval, "Interval in seconds at which the watched command is rerun")
 }
 
 // LineCountingWriter is a writer that counts the number of lines written
@@ -61,7 +61,7 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags,
 		return runFunc(cmd, args)
 	}
 
-	logger.Debug("Watch mode active",
+	logger.Debug("watch mode active",
 		slog.Int("interval", watchFlags.WatchInterval),
 		slog.String("command", cmd.CommandPath()))
 
@@ -114,11 +114,13 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags,
 
 	headerLineCount++
 
-	// Set the line counter as the output
+	// Set the line counter as the output writer
+	// so that we can count the number of lines written
+	// by the command and clear the lines when refreshing
 	view.out = lineCounter
 
 	// Log watch mode information
-	logger.Info("Running command in watch mode",
+	logger.Info("running command in watch mode",
 		slog.Int("refresh_interval_seconds", watchFlags.WatchInterval),
 		slog.String("command", strings.Join(cmdArgs, " ")),
 	)

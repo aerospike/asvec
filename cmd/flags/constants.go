@@ -82,7 +82,6 @@ const (
 	KeyIntShort          = "t"
 	MaxDataColWidthShort = "w"
 	YesShort             = "y"
-	WatchShort           = "w"
 
 	// Flag types
 	FlagTypeEnum = "enum"

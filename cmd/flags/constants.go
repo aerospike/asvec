@@ -67,6 +67,8 @@ const (
 	TLSKeyFile                   = "tls-keyfile"
 	TLSKeyFilePass               = "tls-keyfile-password" //nolint:gosec // Not a credential
 	TLSHostnameOverride          = "tls-hostname-override"
+	Watch                        = "watch"
+	WatchInterval                = "watch-interval"
 
 	// TODO  Replace short flag constants with variables
 	DimensionShort       = "d"
@@ -80,12 +82,14 @@ const (
 	KeyIntShort          = "t"
 	MaxDataColWidthShort = "w"
 	YesShort             = "y"
+	WatchShort           = "w"
 
 	// Flag types
 	FlagTypeEnum = "enum"
 
-	DefaultIPv4 = "127.0.0.1"
-	DefaultPort = 5000
+	DefaultIPv4          = "127.0.0.1"
+	DefaultPort          = 5000
+	DefaultWatchInterval = 2 // Default watch interval in seconds
 
 	Infinity = -1
 )

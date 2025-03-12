@@ -161,4 +161,7 @@ func init() {
 			panic(err)
 		}
 	}
+
+	// Add watch functionality to the index list command
+	wrapCommandWithWatch(indexListCmd)
 }

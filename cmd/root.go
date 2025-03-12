@@ -43,7 +43,7 @@ For example:
 %s
 asvec --help
 	`, HelpTxtSetupEnv),
-	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if rootFlags.logLevel.NotSet() {
 			lvl.Set(slog.LevelError + 1) // disable all logging
 		} else {
@@ -139,6 +139,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&rootFlags.confFile, flags.ConfigFile, "", fmt.Sprintf("Config file (default is %s/%s)", config.DefaultConfDir, defaultConfigFile))                       //nolint:lll // For readability
 	rootCmd.PersistentFlags().StringVar(&rootFlags.clusterName, flags.ClusterName, "default", "Cluster name to use as defined in your configuration file")                                        //nolint:lll // For readability
 	rootCmd.PersistentFlags().AddFlagSet(rootFlags.clientFlags.NewClientFlagSet())
+
 	common.SetupRoot(rootCmd, "aerospike-vector-search", Version)
 
 	// TODO: Add custom template for usage to take into account terminal width

@@ -96,28 +96,20 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags,
 	// Count how many header lines we're printing
 	headerLineCount := 0
 
-	// Print the header only once at the beginning
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	headerText := fmt.Sprintf("Watch mode: refresh every %d seconds (press Ctrl+C to exit) - Last update: %s",
-		watchFlags.WatchInterval, timestamp)
+	// Helper function to print the header with updated timestamp
+	printHeader := func() {
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		headerText := fmt.Sprintf("Watch mode: refresh every %d seconds (press Ctrl+C to exit) - Last update: %s",
+			watchFlags.WatchInterval, timestamp)
+		view.Print(headerText)
+		view.Printf("> %s", strings.Join(cmdArgs, " "))
+		view.Print("") // Add a blank line after the command for better readability
+	}
 
-	view.Print(headerText)
+	// Print the header for the first time
+	printHeader()
 
-	headerLineCount++
-
-	view.Print(fmt.Sprintf("> %s", strings.Join(cmdArgs, " ")))
-
-	headerLineCount++
-
-	// Add a blank line after the command for better readability
-	view.Print("")
-
-	headerLineCount++
-
-	// Set the line counter as the output writer
-	// so that we can count the number of lines written
-	// by the command and clear the lines when refreshing
-	view.out = lineCounter
+	headerLineCount = 3 // Three lines: header text, command, and blank line
 
 	// Log watch mode information
 	logger.Info("running command in watch mode",
@@ -125,21 +117,30 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags,
 		slog.String("command", strings.Join(cmdArgs, " ")),
 	)
 
-	// Run the command for the first time
-	if err := runFunc(cmd, args); err != nil {
+	// Helper function to run the command and handle output
+	runCommandAndCaptureOutput := func() (int, error) {
+		// Set the line counter as the output writer
+		lineCounter.LineCount = 0
+		view.out = lineCounter
+
+		// Run the command
+		err := runFunc(cmd, args)
+
+		// Store the number of lines
+		lineCount := lineCounter.LineCount
+
 		// Restore original stdout/stderr
 		view.out = originalOut
 		view.err = originalErr
 
-		return err
+		return lineCount, err
 	}
 
-	// Store the number of lines from the first run
-	previousLineCount := lineCounter.LineCount
-
-	// Restore original stdout/stderr
-	view.out = originalOut
-	view.err = originalErr
+	// Run the command for the first time
+	previousLineCount, err := runCommandAndCaptureOutput()
+	if err != nil {
+		return err
+	}
 
 	// Then run it on each tick
 	for {
@@ -155,46 +156,23 @@ func RunWithWatch(cmd *cobra.Command, args []string, watchFlags *WatchFlags,
 				fmt.Fprint(view.out, "\033[2K") // Clear the entire line
 			}
 
-			// Reset line counter
-			lineCounter.LineCount = 0
-
 			// Log refresh information
 			logger.Debug("Refreshing command output",
 				slog.Int("refresh_interval_seconds", watchFlags.WatchInterval),
 				slog.String("command", strings.Join(cmdArgs, " ")),
 			)
 
-			// Update timestamp and print header
-			timestamp = time.Now().Format("2006-01-02 15:04:05")
-			headerText = fmt.Sprintf("Watch mode: refresh every %d seconds (press Ctrl+C to exit) - Last update: %s",
-				watchFlags.WatchInterval, timestamp)
-			view.Print(headerText)
-
-			view.Print(fmt.Sprintf("> %s", strings.Join(cmdArgs, " ")))
-
-			// Add a blank line after the command for better readability
-			view.Print("")
-
-			// Set the line counter as the output
-			view.out = lineCounter
+			// Print the header with updated timestamp
+			printHeader()
 
 			// Run the command again
-			if err := runFunc(cmd, args); err != nil {
-				// Restore original stdout/stderr
-				view.out = originalOut
-				view.err = originalErr
+			var err error
 
+			previousLineCount, err = runCommandAndCaptureOutput()
+			if err != nil {
 				logger.Error("Error executing command in watch mode", slog.Any("error", err))
-
 				return err
 			}
-
-			// Update the line count for the next iteration
-			previousLineCount = lineCounter.LineCount
-
-			// Restore original stdout/stderr
-			view.out = originalOut
-			view.err = originalErr
 		}
 	}
 }
@@ -266,6 +244,8 @@ func wrapCommandWithWatch(cmd *cobra.Command) {
 			})
 		}
 		cmd.Run = nil
+	} else {
+		panic("No RunE or Run function found for command")
 	}
 
 	logger.Debug("Added watch functionality to command", slog.String("command", cmd.CommandPath()))

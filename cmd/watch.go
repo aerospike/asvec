@@ -223,7 +223,8 @@ func wrapCommandWithWatch(cmd *cobra.Command) {
 	originalRun := cmd.Run
 
 	// Replace the Run/RunE function with one that uses watch
-	if originalRunE != nil {
+	switch {
+	case originalRunE != nil:
 		cmd.RunE = func(cmd *cobra.Command, args []string) error {
 			// Extract watch flags from command
 			watchFlags.Watch, _ = cmd.Flags().GetBool(flags.Watch)
@@ -232,7 +233,7 @@ func wrapCommandWithWatch(cmd *cobra.Command) {
 			return RunWithWatch(cmd, args, watchFlags, originalRunE)
 		}
 		cmd.Run = nil
-	} else if originalRun != nil {
+	case originalRun != nil:
 		cmd.RunE = func(cmd *cobra.Command, args []string) error {
 			// Extract watch flags from command
 			watchFlags.Watch, _ = cmd.Flags().GetBool(flags.Watch)
@@ -244,7 +245,7 @@ func wrapCommandWithWatch(cmd *cobra.Command) {
 			})
 		}
 		cmd.Run = nil
-	} else {
+	default:
 		panic("No RunE or Run function found for command")
 	}
 

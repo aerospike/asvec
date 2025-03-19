@@ -79,8 +79,8 @@ jobs:
         JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
     - name: Publish Test Build Info
       run: |
-        if [ "${{ github.event_name }}" = "workflow_call" ]; then
-          echo "Workflow was called by another workflow, publishing build info..."
+        if [ -n "${{ inputs.version }}" ]; then
+          echo "Workflow was called by create-prerelease workflow, publishing build info..."
           
           # Add git info
           jf rt build-add-git \
@@ -94,5 +94,5 @@ jobs:
             --build-number "${{ inputs.version }}" \
             --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
         else
-          echo "Workflow was triggered by ${{ github.event_name }} event, skipping build info publishing"
+          echo "Workflow was triggered directly, skipping build info publishing"
         fi

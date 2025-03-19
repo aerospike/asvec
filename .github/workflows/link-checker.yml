@@ -1,5 +1,7 @@
 name: Check Markdown and Help Text Links
-
+permissions:
+  contents: read
+  pull-requests: write
 on: push
 
 jobs:

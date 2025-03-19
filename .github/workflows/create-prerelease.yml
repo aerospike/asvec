@@ -1,4 +1,7 @@
 name: Build and publish asvec
+permissions:
+  contents: read
+  pull-requests: write
 on:
   push:
     tags:

@@ -140,8 +140,13 @@ jobs:
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
         run: |
-          buildcmd="build-prerelease"
-          [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
+          if [ "${ADDCOMMIT}" = "false" ]; then
+            echo "Building official release version"
+            buildcmd="build-official"
+          else
+            echo "Building pre-release version"
+            buildcmd="build-prerelease"
+          fi
           export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
           cd ~/work/asvec/asvec && make cleanall && make ${buildcmd}
       - name: 'Create linux packages'
@@ -467,6 +472,16 @@ jobs:
             jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
 # TODO - add builds for macos and windows (likely need generic repo support in jfrog)
+  tests:
+    needs: build
+    uses: ./.github/workflows/tests-large.yml
+    with:
+      version: ${{ needs.build.outputs.version }}
+    secrets:
+      JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+      JFROG_USERNAME: ${{ vars.JFROG_USERNAME }}
+      FEATURES_CONF: ${{ secrets.FEATURES_CONF }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish-release-bundle: 
     needs: 
@@ -521,14 +536,3 @@ jobs:
               --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
               --spec release-bundle-spec.json \
               --signing-key aerospike --sync
-
-  tests:
-    needs: build
-    uses: ./.github/workflows/tests-large.yml
-    with:
-      version: ${{ needs.build.outputs.version }}
-    secrets:
-      JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
-      JFROG_USERNAME: ${{ vars.JFROG_USERNAME }}
-      FEATURES_CONF: ${{ secrets.FEATURES_CONF }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

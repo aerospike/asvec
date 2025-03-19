@@ -140,7 +140,8 @@ func (itw *IndexTableWriter) AppendIndexRow(
 			tStandaloneIndexMetrics.SetTitle("Standalone Index Metrics")
 			tStandaloneIndexMetrics.AppendRows([]table.Row{
 				{"State", status.StandaloneIndexMetrics.GetState()},
-				{"Inserted Records", status.StandaloneIndexMetrics.GetInsertedRecordCount()},
+				{"Scanned Vector Records", status.StandaloneIndexMetrics.GetScannedVectorRecordCount()},
+				{"Indexed Vector Records", status.StandaloneIndexMetrics.GetIndexedVectorRecordCount()},
 			})
 
 			row = append(row, renderTable(tStandaloneIndexMetrics, format))

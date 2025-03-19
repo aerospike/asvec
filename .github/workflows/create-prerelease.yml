@@ -348,14 +348,14 @@ jobs:
 
       - name: Login to Artifact Aerospike Docker Registry
         run: |
-            jf docker login artifact.aerospike.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+            jf docker login artifact.aerospike.io --username ${{ vars.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
         env:
             JFROG_CLI_OFFER_CONFIG: 'false'
       - name: Configure JFrog CLI
         run: |
           jf c add \
             --url https://artifact.aerospike.io/ \
-            --user ${{ secrets.JFROG_USERNAME }} \
+            --user ${{ vars.JFROG_USERNAME }} \
             --access-token ${{ secrets.JFROG_ACCESS_TOKEN }} \
             artifact
 

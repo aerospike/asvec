@@ -140,15 +140,17 @@ jobs:
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
         run: |
+          set -e
+          export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
+          cd ~/work/asvec/asvec && make cleanall 
+
           if [ "${ADDCOMMIT}" = "false" ]; then
             echo "Building official release version"
-            buildcmd="build-official"
+            make build-official
           else
             echo "Building pre-release version"
-            buildcmd="build-prerelease"
+            make build-prerelease
           fi
-          export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
-          cd ~/work/asvec/asvec && make cleanall && make ${buildcmd}
       - name: 'Create linux packages'
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}

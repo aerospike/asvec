@@ -16,7 +16,7 @@ on:
 env:
   JFROG_CLI_BUILD_NAME: 'asvec'
   JFROG_CLI_LOG_LEVEL: DEBUG
-  JFROG_CLI_BUILD_PROJECT: 'ecosystem'
+  JFROG_CLI_BUILD_PROJECT: 'vector'
   ARTIFACT_NAME: 'asvec'
 
 jobs:
@@ -398,17 +398,17 @@ jobs:
             --build-number "${{ needs.build.outputs.version }}" \
             --image-file ./meta-info \
             --project ${{env.JFROG_CLI_BUILD_PROJECT}} \
-            ecosystem-container-dev-local
+            ${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local
           
       - name: Publish Build Info
         run: |
           export JFROG_CLI_LOG_LEVEL=DEBUG 
-          jf rt build-collect-env --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"  
-          jf rt build-add-git --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}" 
+          jf rt build-collect-env --project ${{ env.JFROG_CLI_BUILD_PROJECT }} "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"  
+          jf rt build-add-git --project ${{ env.JFROG_CLI_BUILD_PROJECT }} "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}" 
 
           jf rt build-publish \
             --detailed-summary \
-            --project ecosystem \
+            --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"
     
   publish-asvec-build: 
@@ -485,6 +485,7 @@ jobs:
           JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
       - name: Create Release Bundle
         run: |
+            
             echo '{
             
                 "name": "${{ env.JFROG_CLI_BUILD_NAME }}",
@@ -509,6 +510,6 @@ jobs:
   
             jf release-bundle-create \
               "${{ env.JFROG_CLI_BUILD_NAME }}" "${{ needs.build.outputs.version }}"\
-              --project ecosystem \
+              --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
               --spec release-bundle-spec.json \
               --signing-key aerospike --sync

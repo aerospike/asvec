@@ -68,14 +68,8 @@ jobs:
         JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
         JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
     - name: Publish Test Build Info
+      if: github.event_name == 'workflow_call'
       run: |        
-        # Add test results
-        jf rt build-add-dependencies \
-          --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
-          --build-number "${{ inputs.version }}" \
-          --project "${{ env.JFROG_CLI_BUILD_PROJECT }}" \
-          --spec "coverage/total.cov"
-        
         # Add git info
         jf rt build-add-git \
           --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \

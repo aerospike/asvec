@@ -82,7 +82,7 @@ jobs:
           echo "Version: ${VERSION} Snapshot: ${SNAPSHOT} version=${VERSION} is-snapshot=${SNAPSHOT}"
 
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -333,14 +333,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@4574d27a4764455b42196d70a065bc6853246a25 # v3.4.0
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
         with:
           platforms: all
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -368,7 +368,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6   
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -426,7 +426,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6       
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -471,6 +471,7 @@ jobs:
       - build
       - build-docker
       - publish-asvec-build
+      - tests
     runs-on: ubuntu-latest
     steps:
       - name: 'Git checkout'
@@ -478,7 +479,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -503,6 +504,10 @@ jobs:
                   {
                     "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
                     "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-rpm"
+                  },
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-tests"
                   }
                 ]
               }' > release-bundle-spec.json
@@ -513,3 +518,14 @@ jobs:
               --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
               --spec release-bundle-spec.json \
               --signing-key aerospike --sync
+
+  tests:
+    needs: build
+    uses: ./.github/workflows/tests-large.yml
+    with:
+      version: ${{ needs.build.outputs.version }}
+    secrets:
+      JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+      JFROG_USERNAME: ${{ vars.JFROG_USERNAME }}
+      FEATURES_CONF: ${{ secrets.FEATURES_CONF }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

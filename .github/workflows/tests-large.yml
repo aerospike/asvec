@@ -7,6 +7,22 @@ on:
     branches:
       - "main"
   workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    secrets:
+      JFROG_ACCESS_TOKEN:
+        required: true
+      JFROG_USERNAME:
+        required: true
+      FEATURES_CONF:
+        required: true
+      CODECOV_TOKEN:
+        required: true
+env:
+  JFROG_CLI_BUILD_NAME: 'asvec'
+  JFROG_CLI_BUILD_PROJECT: 'vector'
   
 jobs:
   tests:
@@ -37,8 +53,34 @@ jobs:
       run: |
         make coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         files: ./coverage/total.cov
         verbose: false
+    - name: setup jfrog
+      uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+      env:
+        JF_URL: https://aerospike.jfrog.io
+        JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+        JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
+    - name: Publish Test Build Info
+      run: |        
+        # Add test results
+        jf rt build-add-dependencies \
+          --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+          --build-number "${{ inputs.version }}" \
+          --project "${{ env.JFROG_CLI_BUILD_PROJECT }}" \
+          --spec "coverage/total.cov"
+        
+        # Add git info
+        jf rt build-add-git \
+          --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+          --build-number "${{ inputs.version }}" \
+          --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
+        
+        # Publish build info
+        jf rt build-publish \
+          --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+          --build-number "${{ inputs.version }}" \
+          --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"

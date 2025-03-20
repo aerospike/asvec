@@ -528,7 +528,7 @@ jobs:
                   },
                   {
                     "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
-                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-generic"
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-tests"
                   }
                 ]
               }' > release-bundle-spec.json

@@ -93,8 +93,8 @@ jobs:
           jf rt build-add-dependencies \
             "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
             "${{ inputs.version }}" \
+            coverage/total.cov \
             --project "${{ env.JFROG_CLI_BUILD_PROJECT }}" \
-            --spec "{\"files\": [{\"pattern\": \"coverage/total.cov\", \"target\": \"coverage/\"}]}"
           
           # Publish build info
           jf rt build-publish \

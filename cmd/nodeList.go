@@ -53,7 +53,7 @@ asvec node ls
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return checkSeedsAndHost()
 		},
-		Run: func(_ *cobra.Command, _ []string) {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			logger := logger.With("cmd", "listNodeCmd")
 			logger.Debug("parsed flags",
 				nodeListFlags.clientFlags.NewSLogAttr()...,
@@ -61,8 +61,7 @@ asvec node ls
 
 			client, err := createClientFromFlags(nodeListFlags.clientFlags)
 			if err != nil {
-				view.Error(err.Error())
-				return
+				return err
 			}
 			defer client.Close()
 
@@ -111,6 +110,8 @@ Possible scenarios:
 
 				view.Warning(msg)
 			}
+
+			return nil
 		},
 	}
 }
@@ -313,7 +314,9 @@ func getNodesNotVisibleToEachNode(
 
 func init() {
 	nodeListCmd := newNodeListCmd()
-
 	nodeCmd.AddCommand(nodeListCmd)
 	nodeListCmd.Flags().AddFlagSet(newNodeListFlagSet())
+
+	// Add watch functionality to the node list command
+	wrapCommandWithWatch(nodeListCmd)
 }

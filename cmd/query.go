@@ -105,7 +105,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 
 			return checkSeedsAndHost()
 		},
-		Run: func(_ *cobra.Command, _ []string) {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			logger.Debug("parsed flags",
 				append(rootFlags.clientFlags.NewSLogAttr(),
 					slog.String(flags.Namespace, queryFlags.namespace),
@@ -122,7 +122,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 
 			client, err := createClientFromFlags(rootFlags.clientFlags)
 			if err != nil {
-				view.Errorf("Failed to connect to AVS: %s", err)
+				return err
 			}
 			defer client.Close()
 
@@ -144,7 +144,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 					logger.ErrorContext(ctx, "unable to get vector using provided vector", slog.Any("error", err))
 					view.Errorf("Failed to get vector using vector: %s", err)
 
-					return
+					return err
 				}
 			} else {
 				indexDef, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName, false)
@@ -152,7 +152,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 					logger.ErrorContext(ctx, "unable to get index definition", slog.Any("error", err))
 					view.Errorf("Failed to get index definition: %s", err)
 
-					return
+					return err
 				}
 
 				if queryFlags.keyString.Val != nil || queryFlags.keyInt.Val != nil {
@@ -161,7 +161,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 						logger.ErrorContext(ctx, "unable to get vector using provided key", slog.Any("error", err))
 						view.Errorf("Failed to get vector using key: %s", err)
 
-						return
+						return err
 					}
 				} else {
 					neighbors, err = trialAndErrorQuery(ctx, client, int(indexDef.Dimensions), hnswSearchParams)
@@ -169,7 +169,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 						logger.ErrorContext(ctx, "unable to get vector using zero vector", slog.Any("error", err))
 						view.Errorf("Failed to get vector using zero vector: %s", err)
 
-						return
+						return err
 					}
 				}
 			}
@@ -178,7 +178,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 
 			if len(neighbors) == 0 {
 				view.Warning("Query returned zero results.")
-				return
+				return nil
 			}
 
 			if queryFlags.includeFields != nil {
@@ -191,7 +191,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 				logger.ErrorContext(ctx, "unable to convert maxDataKeys to int", slog.Any("error", err))
 				view.Errorf("Failed to get index definition: %s", err)
 
-				return
+				return err
 			}
 
 			if queryFlags.maxDataColWidth > math.MaxInt {
@@ -199,7 +199,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 				logger.ErrorContext(ctx, "unable to convert maxDataColWidth to int", slog.Any("error", err))
 				view.Errorf("Failed to get index definition: %s", err)
 
-				return
+				return err
 			}
 
 			//nolint:gosec // Overflow is checked above
@@ -216,6 +216,8 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 					)
 				}
 			}
+
+			return nil
 		},
 	}
 }
@@ -424,4 +426,7 @@ func init() {
 	}
 
 	queryCmd.MarkFlagsMutuallyExclusive(flags.Vector, flags.KeyString, flags.KeyInt)
+
+	// Add watch functionality to the query command
+	wrapCommandWithWatch(queryCmd)
 }

@@ -82,6 +82,15 @@ jobs:
         if [ -n "${{ inputs.version }}" ]; then
           echo "Workflow was called by create-prerelease workflow, publishing build info..."
           
+          # Upload coverage report to JFrog
+          echo "Uploading coverage report to JFrog..."
+          jf rt upload \
+            coverage/total.cov \
+            "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/asvec/${{ inputs.version }}/" \
+            --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+            --build-number="${{ inputs.version }}" \
+            --project="${{ env.JFROG_CLI_BUILD_PROJECT }}"
+          
           # Add git info
           jf rt build-add-git \
              "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
@@ -94,7 +103,7 @@ jobs:
             "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
             "${{ inputs.version }}" \
             coverage/total.cov \
-            --project "${{ env.JFROG_CLI_BUILD_PROJECT }}" \
+            --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
           
           # Publish build info
           jf rt build-publish \

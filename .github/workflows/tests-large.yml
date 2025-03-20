@@ -84,14 +84,22 @@ jobs:
           
           # Add git info
           jf rt build-add-git \
-            --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
-            --build-number "${{ inputs.version }}" \
+             "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+             "${{ inputs.version }}" \
             --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
+          
+          # Add coverage report
+          echo "Adding coverage report to build info..."
+          jf rt build-add-dependencies \
+            "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+            "${{ inputs.version }}" \
+            --project "${{ env.JFROG_CLI_BUILD_PROJECT }}" \
+            --spec "{\"files\": [{\"pattern\": \"coverage/total.cov\", \"target\": \"coverage/\"}]}"
           
           # Publish build info
           jf rt build-publish \
-            --build-name "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
-            --build-number "${{ inputs.version }}" \
+            "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+            "${{ inputs.version }}" \
             --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
         else
           echo "Workflow was triggered directly, skipping build info publishing"

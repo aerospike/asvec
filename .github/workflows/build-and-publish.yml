@@ -61,7 +61,7 @@ jobs:
           fi
 
           # Remove "v" prefix to get the version
-          VERSION=${TAG}
+          VERSION=${TAG#v}
 
           # Check if it's a snapshot
           if [[ "$VERSION" == *-SNAPSHOT-* ]]; then

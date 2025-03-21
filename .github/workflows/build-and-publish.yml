@@ -302,7 +302,7 @@ jobs:
           overwrite: true
 
   build-docker:
-    needs: [parse-version, sign, build]
+    needs: [parse-version, sign, build, tests]
     runs-on: ubuntu-latest
     steps: 
       - name: 'Git checkout'
@@ -389,7 +389,7 @@ jobs:
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"
     
   publish-asvec-build:
-    needs: [parse-version, sign, build]
+    needs: [parse-version, sign, build, tests]
     runs-on: ubuntu-latest
     steps:
       - name: 'Git checkout'

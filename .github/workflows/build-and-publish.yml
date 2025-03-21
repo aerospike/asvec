@@ -440,7 +440,7 @@ jobs:
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
 # TODO - add builds for macos and windows (likely need generic repo support in jfrog)
   tests:
-    needs: [parse-version, build]
+    needs: [parse-version]
     uses: ./.github/workflows/tests-large.yml
     with:
       version: ${{ needs.parse-version.outputs.version }}

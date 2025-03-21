@@ -35,6 +35,7 @@ const (
 	Verbose                      = "verbose"
 	Format                       = "format"
 	Yaml                         = "yaml"
+	Interactive                  = "interactive"
 	InputFile                    = "file"
 	StorageNamespace             = "storage-namespace"
 	StorageSet                   = "storage-set"

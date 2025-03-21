@@ -254,7 +254,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup GPG
-        uses: aerospike/shared-workflows/devops/setup-gpg@ed780e9928d56ef074532dbc6877166d5460587a # v0.1.0
+        uses: aerospike/shared-workflows/devops/setup-gpg@dda8173aca1f1e73f95267572a7d3849cd00f1b8 # v1.0.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}

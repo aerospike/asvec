@@ -38,6 +38,35 @@ asvec --help
   granting user's roles.
 - **Node visibility**: Listing nodes and important metadata i.e. version, peers,
   etc.
+- **Watch Mode**: Continuously monitor command output with automatic refresh using the `--watch` flag.
+
+## Watch Mode
+
+Some commands support a watch mode that continuously refreshes the output at a specified interval. This is useful for monitoring changes in real-time.
+
+### Supported Commands
+
+The following commands support watch mode:
+
+- `node list` (and its alias `node ls`)
+- `index list` (and its alias `index ls`)
+- `query`
+
+### Usage
+
+To use watch mode, add the `--watch` flag to any supported command:
+
+```bash
+asvec node list --watch
+```
+
+By default, the command will refresh every 2 seconds. You can change the refresh interval using the `--watch-interval` flag:
+
+```bash
+asvec node list --watch --watch-interval 5  # Refresh every 5 seconds
+```
+
+Press Ctrl+C to exit watch mode.
 
 ## Configuration File
 All connection related command-line flags can also be configured using a
@@ -139,5 +168,3 @@ Add the following to your .vscode/launch.json
 
 This project is licensed under the Apache License. See the
 [LICENSE.md](./LICENSE) file for details.
-
-

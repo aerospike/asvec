@@ -1,4 +1,7 @@
 name: Test
+permissions:
+  contents: read
+  pull-requests: write
 on:
   push:
     branches:
@@ -30,7 +33,7 @@ jobs:
         echo "$FEATURES_CONF" > docker/auth/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
-        echo "${{ secrets.JFROG_ACCESS_TOKEN }}" | docker login aerospike.jfrog.io -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
+        echo "${{ secrets.JFROG_ACCESS_TOKEN }}" | docker login aerospike.jfrog.io -u "${{ vars.JFROG_USERNAME }}" --password-stdin
     - name: Run tests
       run: |
         FAIL_FAST=true make test

@@ -1,4 +1,7 @@
 name: Large Tests
+permissions:
+  contents: read
+  pull-requests: write
 on:
   pull_request:
     branches:
@@ -7,11 +10,37 @@ on:
     branches:
       - "main"
   workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    secrets:
+      JFROG_ACCESS_TOKEN:
+        required: true
+      JFROG_USERNAME:
+        required: true
+      FEATURES_CONF:
+        required: true
+      CODECOV_TOKEN:
+        required: true
+env:
+  JFROG_CLI_BUILD_NAME: 'asvec'
+  JFROG_CLI_BUILD_PROJECT: 'vector'
   
 jobs:
+
   tests:
     runs-on: aerospike_large_runners_8
     steps:
+    - name: Debug Event Context
+      run: |
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Event Type: ${{ github.event.type }}"
+          echo "Triggered By: ${{ github.actor }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+  
     - uses: actions/checkout@v4
     - name: Get go version from go.mod
       run: |
@@ -32,13 +61,55 @@ jobs:
         echo "$FEATURES_CONF" > docker/multi-node-LB/config/features.conf
     - name: Login to Aerospike Jfrog
       run: |
-        echo "${{ secrets.JFROG_ACCESS_TOKEN }}" | docker login aerospike.jfrog.io -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
+        echo "${{ secrets.JFROG_ACCESS_TOKEN }}" | docker login aerospike.jfrog.io -u "${{ vars.JFROG_USERNAME }}" --password-stdin
     - name: Run tests
       run: |
         make coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         files: ./coverage/total.cov
         verbose: false
+    - name: setup jfrog
+      uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+      env:
+        JF_URL: https://aerospike.jfrog.io
+        JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+        JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
+    - name: Publish Test Build Info
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          echo "Workflow was called by create-prerelease workflow, publishing build info..."
+          
+          # Upload coverage report to JFrog
+          echo "Uploading coverage report to JFrog..."
+          jf rt upload \
+            coverage/total.cov \
+            "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/asvec/${{ inputs.version }}/" \
+            --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+            --build-number="${{ inputs.version }}" \
+            --project="${{ env.JFROG_CLI_BUILD_PROJECT }}"
+          
+          # Add git info
+          jf rt build-add-git \
+             "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+             "${{ inputs.version }}" \
+            --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
+          
+          # Add coverage report
+          echo "Adding coverage report to build info..."
+          jf rt build-add-dependencies \
+            "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+            "${{ inputs.version }}" \
+            coverage/total.cov \
+            --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
+          
+          # Publish build info
+          jf rt build-publish \
+            "${{ env.JFROG_CLI_BUILD_NAME }}-tests" \
+            "${{ inputs.version }}" \
+            --project "${{ env.JFROG_CLI_BUILD_PROJECT }}"
+        else
+          echo "Workflow was triggered directly, skipping build info publishing"
+        fi

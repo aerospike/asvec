@@ -1,4 +1,7 @@
 name: Build and publish asvec
+permissions:
+  contents: read
+  pull-requests: write
 on:
   push:
     tags:
@@ -16,7 +19,7 @@ on:
 env:
   JFROG_CLI_BUILD_NAME: 'asvec'
   JFROG_CLI_LOG_LEVEL: DEBUG
-  JFROG_CLI_BUILD_PROJECT: 'ecosystem'
+  JFROG_CLI_BUILD_PROJECT: 'vector'
   ARTIFACT_NAME: 'asvec'
 
 jobs:
@@ -58,7 +61,7 @@ jobs:
           fi
 
           # Remove "v" prefix to get the version
-          VERSION=${TAG#v}
+          VERSION=${TAG}
 
           # Check if it's a snapshot
           if [[ "$VERSION" == *-SNAPSHOT-* ]]; then
@@ -82,7 +85,7 @@ jobs:
           echo "Version: ${VERSION} Snapshot: ${SNAPSHOT} version=${VERSION} is-snapshot=${SNAPSHOT}"
 
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -137,10 +140,17 @@ jobs:
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
         run: |
-          buildcmd="build-prerelease"
-          [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
+          set -e
           export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
-          cd ~/work/asvec/asvec && make cleanall && make ${buildcmd}
+          cd ~/work/asvec/asvec && make cleanall 
+
+          if [ "${ADDCOMMIT}" = "false" ]; then
+            echo "Building official release version"
+            make build-official
+          else
+            echo "Building pre-release version"
+            make build-prerelease
+          fi
       - name: 'Create linux packages'
         env:
           ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
@@ -284,44 +294,6 @@ jobs:
           path: asvec-*
           overwrite: true
 
-  pre-release:
-    needs:
-      - sign
-      - build
-    runs-on: ubuntu-latest
-    steps:
-      - name: 'Git checkout'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: 'Download Artifacts'
-        uses: actions/download-artifact@v4
-        with:
-          name: asvec-artifacts
-      - name: 'Create a new pre-release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          TAG=${{needs.build.outputs.version}}
-          FULLCOMMIT=$(git rev-parse HEAD)
-          gh release create -R github.com/aerospike/asvec --prerelease --target ${FULLCOMMIT} --title "Asvec - ${TAG}" ${TAG} ${{needs.build.outputs.artifacts}} ${{needs.build.outputs.sha-artifacts}} ${{needs.build.outputs.asc-artifacts}}
-      - name: 'Delete previous pre-release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DELPREV: ${{ inputs.deletePrevBuild }}
-        run: |
-          if [ "${DELPREV}" = "true" ]; then
-            set -e
-            gh release list -R github.com/aerospike/asvec -L 100 | grep Pre-release | awk -F'\t' '{print $3}' | while read -r line; do
-            if [ "$line" != "${{needs.build.outputs.version}}" ]; then
-              if [[ "$line" == "${{ inputs.version }}-SNAPSHOT-"* ]]; then
-              echo "Removing $line"
-              gh release delete "$line" -R github.com/aerospike/asvec --yes --cleanup-tag
-              fi
-            fi
-            done
-          fi
   build-docker:
     needs:
       - sign
@@ -337,10 +309,10 @@ jobs:
         with:
           platforms: all
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -348,14 +320,14 @@ jobs:
 
       - name: Login to Artifact Aerospike Docker Registry
         run: |
-            jf docker login artifact.aerospike.io --username ${{ secrets.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+            jf docker login artifact.aerospike.io --username ${{ vars.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
         env:
             JFROG_CLI_OFFER_CONFIG: 'false'
       - name: Configure JFrog CLI
         run: |
           jf c add \
             --url https://artifact.aerospike.io/ \
-            --user ${{ secrets.JFROG_USERNAME }} \
+            --user ${{ vars.JFROG_USERNAME }} \
             --access-token ${{ secrets.JFROG_ACCESS_TOKEN }} \
             artifact
 
@@ -368,7 +340,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6   
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -398,17 +370,17 @@ jobs:
             --build-number "${{ needs.build.outputs.version }}" \
             --image-file ./meta-info \
             --project ${{env.JFROG_CLI_BUILD_PROJECT}} \
-            ecosystem-container-dev-local
+            ${{ env.JFROG_CLI_BUILD_PROJECT }}-container-dev-local
           
       - name: Publish Build Info
         run: |
           export JFROG_CLI_LOG_LEVEL=DEBUG 
-          jf rt build-collect-env --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"  
-          jf rt build-add-git --project ecosystem "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}" 
+          jf rt build-collect-env --project ${{ env.JFROG_CLI_BUILD_PROJECT }} "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"  
+          jf rt build-add-git --project ${{ env.JFROG_CLI_BUILD_PROJECT }} "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}" 
 
           jf rt build-publish \
             --detailed-summary \
-            --project ecosystem \
+            --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"
     
   publish-asvec-build: 
@@ -426,7 +398,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6       
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -464,6 +436,16 @@ jobs:
             jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
 # TODO - add builds for macos and windows (likely need generic repo support in jfrog)
+  tests:
+    needs: build
+    uses: ./.github/workflows/tests-large.yml
+    with:
+      version: ${{ needs.build.outputs.version }}
+    secrets:
+      JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+      JFROG_USERNAME: ${{ vars.JFROG_USERNAME }}
+      FEATURES_CONF: ${{ secrets.FEATURES_CONF }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish-release-bundle: 
     needs: 
@@ -471,6 +453,7 @@ jobs:
       - build
       - build-docker
       - publish-asvec-build
+      - tests
     runs-on: ubuntu-latest
     steps:
       - name: 'Git checkout'
@@ -478,13 +461,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
           JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
       - name: Create Release Bundle
         run: |
+            
             echo '{
             
                 "name": "${{ env.JFROG_CLI_BUILD_NAME }}",
@@ -502,6 +486,10 @@ jobs:
                   {
                     "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
                     "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-rpm"
+                  },
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-tests"
                   }
                 ]
               }' > release-bundle-spec.json
@@ -509,6 +497,6 @@ jobs:
   
             jf release-bundle-create \
               "${{ env.JFROG_CLI_BUILD_NAME }}" "${{ needs.build.outputs.version }}"\
-              --project ecosystem \
+              --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
               --spec release-bundle-spec.json \
               --signing-key aerospike --sync

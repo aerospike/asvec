@@ -9,3 +9,8 @@ build-metadata
 bin/asvec-linux-amd64
 docker/asvec.docker/meta-info
 meta-info
+asvec-linux-amd64-wip
+asvec-linux-arm64-wip
+asvec-macos-amd64
+embed_tail.txt
+bin/asvec-linux-arm64

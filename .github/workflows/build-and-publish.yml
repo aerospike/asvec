@@ -419,25 +419,25 @@ jobs:
               echo "Skipping upload of $file as it does not match *.deb"
           fi
           done
-          jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
-          jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
+          jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+          jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
           jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
       - name: "Upload mac builds to JFrog"
         run: |
             for file in ${{needs.build.outputs.macos-artifacts}}; do
               if [[ "$file" == *.pkg ]]; then
-                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/macos/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
                     --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
               elif [[ "$file" == *.zip ]]; then
-                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/macos/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
                     --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
               else
                 echo "Skipping upload of $file as it does not match *.pkg or *.zip"
               fi
             done
-            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
-            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
-            jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-macos" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-macos" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-macos" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
           
       - name: "Upload rpm builds to JFrog"
         run: |
@@ -449,10 +449,10 @@ jobs:
                     --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
               else 
                 echo "Skipping upload of $file as it does not match *.rpm"
-            fi
+              fi
             done
-            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
-            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
 
     add-binaries-to-release:
@@ -536,6 +536,10 @@ jobs:
                   {
                     "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
                     "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-tests"
+                  }, 
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-macos"
                   }
                 ]
               }' > release-bundle-spec.json

@@ -422,7 +422,23 @@ jobs:
           jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
           jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
           jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
-        
+      - name: "Upload mac builds to JFrog"
+        run: |
+            for file in ${{needs.build.outputs.macos-artifacts}}; do
+              if [[ "$file" == *.pkg ]]; then
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
+              elif [[ "$file" == *.zip ]]; then
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
+              else
+                echo "Skipping upload of $file as it does not match *.pkg or *.zip"
+              fi
+            done
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
+            jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+          
       - name: "Upload rpm builds to JFrog"
         run: |
           for file in *; do
@@ -438,7 +454,39 @@ jobs:
             jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
             jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
-# TODO - add builds for macos and windows (likely need generic repo support in jfrog)
+
+    add-binaries-to-release:
+        # Only run this job if triggered by a tag push
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        needs: 
+            - sign
+            - build
+        runs-on: ubuntu-latest
+        steps:
+            - name: 'Download Artifacts'
+                uses: actions/download-artifact@v4
+                with:
+                    name: asvec-artifacts
+
+            - name: 'Add binaries to existing release'
+                env:
+                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
+                    TAG="${GITHUB_REF#refs/tags/}"
+                    
+                    # Check if release exists
+                    if gh release view "${TAG}" &>/dev/null; then
+                        echo "Found existing release ${TAG}, adding binaries..."
+                        # Upload all artifacts to the release
+                        gh release upload "${TAG}" \
+                            ${{needs.build.outputs.artifacts}} \
+                            ${{needs.build.outputs.sha-artifacts}} \
+                            ${{needs.build.outputs.asc-artifacts}} \
+                            --clobber
+                    else
+                        echo "No release found for tag ${TAG}, skipping upload to github"
+                    fi
+
   tests:
     needs: [parse-version]
     uses: ./.github/workflows/tests-large.yml

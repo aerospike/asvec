@@ -427,10 +427,10 @@ jobs:
             for file in ${{needs.build.outputs.pkg-artifacts}}; do
               if [[ "$file" == *.pkg ]]; then
                   jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/macos/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
-                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" 
               elif [[ "$file" == *.zip ]]; then
                   jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/macos/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
-                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
               else
                 echo "Skipping upload of $file as it does not match *.pkg or *.zip"
               fi

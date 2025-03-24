@@ -463,10 +463,10 @@ jobs:
     needs: [parse-version]  #, sign, build, tests]
     runs-on: ubuntu-latest
     steps:
-      - name: 'Download Artifacts'
-        uses: actions/download-artifact@v4
-        with:
-          name: asvec-artifacts
+    #   - name: 'Download Artifacts'
+    #     uses: actions/download-artifact@v4
+    #     with:
+    #       name: asvec-artifacts
       - name: 'Add binaries to existing release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

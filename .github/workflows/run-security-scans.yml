@@ -163,3 +163,24 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
+      - name: Post SARIF findings in the issue
+        uses: sett-and-hive/sarif-to-issue-action@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          branch: ${{ github.head_ref }}
+          pr-number: ${{ github.event.number }}
+          sarif-file: ./snyk-code-report.sarif
+          title: "Security scanning results"
+          odc-sarif: false
+      - name: Post SARIF findings in the issue
+        uses: sett-and-hive/sarif-to-issue-action@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          branch: ${{ github.head_ref }}
+          pr-number: ${{ github.event.number }}
+          sarif-file: ./snyk-container-report.sarif
+          title: "Security scanning results"
+          odc-sarif: false
+          

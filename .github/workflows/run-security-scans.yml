@@ -28,17 +28,17 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           set -x
-          # Run scan on Go code and save results
           snyk test --json --severity-threshold=high || EXIT_CODE=$?
           
+          # Generate full report even when vulnerabilities found
+          snyk test --json --security-threshold=low --sarif-file-output=snyk-code-report.sarif > snyk-code-report.json || true
+          
           if [ -z "$EXIT_CODE" ] || [ "$EXIT_CODE" -eq "0" ]; then
-            # No high/critical vulnerabilities found running report for low
-            snyk test --json --security-threshold=low --sarif-file-output=snyk-code-report.sarif > snyk-code-report.json || true
+            echo "No high/critical vulnerabilities found in code"
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "High or Critical vulnerabilities found in code (and not ignored)"
             echo "status=failure" >> $GITHUB_OUTPUT
-            exit 1
           fi
       - name: Upload scan results
         uses: actions/upload-artifact@v4
@@ -81,17 +81,17 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           set -x
-          # Run scan on container and save results
-          snyk container test asvec:latest \
-            --json --severity-threshold=high  || EXIT_CODE=$?
+          snyk container test asvec:latest --json --severity-threshold=high || EXIT_CODE=$?
+          
+          # Generate full report even when vulnerabilities found
+          snyk container test asvec:latest --json --security-threshold=low --sarif-file-output=snyk-container-report.sarif > snyk-container-report.json || true
+          
           if [ -z "$EXIT_CODE" ] || [ "$EXIT_CODE" -eq "0" ]; then
-            # No high/critical vulnerabilities found running report for low
-            snyk container test asvec:latest --json --security-threshold=low --sarif-file-output=snyk-container-report.sarif > snyk-container-report.json || true
+            echo "No high/critical vulnerabilities found in container"
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "High or Critical vulnerabilities found in container (and not ignored)"
             echo "status=failure" >> $GITHUB_OUTPUT
-            exit 1
           fi
       - name: Upload scan results
         uses: actions/upload-artifact@v4

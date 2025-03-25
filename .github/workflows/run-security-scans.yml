@@ -1,0 +1,157 @@
+name: Security Scans
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+env:
+    JFROG_CLI_BUILD_PROJECT: 'vector'
+    JFROG_CLI_BUILD_NAME: 'asvec'
+
+jobs:
+  snyk-scan:
+    runs-on: ubuntu-latest
+    outputs:
+      code-status: ${{ steps.code-scan.outputs.status }}
+      container-status: ${{ steps.container-scan.outputs.status }}
+    steps:
+      - name: 'Git checkout'
+        uses: actions/checkout@v4
+
+      - name: Setup Snyk
+        uses: snyk/actions/setup@master
+
+      - name: Run Snyk code scan
+        id: code-scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Run scan on Go code and save results
+          snyk test --json --file=go.mod --file=go.sum --severity-threshold=high > snyk-code-report.json || EXIT_CODE=$?
+          
+          if [ "$EXIT_CODE" -eq "1" ]; then
+            echo "High or Critical vulnerabilities found in code (and not ignored)"
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+  build-docker:
+    needs: []
+    runs-on: ubuntu-latest
+    steps: 
+      - name: 'Git checkout'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: setup jfrog
+        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+        env:
+          JF_URL: https://aerospike.jfrog.io
+          JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+          JF_PROJECT: ${{ env.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Login to Artifact Aerospike Docker Registry
+        run: |
+            jf docker login artifact.aerospike.io --username ${{ vars.JFROG_USERNAME }} --password ${{ secrets.JFROG_ACCESS_TOKEN }}
+        env:
+            JFROG_CLI_OFFER_CONFIG: 'false'
+      - name: Configure JFrog CLI
+        run: |
+          jf c add \
+            --url https://artifact.aerospike.io/ \
+            --user ${{ vars.JFROG_USERNAME }} \
+            --access-token ${{ secrets.JFROG_ACCESS_TOKEN }} \
+            artifact
+
+          jf c use artifact
+        env:
+          JFROG_CLI_OFFER_CONFIG: 'false'
+    
+      - name: 'Download Artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          name: asvec-artifacts
+      - name: Build and Push Docker Image
+        run: |
+          docker buildx bake \
+            --set asvec.tags=latest \
+            --file docker/asvec.docker/bake.amd64.hcl \
+            --load 
+        env:
+          DOCKER_BUILDKIT: '1'
+          
+      - name: Run Snyk container scan
+        id: container-scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Run scan on container and save results
+          snyk container test asvec:latest \
+            --json --severity-threshold=high > snyk-container-report.json || EXIT_CODE=$?
+          
+          if [ "$EXIT_CODE" -eq "1" ]; then
+            echo "High or Critical vulnerabilities found in container (and not ignored)"
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-reports
+          path: snyk-*-report.json
+          retention-days: 7
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // I feel like there must be a non-custom way to do this. I mean at least it isn't bash /shrug 
+            const fs = require('fs');
+            const codeReport = JSON.parse(fs.readFileSync('snyk-code-report.json', 'utf8'));
+            const containerReport = JSON.parse(fs.readFileSync('snyk-container-report.json', 'utf8'));
+            
+            let comment = '## 🔒 Security Scan Results\n\n';
+            
+            // Code scan results
+            comment += '### 📝 Code Scan\n';
+            if (codeReport.vulnerabilities && codeReport.vulnerabilities.length > 0) {
+              comment += '⚠️ Found vulnerabilities:\n';
+              codeReport.vulnerabilities.forEach(vuln => {
+                const severityEmoji = vuln.severity === 'critical' ? '🚨' : '⚠️';
+                comment += `${severityEmoji} ${vuln.title} (${vuln.severity})\n`;
+              });
+            } else {
+              comment += '✅ No vulnerabilities found.\n';
+            }
+            
+            // Container scan results
+            comment += '\n### 🐳 Container Scan\n';
+            if (containerReport.vulnerabilities && containerReport.vulnerabilities.length > 0) {
+              comment += '⚠️ Found vulnerabilities:\n';
+              containerReport.vulnerabilities.forEach(vuln => {
+                const severityEmoji = vuln.severity === 'critical' ? '🚨' : '⚠️';
+                comment += `${severityEmoji} ${vuln.title} (${vuln.severity})\n`;
+              });
+            } else {
+              comment += '✅ No vulnerabilities found.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

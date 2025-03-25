@@ -105,64 +105,73 @@ jobs:
     needs: [snyk-scan, docker-scan]
     runs-on: ubuntu-latest
     steps:
-
       - name: 'Git checkout'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @security-alert/sarif-to-markdown
+
       - name: Download scan results
         uses: actions/download-artifact@v4
         with:
           name: snyk-code-reports
           path: code-reports/
+
       - name: Download container scan results
         uses: actions/download-artifact@v4
         with:
           name: snyk-container-reports
           path: container-reports/
-      - name: show artifacts
+
+      - name: Show artifacts
         run: find .
-      - name: Comment PR with results
-        uses: actions/github-script@v7
+
+      - name: Update PR with results
         if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const codeReport = JSON.parse(fs.readFileSync('code-reports/snyk-code-report.json', 'utf8'));
-            const containerReport = JSON.parse(fs.readFileSync('container-reports/snyk-container-report.json', 'utf8'));
+            const processor = require('./.github/scripts/process-security-results.js');
             
-            let comment = '## 🔒 Security Scan Results\n\n';
+            // Get the comment content
+            const comment = await processor.run();
             
-            // Code scan results
-            comment += '### 📝 Code Scan\n';
-            if (codeReport.vulnerabilities && codeReport.vulnerabilities.length > 0) {
-              comment += '⚠️ Found vulnerabilities:\n';
-              codeReport.vulnerabilities.forEach(vuln => {
-                const severityEmoji = vuln.severity === 'critical' ? '🚨' : '⚠️';
-                comment += `${severityEmoji} ${vuln.title} (${vuln.severity})\n`;
-              });
-            } else {
-              comment += '✅ No vulnerabilities found.\n';
-            }
-            
-            // Container scan results
-            comment += '\n### 🐳 Container Scan\n';
-            if (containerReport.vulnerabilities && containerReport.vulnerabilities.length > 0) {
-              comment += '⚠️ Found vulnerabilities:\n';
-              containerReport.vulnerabilities.forEach(vuln => {
-                const severityEmoji = vuln.severity === 'critical' ? '🚨' : '⚠️';
-                comment += `${severityEmoji} ${vuln.title} (${vuln.severity})\n`;
-              });
-            } else {
-              comment += '✅ No vulnerabilities found.\n';
-            }
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
+              issue_number: context.issue.number,
             });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('## 🔒 Security Scan Results')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
       - name: Post SARIF findings in the issue
         uses: sett-and-hive/sarif-to-issue-action@main
         with:
@@ -181,4 +190,18 @@ jobs:
           sarif-file: container-reports/snyk-container-report.sarif
           title: "Security scanning results"
           odc-sarif: false
+
+  check-status:
+    needs: [snyk-scan, docker-scan, report-results]
+    runs-on: ubuntu-latest
+    if: always()  # Run even if previous jobs failed
+    steps:
+      - name: Check scan results
+        run: |
+          if [ "${{ needs.snyk-scan.outputs.code-status }}" = "failure" ] || [ "${{ needs.docker-scan.outputs.container-status }}" = "failure" ]; then
+            echo "High or Critical vulnerabilities found in scans"
+            exit 1
+          else
+            echo "No high/critical vulnerabilities found"
+          fi
           

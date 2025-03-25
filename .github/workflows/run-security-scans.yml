@@ -27,6 +27,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
+          set -x
           # Run scan on Go code and save results
           snyk test --json --severity-threshold=high || EXIT_CODE=$?
           
@@ -75,12 +76,15 @@ jobs:
             --load 
         env:
           DOCKER_BUILDKIT: '1'
+      - name: Setup Snyk
+        uses: snyk/actions/setup@b98d498629f1c368650224d6d212bf7dfa89e4bf # v0.4.0
           
       - name: Run Snyk container scan
         id: container-scan
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
+          set -x
           # Run scan on container and save results
           snyk container test asvec:latest \
             --json --severity-threshold=high  || EXIT_CODE=$?

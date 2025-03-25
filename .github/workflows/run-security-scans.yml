@@ -37,10 +37,7 @@ jobs:
             exit 1
           else
             snyk test --json --security-threshold=low > snyk-code-report.json
-            # If file is empty, write valid empty JSON
-            if [ ! -s snyk-code-report.json ]; then
-              echo '{"vulnerabilities":[]}' > snyk-code-report.json
-            fi
+            echo "Generated snyk report for code"
             cat snyk-code-report.json
             echo "status=success" >> $GITHUB_OUTPUT
           fi
@@ -97,10 +94,7 @@ jobs:
             # Write scan results
             snyk container test asvec:latest \
               --json --security-threshold=low > snyk-container-report.json
-            # If file is empty, write valid empty JSON
-            if [ ! -s snyk-container-report.json ]; then
-              echo '{"vulnerabilities":[]}' > snyk-container-report.json
-            fi
+            echo Generatged snyk report for container
             cat snyk-container-report.json
             echo "status=success" >> $GITHUB_OUTPUT
 

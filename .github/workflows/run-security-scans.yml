@@ -169,8 +169,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           branch: ${{ github.head_ref }}
-          pr-number: ${{ github.event.number }}
-          sarif-file: ./snyk-code-report.sarif
+          sarif-file: code-reports/snyk-code-report.sarif
           title: "Security scanning results"
           odc-sarif: false
       - name: Post SARIF findings in the issue
@@ -179,8 +178,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           branch: ${{ github.head_ref }}
-          pr-number: ${{ github.event.number }}
-          sarif-file: ./snyk-container-report.sarif
+          sarif-file: container-reports/snyk-container-report.sarif
           title: "Security scanning results"
           odc-sarif: false
           

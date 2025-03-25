@@ -31,7 +31,7 @@ jobs:
           # Run scan on Go code and save results
           snyk test --json --severity-threshold=high || EXIT_CODE=$?
           
-          if [ "$EXIT_CODE" -eq "0" ]; then
+          if [ -z "$EXIT_CODE" ] || [ "$EXIT_CODE" -eq "0" ]; then
             # No high/critical vulnerabilities found running report for low
             snyk test --json --security-threshold=low --sarif-file-output=snyk-code-report.sarif > snyk-code-report.json || true
             echo "status=success" >> $GITHUB_OUTPUT
@@ -84,7 +84,7 @@ jobs:
           # Run scan on container and save results
           snyk container test asvec:latest \
             --json --severity-threshold=high  || EXIT_CODE=$?
-          if [ "$EXIT_CODE" -eq "0" ]; then
+          if [ -z "$EXIT_CODE" ] || [ "$EXIT_CODE" -eq "0" ]; then
             # No high/critical vulnerabilities found running report for low
             snyk container test asvec:latest --json --security-threshold=low --sarif-file-output=snyk-container-report.sarif > snyk-container-report.json || true
             echo "status=success" >> $GITHUB_OUTPUT

@@ -113,6 +113,8 @@ jobs:
         with:
           name: snyk-container-reports
           path: snyk-*-report.json
+      - name: show artifacts
+        run: find .
       - name: Comment PR with results
         uses: actions/github-script@v7
         if: github.event_name == 'pull_request'

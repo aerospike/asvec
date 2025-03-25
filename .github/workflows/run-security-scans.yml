@@ -67,7 +67,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker buildx bake \
-            --set asvec.tags=latest \
+            --set asvec.tags=asvec:latest \
             --file docker/asvec.docker/bake.amd64.hcl \
             --load 
         env:

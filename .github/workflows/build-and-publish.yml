@@ -1,6 +1,6 @@
 name: Build and publish asvec
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 on:
   push:

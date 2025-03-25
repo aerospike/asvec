@@ -6,8 +6,8 @@ async function run() {
     const codeSarif = JSON.parse(fs.readFileSync('code-reports/snyk-code-report.sarif', 'utf8'));
     const containerSarif = JSON.parse(fs.readFileSync('container-reports/snyk-container-report.sarif', 'utf8'));
     
-    const codeMarkdown = await sarifToMarkdown.default(codeSarif);
-    const containerMarkdown = await sarifToMarkdown.default(containerSarif);
+    const codeMarkdown = await sarifToMarkdown(codeSarif);
+    const containerMarkdown = await sarifToMarkdown(containerSarif);
     
     const comment = `## 🔒 Security Scan Results
 

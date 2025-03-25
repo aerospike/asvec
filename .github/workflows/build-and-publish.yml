@@ -487,9 +487,9 @@ jobs:
                 echo "Found existing release ${TAG}, adding binaries..."
                 # Upload all artifacts to the release
                 gh release upload "${TAG}" \
-                    # ${{needs.build.outputs.artifacts}} \
-                    # ${{needs.build.outputs.sha-artifacts}} \
-                    # ${{needs.build.outputs.asc-artifacts}} \
+                    ${{needs.build.outputs.artifacts}} \
+                    ${{needs.build.outputs.sha-artifacts}} \
+                    ${{needs.build.outputs.asc-artifacts}} \
                     --clobber
             else
                 echo "No release found for tag ${TAG}, skipping upload to github"

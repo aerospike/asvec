@@ -28,13 +28,19 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           # Run scan on Go code and save results
-          snyk test --json --file=go.mod --file=go.sum --severity-threshold=high > snyk-code-report.json || EXIT_CODE=$?
+          snyk test --json --severity-threshold=high || EXIT_CODE=$?
           
           if [ "$EXIT_CODE" -eq "1" ]; then
             echo "High or Critical vulnerabilities found in code (and not ignored)"
             echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           else
+            snyk test --json --security-threshold=low > snyk-code-report.json
+            # If file is empty, write valid empty JSON
+            if [ ! -s snyk-code-report.json ]; then
+              echo '{"vulnerabilities":[]}' > snyk-code-report.json
+            fi
+            cat snyk-code-report.json
             echo "status=success" >> $GITHUB_OUTPUT
           fi
       - name: Upload scan results
@@ -77,14 +83,23 @@ jobs:
         run: |
           # Run scan on container and save results
           snyk container test asvec:latest \
-            --json --severity-threshold=high > snyk-container-report.json || EXIT_CODE=$?
+            --json --severity-threshold=high  || EXIT_CODE=$?
           
           if [ "$EXIT_CODE" -eq "1" ]; then
             echo "High or Critical vulnerabilities found in container (and not ignored)"
             echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           else
+            # Write scan results
+            snyk container test asvec:latest \
+              --json --security-threshold=low > snyk-container-report.json
+            # If file is empty, write valid empty JSON
+            if [ ! -s snyk-container-report.json ]; then
+              echo '{"vulnerabilities":[]}' > snyk-container-report.json
+            fi
+            cat snyk-container-report.json
             echo "status=success" >> $GITHUB_OUTPUT
+
           fi
       - name: Upload scan results
         uses: actions/upload-artifact@v4

@@ -142,7 +142,8 @@ jobs:
             
             async function updatePR() {
               // Get the comment content
-              const result = await processor.run();
+              const result = processor.run();
+              console.log({processor: result});
               
               // Find existing comment
               const { data: comments } = await github.rest.issues.listComments({

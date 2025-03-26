@@ -1,7 +1,7 @@
 const fs = require('fs');
 const { sarifToMarkdown } = require('@security-alert/sarif-to-markdown');
 
-async function run() {
+function run() {
   try {
     // Read SARIF files
     const codeSarif = JSON.parse(fs.readFileSync('code-reports/snyk-code-report.sarif', 'utf8'));
@@ -14,7 +14,7 @@ async function run() {
 
     // Convert SARIF to markdown or show "no issues found" message
     const codeMarkdown = hasResults(codeSarif) 
-      ? await sarifToMarkdown(codeSarif, {
+      ?  sarifToMarkdown(codeSarif, {
           title: "Code Scan Results",
           severities: ["critical", "high", "medium", "low"],
           simpleMode: false,
@@ -24,7 +24,7 @@ async function run() {
       : "✅ No vulnerabilities found in code scan.";
 
     const containerMarkdown = hasResults(containerSarif)
-      ? await sarifToMarkdown(containerSarif, {
+      ?  sarifToMarkdown(containerSarif, {
           title: "Container Scan Results", 
           severities: ["critical", "high", "medium", "low"],
           simpleMode: false,

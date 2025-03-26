@@ -9,7 +9,7 @@ function run() {
 
     // Helper function to check if SARIF has results
     const hasResults = (sarif) => {
-      console.log({sarif}, {results: sarif.runs[0].results});
+      console.dir({sarif: sarif}, {results: sarif.runs[0].results});
       return sarif.runs && sarif.runs[0] && sarif.runs[0].results && sarif.runs[0].results.length > 0;
     };
 
@@ -24,7 +24,7 @@ function run() {
         failOn: ["critical", "high"]
       })(codeSarif)
       : {codeMarkdown: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false};
-    console.log(codeMarkdown);
+    console.dir({"codeMarkdown": codeMarkdown});
 
     const containerMarkdown = hasResults(containerSarif)
       ?  sarifToMarkdown({
@@ -35,7 +35,7 @@ function run() {
         failOn: ["critical", "high"]
       })(containerSarif)
       : {containerMarkdown: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false};
-    console.log(containerMarkdown);
+    console.dir({"containerMarkdown": containerMarkdown});
 
     // Build comment
     const timestamp = new Date().toISOString();

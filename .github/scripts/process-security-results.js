@@ -9,10 +9,12 @@ function run() {
 
     // Helper function to check if SARIF has results
     const hasResults = (sarif) => {
+      console.log({sarif}, {results: sarif.runs[0].results});
       return sarif.runs && sarif.runs[0] && sarif.runs[0].results && sarif.runs[0].results.length > 0;
     };
 
     // Convert SARIF to markdown or show "no issues found" message
+//    const {body, hasMessages, shouldFail}
     const codeMarkdown = hasResults(codeSarif) 
       ?  sarifToMarkdown({
         title: "Code Scan Results",
@@ -21,7 +23,8 @@ function run() {
         details: true,
         failOn: ["critical", "high"]
       })(codeSarif)
-      : "✅ No vulnerabilities found in code scan.";
+      : {codeMarkdown: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false};
+    console.log(codeMarkdown);
 
     const containerMarkdown = hasResults(containerSarif)
       ?  sarifToMarkdown({
@@ -31,7 +34,8 @@ function run() {
         details: true,
         failOn: ["critical", "high"]
       })(containerSarif)
-      : "✅ No vulnerabilities found in container scan.";
+      : {containerMarkdown: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false};
+    console.log(containerMarkdown);
 
     // Build comment
     const timestamp = new Date().toISOString();
@@ -40,10 +44,11 @@ function run() {
       body: `Last updated: ${timestamp}
 
 ## 📝 Code Scan
-${codeMarkdown}
-
+${codeMarkdown.body }
+${codeMarkdown.shouldFail}}
 ## 🐳 Container Scan
-${containerMarkdown}`
+${containerMarkdown.body}
+${containerMarkdown.shouldFail}`
     };
 
   } catch (error) {

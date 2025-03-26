@@ -24,7 +24,7 @@ function run() {
         failOn: ["critical", "high"]
       })(codeSarif)
       : {codeMarkdown: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false};
-    console.dir({"codeMarkdown": codeMarkdown});
+    console.dir({"codeMarkdown": codeMarkdown}, {depth: null});
 
     const containerMarkdown = hasResults(containerSarif)
       ?  sarifToMarkdown({
@@ -35,7 +35,7 @@ function run() {
         failOn: ["critical", "high"]
       })(containerSarif)
       : {containerMarkdown: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false};
-    console.dir({"containerMarkdown": containerMarkdown});
+    console.dir({"containerMarkdown": containerMarkdown}, {depth: null});
 
     // Build comment
     const timestamp = new Date().toISOString();

@@ -39,7 +39,7 @@ function run() {
 
     // Build comment
     const timestamp = new Date().toISOString();
-    return {
+    const retVal = {
       title: "🔒 Security Scan Results",
       body: `Last updated: ${timestamp}
 
@@ -51,6 +51,9 @@ ${containerMarkdown.body}
 ${containerMarkdown.shouldFail}`
     };
 
+    console.log(JSON.stringify({"retVal": retVal}, null, "  "));
+    console.log("bro" + retVal.body);
+    return retVal;
   } catch (error) {
     console.error('Error processing security results:', error);
     throw error;

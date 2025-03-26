@@ -14,23 +14,31 @@ function run() {
 
     // Convert SARIF to markdown or show "no issues found" message
     const codeResult = hasResults(codeSarif) 
-      ? sarifToMarkdown({
-          title: "Code Scan Results",
-          severities: ["critical", "high", "medium", "low"],
-          simpleMode: false,
-          details: true,
-          failOn: ["critical", "high"]
-        })(codeSarif)
+      ? (() => {
+          const result = sarifToMarkdown({
+            title: "Code Scan Results",
+            severities: ["critical", "high", "medium", "low"],
+            simpleMode: false,
+            details: true,
+            failOn: ["critical", "high"]
+          })(codeSarif);
+          console.log('Code scan result:', JSON.stringify(result, null, 2));
+          return result;
+        })()
       : { body: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false };
 
     const containerResult = hasResults(containerSarif)
-      ? sarifToMarkdown({
-          title: "Container Scan Results", 
-          severities: ["critical", "high", "medium", "low"],
-          simpleMode: false,
-          details: true,
-          failOn: ["critical", "high"]
-        })(containerSarif)
+      ? (() => {
+          const result = sarifToMarkdown({
+            title: "Container Scan Results", 
+            severities: ["critical", "high", "medium", "low"],
+            simpleMode: false,
+            details: true,
+            failOn: ["critical", "high"]
+          })(containerSarif);
+          console.log('Container scan result:', JSON.stringify(result, null, 2));
+          return result;
+        })()
       : { body: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false };
 
     // Build comment
@@ -40,14 +48,15 @@ function run() {
       body: `Last updated: ${timestamp}
 
 ## 📝 Code Scan
-${codeResult.body}
+${codeResult.body || ''}
 ${codeResult.shouldFail ? '⚠️ High or Critical vulnerabilities found!' : ''}
 
 ## 🐳 Container Scan
-${containerResult.body}
+${containerResult.body || ''}
 ${containerResult.shouldFail ? '⚠️ High or Critical vulnerabilities found!' : ''}`
     };
 
+    console.log('Final return value:', JSON.stringify(retVal, null, 2));
     return retVal;
   } catch (error) {
     console.error('Error processing security results:', error);

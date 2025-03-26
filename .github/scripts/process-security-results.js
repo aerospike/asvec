@@ -14,23 +14,23 @@ function run() {
 
     // Convert SARIF to markdown or show "no issues found" message
     const codeMarkdown = hasResults(codeSarif) 
-      ?  sarifToMarkdown(codeSarif, {
-          title: "Code Scan Results",
-          severities: ["critical", "high", "medium", "low"],
-          simpleMode: false,
-          details: true,
-          failOn: ["critical", "high"]
-        })
+      ?  sarifToMarkdown({
+        title: "Code Scan Results",
+        severities: ["critical", "high", "medium", "low"],
+        simpleMode: false,
+        details: true,
+        failOn: ["critical", "high"]
+      })(codeSarif)
       : "✅ No vulnerabilities found in code scan.";
 
     const containerMarkdown = hasResults(containerSarif)
-      ?  sarifToMarkdown(containerSarif, {
-          title: "Container Scan Results", 
-          severities: ["critical", "high", "medium", "low"],
-          simpleMode: false,
-          details: true,
-          failOn: ["critical", "high"]
-        })
+      ?  sarifToMarkdown({
+        title: "Container Scan Results", 
+        severities: ["critical", "high", "medium", "low"],
+        simpleMode: false,
+        details: true,
+        failOn: ["critical", "high"]
+      })(containerSarif)
       : "✅ No vulnerabilities found in container scan.";
 
     // Build comment

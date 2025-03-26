@@ -44,14 +44,12 @@ ${codeMarkdown}
 ## 🐳 Container Scan
 ${containerMarkdown}`;
 
-    // Write comment to file for GitHub Actions to use
-    fs.writeFileSync('security-comment.md', comment);
-    console.log('Successfully processed security results');
+    return comment;
 
   } catch (error) {
     console.error('Error processing security results:', error);
-    process.exit(1);
+    throw error;
   }
 }
 
-run(); 
+module.exports = { run }; 

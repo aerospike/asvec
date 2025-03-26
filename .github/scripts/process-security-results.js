@@ -9,33 +9,29 @@ function run() {
 
     // Helper function to check if SARIF has results
     const hasResults = (sarif) => {
-      console.log(JSON.stringify({"sarif": sarif}, null, "  "));
       return sarif.runs && sarif.runs[0] && sarif.runs[0].results && sarif.runs[0].results.length > 0;
     };
 
     // Convert SARIF to markdown or show "no issues found" message
-//    const {body, hasMessages, shouldFail}
-    const codeMarkdown = hasResults(codeSarif) 
-      ?  sarifToMarkdown({
-        title: "Code Scan Results",
-        severities: ["critical", "high", "medium", "low"],
-        simpleMode: false,
-        details: true,
-        failOn: ["critical", "high"]
-      })(codeSarif)
-      : {codeMarkdown: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false};
-    console.log(JSON.stringify({"codeMarkdown": codeMarkdown}, null, "  "));
+    const codeResult = hasResults(codeSarif) 
+      ? sarifToMarkdown({
+          title: "Code Scan Results",
+          severities: ["critical", "high", "medium", "low"],
+          simpleMode: false,
+          details: true,
+          failOn: ["critical", "high"]
+        })(codeSarif)
+      : { body: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false };
 
-    const containerMarkdown = hasResults(containerSarif)
-      ?  sarifToMarkdown({
-        title: "Container Scan Results", 
-        severities: ["critical", "high", "medium", "low"],
-        simpleMode: false,
-        details: true,
-        failOn: ["critical", "high"]
-      })(containerSarif)
-      : {containerMarkdown: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false};
-    console.log(JSON.stringify({"containerMarkdown": containerMarkdown}, null, "  "));
+    const containerResult = hasResults(containerSarif)
+      ? sarifToMarkdown({
+          title: "Container Scan Results", 
+          severities: ["critical", "high", "medium", "low"],
+          simpleMode: false,
+          details: true,
+          failOn: ["critical", "high"]
+        })(containerSarif)
+      : { body: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false };
 
     // Build comment
     const timestamp = new Date().toISOString();
@@ -44,15 +40,14 @@ function run() {
       body: `Last updated: ${timestamp}
 
 ## 📝 Code Scan
-${codeMarkdown.body }
-${codeMarkdown.shouldFail}}
+${codeResult.body}
+${codeResult.shouldFail ? '⚠️ High or Critical vulnerabilities found!' : ''}
+
 ## 🐳 Container Scan
-${containerMarkdown.body}
-${containerMarkdown.shouldFail}`
+${containerResult.body}
+${containerResult.shouldFail ? '⚠️ High or Critical vulnerabilities found!' : ''}`
     };
 
-    console.log(JSON.stringify({"retVal": retVal}, null, "  "));
-    console.log("bro" + retVal.body);
     return retVal;
   } catch (error) {
     console.error('Error processing security results:', error);

@@ -35,16 +35,16 @@ async function run() {
 
     // Build comment
     const timestamp = new Date().toISOString();
-    const comment = `# 🔒 Security Scan Results
-Last updated: ${timestamp}
+    return {
+      title: "🔒 Security Scan Results",
+      body: `Last updated: ${timestamp}
 
 ## 📝 Code Scan
 ${codeMarkdown}
 
 ## 🐳 Container Scan
-${containerMarkdown}`;
-
-    return comment;
+${containerMarkdown}`
+    };
 
   } catch (error) {
     console.error('Error processing security results:', error);

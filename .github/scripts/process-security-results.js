@@ -16,7 +16,12 @@ function run() {
         resultsLength: sarif.runs && sarif.runs[0] && sarif.runs[0].results ? sarif.runs[0].results.length : 'N/A',
         rulesLength: sarif.runs && sarif.runs[0] && sarif.runs[0].tool && sarif.runs[0].tool.driver && sarif.runs[0].tool.driver.rules ? sarif.runs[0].tool.driver.rules.length : 'N/A'
       });
-      return sarif.runs && sarif.runs[0] && sarif.runs[0].results && sarif.runs[0].results.length > 0;
+      
+      // Check for either results or rules
+      return (sarif.runs && sarif.runs[0] && (
+        (sarif.runs[0].results && sarif.runs[0].results.length > 0) ||
+        (sarif.runs[0].tool && sarif.runs[0].tool.driver && sarif.runs[0].tool.driver.rules && sarif.runs[0].tool.driver.rules.length > 0)
+      ));
     };
 
     console.log('Code SARIF:', JSON.stringify(codeSarif, null, 2));

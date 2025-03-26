@@ -158,8 +158,8 @@ jobs:
               );
               
               const commentBody = `# ${result.title}\n${result.body}`;
-              
-              if (botComment) {
+              // TODO: disabling updates to comments for now
+              if (false &&botComment) {
                 // Update existing comment
                 await github.rest.issues.updateComment({
                   owner: context.repo.owner,

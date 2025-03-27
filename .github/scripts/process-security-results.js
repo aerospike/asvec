@@ -54,7 +54,7 @@ function run() {
             return "No runs found in the SARIF file.";
         }
 
-        let md = "# SARIF Scan Summary\n\n";
+        let md = "\n";
 
         return sarif.runs.reduce((md, run, runIndex) => {
             const toolName = run?.tool?.driver?.name || "Unknown Tool";
@@ -109,7 +109,7 @@ ${helpMarkdown}
 
             md += "\n";
             return md;
-        }, "# SARIF Scan Summary\n\n");
+        }, "\n\n");
     }
 
     // Build comment

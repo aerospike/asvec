@@ -9,23 +9,28 @@ function run() {
 
     // Helper function to check if SARIF has results
     const hasResults = (sarif) => {
-      console.log('Checking SARIF structure:', {
-        hasRuns: !!sarif.runs,
-        hasFirstRun: !!(sarif.runs && sarif.runs[0]),
-        hasResults: !!(sarif.runs && sarif.runs[0] && sarif.runs[0].results),
-        resultsLength: sarif.runs && sarif.runs[0] && sarif.runs[0].results ? sarif.runs[0].results.length : 'N/A',
-        rulesLength: sarif.runs && sarif.runs[0] && sarif.runs[0].tool && sarif.runs[0].tool.driver && sarif.runs[0].tool.driver.rules ? sarif.runs[0].tool.driver.rules.length : 'N/A'
-      });
-      
-      // Check for either results or rules
-      return (sarif.runs && sarif.runs[0] && (
-        (sarif.runs[0].results && sarif.runs[0].results.length > 0) ||
-        (sarif.runs[0].tool && sarif.runs[0].tool.driver && sarif.runs[0].tool.driver.rules && sarif.runs[0].tool.driver.rules.length > 0)
-      ));
-    };
+      if (!sarif?.runs?.length) {
+        console.log('No runs found in SARIF file');
+        return false;
+      }
 
-    console.log('Code SARIF:', JSON.stringify(codeSarif, null, 2));
-    console.log('Container SARIF:', JSON.stringify(containerSarif, null, 2));
+      // Thisis all just for logging.
+      console.log('SARIF overview:');
+      const summary = sarif.runs.map((run, index) => ({
+        run: index,
+        tool: run?.tool?.driver?.name ?? 'Unknown',
+        results: run?.results?.length ?? 0,
+        rules: run?.tool?.driver?.rules?.length ?? 0,
+        severity: run?.results?.map(r => r.level).filter(Boolean) ?? []
+      }));
+      console.table(summary);
+
+      // Check all runs for either results or rules
+      return sarif.runs.some(run => 
+        run?.results?.length > 0 || 
+        run?.tool?.driver?.rules?.length > 0
+      );
+    };
 
     // Convert SARIF to markdown or show "no issues found" message
     const codeResults = hasResults(codeSarif) 
@@ -36,7 +41,12 @@ function run() {
           details: true,
           failOn: ["critical", "high"]
         })(codeSarif)
-      : [{ body: "✅ No vulnerabilities found in code scan.", hasMessages: false, shouldFail: false }];
+      : [{ 
+          body: "### Code Scan Summary\n✅ No security vulnerabilities found\n\n" + 
+                `_Analyzed with ${codeSarif.runs?.map(r => r?.tool?.driver?.name).filter(Boolean).join(", ")}_`,
+          hasMessages: false, 
+          shouldFail: false 
+        }];
 
     const containerResults = hasResults(containerSarif)
       ? sarifToMarkdown({
@@ -46,10 +56,12 @@ function run() {
           details: true,
           failOn: ["critical", "high"]
         })(containerSarif)
-      : [{ body: "✅ No vulnerabilities found in container scan.", hasMessages: false, shouldFail: false }];
-
-    console.log('Code Results:', JSON.stringify(codeResults, null, 2));
-    console.log('Container Results:', JSON.stringify(containerResults, null, 2));
+      : [{ 
+          body: "### Container Scan Summary\n✅ No security vulnerabilities found\n\n" + 
+                `_Analyzed with ${containerSarif.runs?.map(run => run?.tool?.driver?.name).filter(Boolean).join(", ")}_`,
+          hasMessages: false, 
+          shouldFail: false 
+        }];
 
     // Build comment
     const timestamp = new Date().toISOString();
@@ -58,12 +70,12 @@ function run() {
       body: `Last updated: ${timestamp}
 
 ## 📝 Code Scan
-${codeResults[0].body}
-${codeResults.some(r => r.shouldFail) ? '⚠️ High or Critical vulnerabilities found!' : ''}
+${codeResults.map(result => result?.body ?? '').join('\n')}
+${codeResults.some(r => r?.shouldFail) ? '⚠️ High or Critical vulnerabilities found!' : ''}
 
 ## 🐳 Container Scan
-${containerResults[0].body}
-${containerResults.some(r => r.shouldFail) ? '⚠️ High or Critical vulnerabilities found!' : ''}`
+${containerResults.map(result => result?.body ?? '').join('\n')}
+${containerResults.some(r => r?.shouldFail) ? '⚠️ High or Critical vulnerabilities found!' : ''}`
     };
 
     console.log('Final return value:', JSON.stringify(retVal, null, 2));

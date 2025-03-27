@@ -5,6 +5,17 @@ function run() {
     const codeSarif = JSON.parse(fs.readFileSync('code-reports/snyk-code-report.sarif', 'utf8'));
     const containerSarif = JSON.parse(fs.readFileSync('container-reports/snyk-container-report.sarif', 'utf8'));
 
+    const getSeverityColor = (severity) => {
+        const colors = {
+            critical: '#cc0000',
+            high: '#ff4444',
+            medium: '#ff8800',
+            moderate: '#ff8800',
+            low: '#ffcc00',
+            undefined: '#6c757d'
+        };
+        return colors[severity?.toLowerCase()] ?? colors.undefined;
+    };
 
     /**
      * Prints a summary of the SARIF file to the console.
@@ -27,9 +38,7 @@ function run() {
             severity: run?.results?.map(r => r.level).filter(Boolean) ?? []
         }));
         console.table(summary);
-
     };
-
 
     /**
      * Generates a Markdown summary from a SARIF file.
@@ -52,8 +61,8 @@ function run() {
             md += `## Run ${runIndex + 1} - Tool: **${toolName}**\n\n`;
 
             if (run.results && run.results.length > 0) {
-                md += "| Rule ID | Severity | Message | File | Start Line | Help |\n";
-                md += "|---------|----------|---------|------|------------|------|\n";
+                md += "| Severity | Rule ID | Message | File | Start Line |\n";
+                md += "|---------|----------|---------|------|------------|\n";
                 // Sarif schema is overly flexible, so we need to handle some weird cases. This is working for snyk output. 
                 // It will problaly need to be adapted for other tools.
                 md += run.results.map(result => {
@@ -69,10 +78,11 @@ function run() {
                         ? result.locations[0].physicalLocation?.region?.startLine || "N/A"
                         : "N/A";
                     const helpMarkdown = rule.help?.markdown || rule.help?.text || "";
-
                     const escapedHelp = helpMarkdown.replace(/\|/g, '\\|');
+                    const severityColor = getSeverityColor(severity);
 
-                    return `| ${ruleId} | ${severity} | ${message} | ${location} | ${startLine} | ${escapedHelp} |\n`;
+                    return `| <span style="color:${severityColor};font-weight:bold;">${severity}</span> | ${ruleId} | ${message} | ${location} | ${startLine} |\n` +
+                           `| <td colspan="5"><details><summary>View Details</summary>\n\n${escapedHelp}\n\n</details></td> |\n`;
                 }).join('');
             } else {
                 md += "No issues found in this run.\n";

@@ -74,7 +74,7 @@ function run() {
 
         return sarif.runs.reduce((md, run, runIndex) => {
             const toolName = run?.tool?.driver?.name || "Unknown Tool";
-            md += `> **Run ${runIndex + 1} - Tool: ${toolName}**\n\n`;
+            md += `   **Run ${runIndex + 1} - Tool: ${toolName}**\n\n`;
             let errors = 0;
             if (run.results && run.results.length > 0) {
                 // Sarif schema is overly flexible, so we need to handle some weird cases. This is working for snyk output. 
@@ -121,7 +121,7 @@ ${helpMarkdown}
 `;
                 }).join('');
             } else {
-                md += "✅ No security issues found in this run.\n";
+                md += "    ✅ No security issues found in this run.\n";
             }
 
             md += "\n";
@@ -139,10 +139,10 @@ ${helpMarkdown}
         title: "🔒 Security Scan Results",
         body: `Last updated: ${timestamp}
     
-** 📝 Code Scan **
+**📝 Code Scan**
 ${codeResults}
 
-** 🐳 Container Scan **
+**🐳 Container Scan**
 ${containerResults}
 
 `

@@ -76,14 +76,32 @@ function run() {
                         ? result.locations[0].physicalLocation?.region?.startLine || "N/A"
                         : "N/A";
                     const helpMarkdown = rule.help?.markdown || rule.help?.text || "";
-                    const escapedHelp = helpMarkdown.replace(/\|/g, '\\|');
                     const severityColor = getSeverityColor(severity);
     
-                    return `| Severity | Rule ID | Message | File | Start Line |\n` +
-                           `|----------|---------|---------|------|------------|\n` +
-                           `| <span style="color:${severityColor};font-weight:bold;">${severity}</span> | ${ruleId} | ${message} | ${location} | ${startLine} |\n\n` +
-                           `<details><summary>View Details</summary>\n\n${helpMarkdown}\n\n</details>\n\n`;
-                           
+                    return `<table>
+<tr>
+  <th>Severity</th>
+  <th>Rule ID</th>
+  <th>Message</th>
+  <th>File</th>
+  <th>Start Line</th>
+</tr>
+<tr>
+  <td><span style="color:${severityColor};font-weight:bold;">${severity}</span></td>
+  <td>${ruleId}</td>
+  <td>${message}</td>
+  <td>${location}</td>
+  <td>${startLine}</td>
+</tr>
+</table>
+
+<details><summary>View Details</summary>
+
+${helpMarkdown}
+
+</details>
+
+`;
                 }).join('');
             } else {
                 md += "No issues found in this run.\n";

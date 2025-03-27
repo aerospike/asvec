@@ -78,13 +78,12 @@ function run() {
                     const helpMarkdown = rule.help?.markdown || rule.help?.text || "";
                     const escapedHelp = helpMarkdown.replace(/\|/g, '\\|');
                     const severityColor = getSeverityColor(severity);
-                    md += "\n";
     
-                    return `|---------|----------|---------|------|------------|` +
-                           `| Severity | Rule ID | Message | File | Start Line |\n` +
-                           `| <span style="color:${severityColor};font-weight:bold;">${severity}</span> | ${ruleId} | ${message} | ${location} | ${startLine} |\n` +
-                           `<details><summary>View Details</summary>\n\n${helpMarkdown}\n\n</details>\n`;
-                           "---"
+                    return `| Severity | Rule ID | Message | File | Start Line |\n` +
+                           `|----------|---------|---------|------|------------|\n` +
+                           `| <span style="color:${severityColor};font-weight:bold;">${severity}</span> | ${ruleId} | ${message} | ${location} | ${startLine} |\n\n` +
+                           `<details><summary>View Details</summary>\n\n${helpMarkdown}\n\n</details>\n\n`;
+                           
                 }).join('');
             } else {
                 md += "No issues found in this run.\n";

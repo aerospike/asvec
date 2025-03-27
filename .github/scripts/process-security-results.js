@@ -4,7 +4,11 @@ function run() {
     // Read SARIF files
     const codeSarif = JSON.parse(fs.readFileSync('code-reports/snyk-code-report.sarif', 'utf8'));
     const containerSarif = JSON.parse(fs.readFileSync('container-reports/snyk-container-report.sarif', 'utf8'));
-
+    /**
+     * This seems to be ignored by github PR comments. Still keeping it here in the hopes that it will be used in the future.
+     * @param {*} severity 
+     * @returns 
+     */
     const getSeverityColor = (severity) => {
         const colors = {
             critical: '#cc0000',
@@ -40,6 +44,18 @@ function run() {
         console.table(summary);
     };
 
+    const getSeverityEmoji = (severity) => {
+        const emojis = {
+            critical: '🔴 🚨',  // Red circle + siren for critical
+            high: '🟠 ⚠️',     // Orange circle + warning for high
+            medium: '🟡 ⚠️',    // Yellow circle + warning for medium
+            moderate: '🟡 ⚠️',   // Yellow circle + warning for moderate (alias of medium)
+            low: '🔵 ℹ️',      // Blue circle + info for low
+            undefined: '⚪ ❓'   // White circle + question mark for undefined
+        };
+        return emojis[severity?.toLowerCase()] ?? emojis.undefined;
+    };
+
     /**
      * Generates a Markdown summary from a SARIF file.
      * It iterates over all runs, and for each result it looks up the associated rule
@@ -48,7 +64,7 @@ function run() {
      * @param {object} sarif - Parsed SARIF (json) object.
      * @returns {string} - Markdown summary.
      */
-    const generateMarkdownSummary = (sarif) => {
+    const processSarif = (sarif) => {
         printResults(sarif);
         if (!sarif || !sarif.runs || sarif.runs.length === 0) {
             return "No runs found in the SARIF file.";
@@ -58,8 +74,8 @@ function run() {
 
         return sarif.runs.reduce((md, run, runIndex) => {
             const toolName = run?.tool?.driver?.name || "Unknown Tool";
-            md += `## Run ${runIndex + 1} - Tool: **${toolName}**\n\n`;
-
+            md += `### Run ${runIndex + 1} - Tool: **${toolName}**\n\n`;
+            let errors = 0;
             if (run.results && run.results.length > 0) {
                 // Sarif schema is overly flexible, so we need to handle some weird cases. This is working for snyk output. 
                 // It will problaly need to be adapted for other tools.
@@ -77,6 +93,7 @@ function run() {
                         : "N/A";
                     const helpMarkdown = rule.help?.markdown || rule.help?.text || "";
                     const severityColor = getSeverityColor(severity);
+                    const severityEmoji = getSeverityEmoji(severity);
     
                     return `<table>
 <tr>
@@ -87,7 +104,7 @@ function run() {
   <th>Start Line</th>
 </tr>
 <tr>
-  <td><span style="color:${severityColor};font-weight:bold;">${severity}</span></td>
+  <td><span style="color:${severityColor};font-weight:bold;">${severityEmoji} ${severity}</span></td>
   <td>${ruleId}</td>
   <td>${message}</td>
   <td>${location}</td>
@@ -104,7 +121,7 @@ ${helpMarkdown}
 `;
                 }).join('');
             } else {
-                md += "No issues found in this run.\n";
+                md += "✅ No security issues found in this run.\n";
             }
 
             md += "\n";
@@ -114,16 +131,21 @@ ${helpMarkdown}
 
     // Build comment
     const timestamp = new Date().toISOString();
+    const codeResults = processSarif(codeSarif);
+    const containerResults = processSarif(containerSarif);
+    const hasResults = codeResults.length > 0 || containerResults.length > 0;
+    
     const retVal = {
         title: "🔒 Security Scan Results",
         body: `Last updated: ${timestamp}
+    
+#### 📝 Code Scan
+${codeResults}
 
-## 📝 Code Scan
-${generateMarkdownSummary(codeSarif)}
+####🐳 Container Scan
+${containerResults}
 
-## 🐳 Container Scan
-${generateMarkdownSummary(containerSarif)}
-`
+${hasResults ? `#### 🔒 Security Scan Results\n${codeResults}\n\n${containerResults}` : 'No results found'}`
     };
 
     console.log('Final return value:', JSON.stringify(retVal, null, 2));

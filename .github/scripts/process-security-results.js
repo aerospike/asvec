@@ -61,8 +61,6 @@ function run() {
             md += `## Run ${runIndex + 1} - Tool: **${toolName}**\n\n`;
 
             if (run.results && run.results.length > 0) {
-                md += "| Severity | Rule ID | Message | File | Start Line |\n";
-                md += "|---------|----------|---------|------|------------|\n";
                 // Sarif schema is overly flexible, so we need to handle some weird cases. This is working for snyk output. 
                 // It will problaly need to be adapted for other tools.
                 md += run.results.map(result => {
@@ -80,9 +78,13 @@ function run() {
                     const helpMarkdown = rule.help?.markdown || rule.help?.text || "";
                     const escapedHelp = helpMarkdown.replace(/\|/g, '\\|');
                     const severityColor = getSeverityColor(severity);
-
-                    return `| <span style="color:${severityColor};font-weight:bold;">${severity}</span> | ${ruleId} | ${message} | ${location} | ${startLine} |\n` +
-                           `| <td colspan="5"><details><summary>View Details</summary>\n\n${escapedHelp}\n\n</details></td> |\n`;
+                    md += "\n";
+    
+                    return `|---------|----------|---------|------|------------|` +
+                           `| Severity | Rule ID | Message | File | Start Line |\n` +
+                           `| <span style="color:${severityColor};font-weight:bold;">${severity}</span> | ${ruleId} | ${message} | ${location} | ${startLine} |\n` +
+                           `<details><summary>View Details</summary>\n\n${helpMarkdown}\n\n</details>\n`;
+                           "---"
                 }).join('');
             } else {
                 md += "No issues found in this run.\n";

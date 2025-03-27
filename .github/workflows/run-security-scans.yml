@@ -157,7 +157,7 @@ jobs:
                 c.body.includes(result.title)
               );
               
-              const commentBody = `# ${result.title}\n${result.body}`;
+              const commentBody = `### ${result.title}\n${result.body}`;
               // TODO: disabling updates to comments for now
               if (false &&botComment) {
                 // Update existing comment

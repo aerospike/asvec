@@ -1,6 +1,6 @@
 name: Build and publish asvec
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 on:
   push:
@@ -23,25 +23,18 @@ env:
   ARTIFACT_NAME: 'asvec'
 
 jobs:
-  build:
+
+  parse-version:
+    runs-on: ubuntu-latest
     outputs:
+      tag: ${{ steps.parse-version.outputs.tag }}
       version: ${{ steps.parse-version.outputs.version }}
       is-snapshot: ${{ steps.parse-version.outputs.is-snapshot }}
-      rpm-version: ${{ steps.save-version.outputs.rpm-version }}
-      artifacts: ${{ steps.save-version.outputs.artifacts }}
-      rpm-artifacts: ${{ steps.save-version.outputs.rpm-artifacts }}
-      deb-artifacts: ${{ steps.save-version.outputs.deb-artifacts }}
-      zip-artifacts: ${{ steps.save-version.outputs.zip-artifacts }}
-      pkg-artifacts: ${{ steps.save-version.outputs.pkg-artifacts }}
-      sha-artifacts: ${{ steps.save-version.outputs.sha-artifacts }}
-      asc-artifacts: ${{ steps.save-version.outputs.asc-artifacts }}
-    runs-on: macos-13
     steps:
       - name: 'Git checkout'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: 'Extract Version and Snapshot'
         id: parse-version
         run: |
@@ -74,15 +67,32 @@ jobs:
             SNAPSHOT="false"
           fi
 
-
-
           # Output the results
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "SNAPSHOT=${SNAPSHOT}" >> $GITHUB_ENV
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "is-snapshot=${SNAPSHOT}" >> $GITHUB_OUTPUT
 
-          echo "Version: ${VERSION} Snapshot: ${SNAPSHOT} version=${VERSION} is-snapshot=${SNAPSHOT}"
+          echo "Version: ${VERSION} Snapshot: ${SNAPSHOT}"
+
+  build:
+    needs: parse-version
+    outputs:
+      version: ${{ needs.parse-version.outputs.version }}
+      is-snapshot: ${{ needs.parse-version.outputs.is-snapshot }}
+      rpm-version: ${{ steps.save-version.outputs.rpm-version }}
+      artifacts: ${{ steps.save-version.outputs.artifacts }}
+      rpm-artifacts: ${{ steps.save-version.outputs.rpm-artifacts }}
+      deb-artifacts: ${{ steps.save-version.outputs.deb-artifacts }}
+      zip-artifacts: ${{ steps.save-version.outputs.zip-artifacts }}
+      pkg-artifacts: ${{ steps.save-version.outputs.pkg-artifacts }}
+      sha-artifacts: ${{ steps.save-version.outputs.sha-artifacts }}
+      asc-artifacts: ${{ steps.save-version.outputs.asc-artifacts }}
+    runs-on: macos-latest
+    steps:
+      - name: 'Git checkout'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: setup jfrog
         uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
@@ -138,7 +148,7 @@ jobs:
 
       - name: 'Compile'
         env:
-          ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
+          ADDCOMMIT: ${{ needs.parse-version.outputs.is-snapshot }}
         run: |
           set -e
           export PATH=$PATH:/usr/local/bin:/usr/local/go/bin
@@ -153,7 +163,7 @@ jobs:
           fi
       - name: 'Create linux packages'
         env:
-          ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
+          ADDCOMMIT: ${{ needs.parse-version.outputs.is-snapshot }}
         run: |
           buildcmd="build-prerelease"
           [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
@@ -161,7 +171,7 @@ jobs:
           cd ~/work/asvec/asvec && make pkg-linux
       - name: 'Create windows zips'
         env:
-          ADDCOMMIT: ${{ steps.parse-version.outputs.is-snapshot }}
+          ADDCOMMIT: ${{ needs.parse-version.outputs.is-snapshot }}
         run: |
           buildcmd="build-prerelease"
           [ "${ADDCOMMIT}" = "false" ] && buildcmd="build-official"
@@ -295,9 +305,7 @@ jobs:
           overwrite: true
 
   build-docker:
-    needs:
-      - sign
-      - build
+    needs: [parse-version, sign, build, tests]
     runs-on: ubuntu-latest
     steps: 
       - name: 'Git checkout'
@@ -383,10 +391,8 @@ jobs:
             --project ${{ env.JFROG_CLI_BUILD_PROJECT }} \
             "${{ env.JFROG_CLI_BUILD_NAME }}-container" "${{ needs.build.outputs.version }}"
     
-  publish-asvec-build: 
-    needs: 
-      - sign
-      - build
+  publish-asvec-build:
+    needs: [parse-version, sign, build, tests]
     runs-on: ubuntu-latest
     steps:
       - name: 'Git checkout'
@@ -416,10 +422,26 @@ jobs:
               echo "Skipping upload of $file as it does not match *.deb"
           fi
           done
-          jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
-          jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}"
+          jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+          jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
           jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-deb" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
-        
+      - name: "Upload mac builds to JFrog"
+        run: |
+            for file in ${{needs.build.outputs.pkg-artifacts}}; do
+              if [[ "$file" == *.pkg ]]; then
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/macos/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}" 
+              elif [[ "$file" == *.zip ]]; then
+                  jf rt upload "$file" "${{env.JFROG_CLI_BUILD_PROJECT}}-generic-dev-local/macos/${{ env.ARTIFACT_NAME }}/${{ needs.build.outputs.version }}/" \
+                    --build-name="${{ env.JFROG_CLI_BUILD_NAME }}-macos" --build-number="${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+              else
+                echo "Skipping upload of $file as it does not match *.pkg or *.zip"
+              fi
+            done
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-macos" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-macos" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-macos" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+          
       - name: "Upload rpm builds to JFrog"
         run: |
           for file in *; do
@@ -430,30 +452,62 @@ jobs:
                     --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
               else 
                 echo "Skipping upload of $file as it does not match *.rpm"
-            fi
+              fi
             done
-            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
-            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}"
+            jfrog rt build-collect-env "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
+            jfrog rt build-add-git "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
             jfrog rt build-publish "${{ env.JFROG_CLI_BUILD_NAME }}-rpm" "${{ needs.build.outputs.version }}" --project="${{env.JFROG_CLI_BUILD_PROJECT}}"
-# TODO - add builds for macos and windows (likely need generic repo support in jfrog)
+
+  add-binaries-to-release:
+        # Only run this job if triggered by a tag push
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [parse-version, sign, build, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Git checkout'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Download Artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          name: asvec-artifacts
+      - name: 'Add binaries to existing release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            # possibly too verbose but useful for debugging
+            set -x
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "Checking for release with tag: ${TAG}"
+            gh release view "${TAG}"
+            echo "Exit code: $?"
+            if gh release view "${TAG}" > /dev/null 2>&1; then
+                echo "Found existing release ${TAG}, adding binaries..."
+                # Upload all artifacts to the release
+                gh release upload "${TAG}" \
+                    ${{needs.build.outputs.artifacts}} \
+                    ${{needs.build.outputs.sha-artifacts}} \
+                    ${{needs.build.outputs.asc-artifacts}} \
+                    --clobber
+            else
+                echo "No release found for tag ${TAG}, skipping upload to github"
+            fi
+
   tests:
-    needs: build
+    needs: [parse-version]
     uses: ./.github/workflows/tests-large.yml
     with:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.parse-version.outputs.version }}
     secrets:
       JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
       JFROG_USERNAME: ${{ vars.JFROG_USERNAME }}
       FEATURES_CONF: ${{ secrets.FEATURES_CONF }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  publish-release-bundle: 
-    needs: 
-      - sign
-      - build
-      - build-docker
-      - publish-asvec-build
-      - tests
+  publish-release-bundle:
+    needs: [parse-version, sign, build, build-docker, publish-asvec-build, tests]
     runs-on: ubuntu-latest
     steps:
       - name: 'Git checkout'
@@ -490,6 +544,10 @@ jobs:
                   {
                     "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
                     "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-tests"
+                  }, 
+                  {
+                    "project": "${{env.JFROG_CLI_BUILD_PROJECT}}",
+                    "build":  "${{ env.JFROG_CLI_BUILD_NAME }}-macos"
                   }
                 ]
               }' > release-bundle-spec.json

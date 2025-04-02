@@ -142,7 +142,7 @@ jobs:
             
             async function updatePR() {
               // Get the comment content
-              const result = processor.run();
+              const result = await processor.run();
               console.log(JSON.stringify({"processor": result}, null, "  "));
               
               // Find existing comment

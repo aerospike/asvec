@@ -32,7 +32,7 @@ function run() {
             return false;
         }
 
-        // Thisis all just for logging.
+        // This is all just for logging.
         console.log('SARIF overview:');
         const summary = sarif.runs.map((run, index) => ({
             run: index,

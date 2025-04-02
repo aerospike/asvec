@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"asvec/cmd/flags"
+	"asvec/cmd/interactive"
 	"context"
 	"fmt"
 	"log/slog"
@@ -30,6 +31,7 @@ var queryFlags = &struct {
 	includeFields   []string
 	hnswEf          flags.Uint32OptionalFlag
 	format          int // For testing. Hidden
+	interactive     bool
 }{
 	clientFlags: rootFlags.clientFlags,
 }
@@ -53,6 +55,7 @@ func newQueryFlagSet() *pflag.FlagSet {
 	flagSet.UintVarP(&queryFlags.maxDataColWidth, flags.MaxDataColWidth, flags.MaxDataColWidthShort, 50, "The maximum column width for record data before wrapping. To display long values on a single line set to 0.")    //nolint:lll // For readability
 	flagSet.StringSliceVarP(&queryFlags.includeFields, flags.Fields, "f", nil, "Fields names to include when displaying record data.")                                                                                     //nolint:lll // For readability
 	flagSet.Var(&queryFlags.hnswEf, flags.HnswEf, "The default number of candidate nearest neighbors shortlisted during search. Larger values provide better recall at the cost of longer search times.")                  //nolint:lll // For readability
+	flagSet.BoolVarP(&queryFlags.interactive, flags.Interactive, "I", false, "Use interactive mode to browse and select query results")                                                                                    //nolint:lll // For readability
 
 	err := flags.AddFormatTestFlag(flagSet, &queryFlags.format)
 	if err != nil {
@@ -92,6 +95,19 @@ asvec query -i my-index -n my-namespace -v "[0.5,0.1,0.3,0.4,1.0]" --max-width 1
 # Query using your own bool vector and change the number of DATA rows displayed to 10.
 asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 
+# Use interactive mode to explore and view the details of each result
+asvec query -i my-index -n my-namespace --interactive
+
+In interactive mode, you can:
+- Navigate through results with arrow keys
+- Select a result to view detailed information
+- Press 'q' while viewing a result to initiate a new query using that record's vector
+- Return to the results list with 'esc'
+- Quit the application with 'ctrl+c'
+
+Interactive mode allows for unlimited "query chaining" - you can continue to select
+results and initiate new queries to explore the vector space as deeply as you wish.
+
 		`, HelpTxtSetupEnv),
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if viper.IsSet(flags.Set) && !(viper.IsSet(flags.KeyString) || viper.IsSet(flags.KeyInt)) {
@@ -117,6 +133,7 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 					slog.Any(flags.MaxResults, queryFlags.maxResults),
 					slog.Any(flags.MaxDataKeys, queryFlags.maxDataKeys),
 					slog.Any(flags.Fields, queryFlags.includeFields),
+					slog.Bool(flags.Interactive, queryFlags.interactive),
 				)...,
 			)
 
@@ -203,7 +220,99 @@ asvec query -i my-index -n my-namespace -v "[1,0,1,0,0,0,1,0,1,1]" --max-keys 10
 			}
 
 			//nolint:gosec // Overflow is checked above
-			view.PrintQueryResults(neighbors, queryFlags.format, int(queryFlags.maxDataKeys), int(queryFlags.maxDataColWidth))
+			maxDataKeys := int(queryFlags.maxDataKeys)
+			maxDataColWidth := int(queryFlags.maxDataColWidth)
+
+			if queryFlags.interactive {
+				// Use interactive mode
+				var selectedRecord *avs.Neighbor
+				var err error
+
+				// Create initial neighbors list from original query
+				currentNeighbors := neighbors
+
+				// Loop to allow for multiple requery operations
+				for {
+					selectedRecord, err = interactive.StartInteractiveQuery(
+						currentNeighbors,
+						maxDataKeys,
+						maxDataColWidth,
+						queryFlags.includeFields,
+					)
+					if err != nil {
+						return err
+					}
+
+					// Exit the loop if no record was selected for querying
+					if selectedRecord == nil {
+						break
+					}
+
+					logger.InfoContext(ctx, "initiating new query based on selected record",
+						slog.Any("key", selectedRecord.Key),
+						slog.String("namespace", selectedRecord.Namespace))
+
+					// Find the vector field in the record
+					indexDef, err := client.IndexGet(ctx, queryFlags.namespace, queryFlags.indexName, false)
+					if err != nil {
+						logger.ErrorContext(ctx, "unable to get index definition for new query", slog.Any("error", err))
+						view.Errorf("Failed to get index definition: %s", err)
+						return err
+					}
+
+					field := indexDef.Field
+					queryVector, ok := selectedRecord.Record.Data[field]
+					if !ok {
+						msg := "vector field not found in selected record"
+						logger.ErrorContext(ctx, msg, slog.String("field", field))
+						view.Errorf("%s: %s", msg, field)
+						return fmt.Errorf(msg)
+					}
+
+					// Perform a new query with the selected record's vector
+					switch v := queryVector.(type) {
+					case []float32:
+						currentNeighbors, err = client.VectorSearchFloat32(
+							ctx,
+							queryFlags.namespace,
+							queryFlags.indexName,
+							v,
+							queryFlags.maxResults,
+							hnswSearchParams,
+							queryFlags.includeFields,
+							nil,
+						)
+					case []bool:
+						currentNeighbors, err = client.VectorSearchBool(
+							ctx,
+							queryFlags.namespace,
+							queryFlags.indexName,
+							v,
+							queryFlags.maxResults,
+							hnswSearchParams,
+							queryFlags.includeFields,
+							nil,
+						)
+					default:
+						msg := "unsupported vector type in selected record"
+						logger.ErrorContext(ctx, msg, slog.Any("type", fmt.Sprintf("%T", queryVector)))
+						view.Errorf("%s: %T", msg, queryVector)
+						return fmt.Errorf(msg)
+					}
+
+					if err != nil {
+						logger.ErrorContext(ctx, "failed to run vector search with selected record", slog.Any("error", err))
+						view.Errorf("Unable to run vector query: %s", err)
+						return err
+					}
+
+					// Continue loop with new neighbors list
+				}
+
+				return nil
+			}
+
+			view.PrintQueryResults(neighbors, queryFlags.format, maxDataKeys, maxDataColWidth)
 
 			if !viper.IsSet(flags.MaxResults) {
 				view.Printf("Hint: To increase the number of records returned, use the --%s flag.", flags.MaxResults)

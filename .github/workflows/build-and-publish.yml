@@ -87,7 +87,7 @@ jobs:
       pkg-artifacts: ${{ steps.save-version.outputs.pkg-artifacts }}
       sha-artifacts: ${{ steps.save-version.outputs.sha-artifacts }}
       asc-artifacts: ${{ steps.save-version.outputs.asc-artifacts }}
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - name: 'Git checkout'
         uses: actions/checkout@v4
@@ -477,7 +477,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            # posibly too verbose but useful for debugging
+            # possibly too verbose but useful for debugging
             set -x
             TAG="${GITHUB_REF#refs/tags/}"
             echo "Checking for release with tag: ${TAG}"

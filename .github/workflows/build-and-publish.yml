@@ -477,7 +477,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            # posibly too verbose but useful for debugging
+            # possibly too verbose but useful for debugging
             set -x
             TAG="${GITHUB_REF#refs/tags/}"
             echo "Checking for release with tag: ${TAG}"

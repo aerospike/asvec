@@ -1,7 +1,6 @@
 module asvec
 
 go 1.23.4
-toolchain go1.24.1
 
 require (
 	github.com/aerospike/avs-client-go v0.5.1-0.20250306234941-eeb92311a5ef

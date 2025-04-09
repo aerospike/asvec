@@ -26,7 +26,7 @@ brew install aerospike/tools/asvec
 ```
 or
 ```shell
-brew tap brew install aerospike/tools
+brew tap aerospike/tools
 brew install asvec
 ```
 

@@ -18,6 +18,22 @@ instructions on getting started.
 
 ### Installation
 
+#### Brew
+
+You can install asvec with homebrew.
+```shell
+brew install aerospike/tools/asvec
+```
+or
+```shell
+brew tap aerospike/tools
+brew install asvec
+```
+
+For more details see our [asvec homebrew formula](https://github.com/aerospike/homebrew-tools/blob/main/asvec.md).
+
+#### Downloads
+
 Download the latest release from [GitHub Releases](https://github.com/aerospike/asvec/releases).
 
 ### Basic Usage

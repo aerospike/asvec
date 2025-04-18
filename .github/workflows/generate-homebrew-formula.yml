@@ -1,0 +1,64 @@
+name: Generate Homebrew Formula
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The git tag to generate Homebrew formula for (e.g. v1.2.3)'
+        required: true
+        type: string
+      isLatest:
+        description: 'Mark this as the latest version'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  parse-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse-version.outputs.version }}
+    steps:
+      - name: 'Parse version from tag'
+        id: parse-version
+        run: |
+          # Remove "v" prefix to get the version
+          TAG="${{ inputs.tag }}"
+          VERSION=${TAG#v}
+          
+          # Output the results
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Parsed version: ${VERSION}"
+
+  generate-homebrew-formula:
+    needs: [parse-version]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Generate Homebrew Formula'
+        run: |
+          version=${{ needs.parse-version.outputs.version }}
+          is_latest="${{ inputs.isLatest }}"
+          
+          response=$(curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.PAT }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -w "%{http_code}" \
+            -o response.txt \
+            https://api.github.com/repos/aerospike/homebrew-tools/dispatches \
+            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": ${is_latest}, \"version\": \"$version\"}}" \
+            > status_code.txt
+          
+          status_code=$(cat status_code.txt)
+          echo "Response status code: $status_code"
+          
+          if [[ $status_code -lt 200 || $status_code -ge 300 ]]; then
+            echo "::error::Failed to trigger Homebrew formula generation. Status code: $status_code"
+            cat response.txt
+            exit 1
+          fi
+          
+          echo "Successfully triggered Homebrew formula generation for version $version" 

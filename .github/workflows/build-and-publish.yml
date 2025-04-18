@@ -500,7 +500,7 @@ jobs:
   
   generate-homebrew-formula:
     # the action that generates the homebrew formula in https://github.com/aerospike/homebrew-tools
-    # pulls artifacts from the release so we needs to wait for them to be uploaded
+    # pulls artifacts from the release so we need to wait for them to be uploaded
     # Only run this job if triggered by a tag push (trigger under same conditions as add-binaries-to-release)
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [add-binaries-to-release, parse-version, sign, build, tests]
@@ -513,13 +513,26 @@ jobs:
       - name: 'Generate Homebrew Formula'
         run: |
           version=${{ needs.parse-version.outputs.version }}
-          curl -L \
+          response=$(curl -L \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.PAT }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
+            -w "%{http_code}" \
+            -o response.txt \
             https://api.github.com/repos/aerospike/homebrew-tools/dispatches \
-            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": true, \"version\": \"$version\"}}"
+            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": true, \"version\": \"$version\"}}")
+          
+          status_code=${response: -3}
+          echo "Response status code: $status_code"
+          
+          if [[ $status_code -lt 200 || $status_code -ge 300 ]]; then
+            echo "::error::Failed to trigger Homebrew formula generation. Status code: $status_code"
+            cat response.txt
+            exit 1
+          fi
+          
+          echo "Successfully triggered Homebrew formula generation"
 
   tests:
     needs: [parse-version]

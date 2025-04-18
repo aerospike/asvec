@@ -38,7 +38,7 @@ jobs:
     steps:
       - name: 'Generate Homebrew Formula'
         run: |
-          version=${{ needs.parse-version.outputs.version }}
+          version="${{ needs.parse-version.outputs.version }}"
           is_latest="${{ inputs.isLatest }}"
           
           response=$(curl -L \
@@ -49,8 +49,8 @@ jobs:
             -w "%{http_code}" \
             -o response.txt \
             https://api.github.com/repos/aerospike/homebrew-tools/dispatches \
-            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": ${is_latest}, \"version\": \"$version\"}}" \
-            > status_code.txt
+            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": \"$is_latest\", \"version\": \"$version\"}}" \
+          ) > status_code.txt
           
           status_code=$(cat status_code.txt)
           echo "Response status code: $status_code"
@@ -61,4 +61,4 @@ jobs:
             exit 1
           fi
           
-          echo "Successfully triggered Homebrew formula generation for version $version" 
+          echo "Successfully triggered Homebrew formula generation for version $version"

@@ -49,9 +49,10 @@ jobs:
             -w "%{http_code}" \
             -o response.txt \
             https://api.github.com/repos/aerospike/homebrew-tools/dispatches \
-            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": ${is_latest}, \"version\": \"$version\"}}")
+            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": ${is_latest}, \"version\": \"$version\"}}" \
+            > status_code.txt
           
-          status_code=${response: -3}
+          status_code=$(cat status_code.txt)
           echo "Response status code: $status_code"
           
           if [[ $status_code -lt 200 || $status_code -ge 300 ]]; then

@@ -49,13 +49,12 @@ jobs:
             -w "%{http_code}" \
             -o response.txt \
             https://api.github.com/repos/aerospike/homebrew-tools/dispatches \
-            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": \"$is_latest\", \"version\": \"$version\"}}" \
-          ) > status_code.txt
+            -d "{\"event_type\": \"asvec\", \"client_payload\": {\"isLatest\": ${is_latest}, \"version\": \"$version\"}}")
           
-          status_code=$(cat status_code.txt)
+          status_code=${response}
           echo "Response status code: $status_code"
           
-          if [[ $status_code -lt 200 || $status_code -ge 300 ]]; then
+          if [[ -z "$status_code" || $status_code -lt 200 || $status_code -ge 300 ]]; then
             echo "::error::Failed to trigger Homebrew formula generation. Status code: $status_code"
             cat response.txt
             exit 1

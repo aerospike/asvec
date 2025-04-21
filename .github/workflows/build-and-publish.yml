@@ -95,7 +95,7 @@ jobs:
           fetch-depth: 0
 
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+        uses: jfrog/setup-jfrog-cli@611876cbed7d009aab97257020a59ddde6e840c0 # v4.5.8
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -323,7 +323,7 @@ jobs:
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+        uses: jfrog/setup-jfrog-cli@611876cbed7d009aab97257020a59ddde6e840c0 # v4.5.8
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -351,7 +351,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6   
+        uses: jfrog/setup-jfrog-cli@611876cbed7d009aab97257020a59ddde6e840c0 # v4.5.8
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -407,7 +407,7 @@ jobs:
         with:
           name: asvec-artifacts
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6       
+        uses: jfrog/setup-jfrog-cli@611876cbed7d009aab97257020a59ddde6e840c0 # v4.5.8
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
@@ -518,7 +518,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup jfrog
-        uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+        uses: jfrog/setup-jfrog-cli@611876cbed7d009aab97257020a59ddde6e840c0 # v4.5.8
         env:
           JF_URL: https://aerospike.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
